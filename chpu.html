@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0B0D">
 <link rel="manifest" href="./manifest-chpu.webmanifest">
-<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(){});});}</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").then(function(r){if(r.waiting){r.waiting.postMessage("skip");}r.addEventListener("updatefound",function(){var n=r.installing;if(!n)return;n.addEventListener("statechange",function(){if(n.state==="installed"&&navigator.serviceWorker.controller){n.postMessage("skip");}});});}).catch(function(){});var reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(reloading)return;reloading=true;location.reload();});});}</script>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -34,7 +34,7 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .device{width:412px;height:900px;max-height:calc(100vh - 48px);background:var(--ink);border-radius:38px;
   position:relative;overflow:hidden;border:9px solid #17171b;
   box-shadow:0 0 0 2px #35353d,0 40px 90px rgba(0,0,0,.75),0 0 120px rgba(255,107,0,.07)}
-@media (max-width:760px){.stage{padding:0}.device{width:100vw;height:100vh;height:100dvh;max-height:none;border:0;border-radius:0;box-shadow:none}}
+@media (max-width:760px){.stage{padding:0}.device{width:100vw;height:100vh;height:100svh;height:100dvh;max-height:none;border:0;border-radius:0;box-shadow:none}}
 .statusbar{height:26px;margin-top:env(safe-area-inset-top,0px);display:flex;align-items:center;justify-content:space-between;padding:0 18px;
   font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--steel)}
 .statusbar .dots{display:flex;gap:5px;align-items:center}
@@ -131,12 +131,13 @@ textarea{min-height:76px;resize:vertical;font-family:"IBM Plex Sans",sans-serif;
 .nmeta span{color:var(--red);cursor:pointer;font-family:"Oswald",sans-serif;letter-spacing:.08em;text-transform:uppercase}
 .nbadge{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ember);
   background:#2a1c0d;border:1px solid #4a331a;border-radius:6px;padding:1px 6px}
-nav{position:absolute;left:0;right:0;bottom:0;height:calc(64px + env(safe-area-inset-bottom,0px));background:rgba(15,15,18,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+nav{position:absolute;left:0;right:0;bottom:0;height:calc(58px + env(safe-area-inset-bottom,0px));background:rgba(15,15,18,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
   border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr 1fr 0.66fr;z-index:40;padding-bottom:env(safe-area-inset-bottom,0px)}
-.nb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#63636D;font-size:10px;
+.nb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#7C7C87;font-size:10px;
   font-family:"Oswald",sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 .nb.on{color:var(--orange)}
-.nb svg{width:22px;height:22px}
+.nb span{display:block;margin-top:1px}
+.nb svg{width:20px;height:20px;flex:none}
 .credit{text-align:center;font-size:9.5px;letter-spacing:.14em;color:#4E4E58;font-family:"Oswald",sans-serif;
   text-transform:uppercase;padding:16px 16px 6px}
 .empty{text-align:center;color:var(--steel);padding:46px 24px;font-size:13.5px;line-height:1.6}
@@ -204,7 +205,7 @@ nav{position:absolute;left:0;right:0;bottom:0;height:calc(64px + env(safe-area-i
     <header>
       <div class="brand">
         <svg class="mark" viewBox="0 0 120 120"><use href="#logo"/></svg>
-        <div class="brandtxt"><b>РАЗРЯД</b><span>Оператор ЧПУ · v0.930</span></div>
+        <div class="brandtxt"><b>РАЗРЯД</b><span>Оператор ЧПУ · v0.935</span></div>
       </div>
       <h1 class="htitle" id="ttl">G-коды</h1>
       <p class="hsub" id="sub">Haas и Fanuc: что совпадает, а что нет</p>
@@ -614,7 +615,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>'x'+Math.random().toString(36).slice(2,9);
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._i);t._i=setTimeout(()=>t.classList.remove('on'),1900);}
-const CREDIT=`<div class="credit">Версия 0.930 · Разработал Онянов Дмитрий Сергеевич</div>`;
+const CREDIT=`<div class="credit">Версия 0.935 · Разработал Онянов Дмитрий Сергеевич</div>`;
 function dbadge(d){return d===0?'<span class="badge b-same">одинаково</span>'
   :d===1?'<span class="badge b-diff">есть отличия</span>'
   :'<span class="badge b-diff">только у одной стойки</span>';}
@@ -654,7 +655,7 @@ const FTITLE=id=>{for(const k in FOLDERS){const f=FOLDERS[k].find(x=>x[0]===id);
 
 function drawNav(){
   $('#nav').innerHTML=TABS.map(t=>`<div class="nb ${t.id===tab?'on':''}" data-tab="${t.id}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${t.i}</svg>${t.n}</div>`).join('');
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${t.i}</svg><span>${t.n}</span></div>`).join('');
   $('#nav').querySelectorAll('.nb').forEach(b=>b.onclick=()=>{
     if(b.dataset.tab===tab&&!folder&&!geoCase) return;
     tab=b.dataset.tab; folder=null; geoCase=null; rank=null; filter='Все'; $('#q').value=''; deeper(); render();});
@@ -697,7 +698,7 @@ function render(){
     `<div class="wrap" style="padding-bottom:0"><div class="card" id="upBtn" style="display:flex;align-items:center;gap:10px;padding:11px 13px">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
       <span style="font-family:Oswald;letter-spacing:.08em;text-transform:uppercase;font-size:12px">${geoCase?'К списку контуров':rank?'К списку разрядов':'Все разделы'}</span></div></div>`);
-  bind(); s.scrollTop=0;
+  bind(); numFix(); s.scrollTop=0;
 }
 function drawChips(){
   const c=$('#chips');
@@ -717,7 +718,7 @@ function viewMore(){
         Всё считается на телефоне, без интернета.
       </div>
       <div class="res" style="margin-top:12px">
-        <div><div class="f">Версия</div><div class="v">0.930</div></div>
+        <div><div class="f">Версия</div><div class="v">0.935</div></div>
         <div><div class="f">Разработал</div><div class="v" style="font-size:13px">Онянов Д.С.</div></div>
         <div><div class="f">Контуров</div><div class="v">${GC.length+GI.length}</div></div>
         <div><div class="f">Кодов в справочнике</div><div class="v">${G.length+M.length}</div></div>
@@ -747,7 +748,7 @@ function viewMore(){
         <div class="ct" style="font-size:12.5px;margin-top:5px;line-height:1.5">${esc(c[2])}</div></div>`).join('')}</div>
     </div>
     <div class="card"><div class="tag">О нумерации версий</div>
-      <div class="ct" style="margin-top:8px;line-height:1.55">Каждое обновление добавляет пять тысячных: 0.930 → 0.935 → 0.940. <b>До версии 1.0 в приложении могут быть ошибки</b> — оно в работе, разделы дописываются, расчёты перепроверяются. Версия 1.0 будет означать готовый продукт: проверенный на станках, с полным набором разделов и без известных ошибок. Пока номер меньше единицы — сверяйтесь с чертежом и руководством на свою стойку.</div>
+      <div class="ct" style="margin-top:8px;line-height:1.55">Каждое обновление добавляет пять тысячных: 0.935 → 0.940 → 0.945. <b>До версии 1.0 в приложении могут быть ошибки</b> — оно в работе, разделы дописываются, расчёты перепроверяются. Версия 1.0 будет означать готовый продукт: проверенный на станках, с полным набором разделов и без известных ошибок. Пока номер меньше единицы — сверяйтесь с чертежом и руководством на свою стойку.</div>
     </div>
     ${bkCard()}
     <div class="card"><div class="tag">Нашли ошибку — напишите</div>
@@ -1080,6 +1081,7 @@ function bkCard(){
 /* ============ учебный раздел ============ */
 
 const CHANGES=[
+ ['0.935','Ввод чисел и нижнее меню','ИСПРАВЛЕНО: в браузере подписи разделов под иконками обрезались нижним краем экрана — высота теперь считается по реально видимой области. Поле с числом очищается при нажатии, стирать вручную больше не нужно, и вызывается цифровая клавиатура. Ушли не введя ничего — прежнее значение возвращается.'],
  ['0.930','Правка расчётов и сохранение записей','ИСПРАВЛЕНО: подача на дуге считалась наоборот — на наружном радиусе программа снижала подачу вместо повышения, на внутреннем поднимала. ИСПРАВЛЕНО: в расчёте шероховатости выводилась высота гребешка Rz, подписанная как Ra, — завышение примерно вчетверо. Добавлено сохранение и восстановление записей файлом, копирование любого блока кода по нажатию, уточнения по G04, G53, G54.1 и G76.'],
  ['0.925','Шестой разряд и посадки','Пятый и шестой разряды разделены: у шестого своя программа — точность выше 7-го квалитета, тонкостенные и длинные детали, проверка станка на биение и люфт. Посадок стало 34 вместо 15, добавлены квалитеты 5 и 10, в таблицу IT добавлен столбец IT5.'],
  ['0.920','Правка текста о версиях','ИСПРАВЛЕНО: в пояснении о нумерации стояло, что готовым продуктом будет 0.915. Готовым считается 1.0. Ошибка появилась из-за автозамены номера версии, которая задела обычный текст.'],
@@ -2138,8 +2140,8 @@ function openSheet(id){
       <div class="sec">Вывод</div><div class="note warn">${esc(d.n)}</div>`;
   }
   $('#sheetTitle').textContent=ttl; $('#sheetSub').textContent=sub;
-  $('#sheetBody').innerHTML=html+notesHTML(id)+`<div class="credit" style="padding-top:22px">Версия 0.930 · Разработал Онянов Дмитрий Сергеевич</div>`;
-  wireNotes(id);
+  $('#sheetBody').innerHTML=html+notesHTML(id)+`<div class="credit" style="padding-top:22px">Версия 0.935 · Разработал Онянов Дмитрий Сергеевич</div>`;
+  wireNotes(id); numFix();
   $('#sheet').classList.add('open'); deeper();
 }
 function notesHTML(id){
@@ -2257,6 +2259,25 @@ $('#q').oninput=()=>{ if(folder==='g'||folder==='m'){ $('#screen').innerHTML=vie
 (function clock(){const d=new Date();
   $('#clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
   setTimeout(clock,20000);})();
+
+
+/* --- числовые поля: очищаются при нажатии, цифровая клавиатура --- */
+function numFix(){
+  document.querySelectorAll('input[type=number]').forEach(el=>{
+    if(el.dataset.nf) return; el.dataset.nf='1';
+    el.setAttribute('inputmode','decimal');
+    el.addEventListener('focus',()=>{ el.dataset.prev=el.value; el.value='';
+      setTimeout(()=>{ try{ el.select(); }catch(e){} },0); });
+    el.addEventListener('blur',()=>{ if(el.value.trim()===''){
+      el.value=el.dataset.prev||''; el.dispatchEvent(new Event('input',{bubbles:true})); } });
+  });
+}
+
+function fitH(){ try{ const d=document.querySelector('.device');
+  if(d && window.innerWidth<=760) d.style.height=window.innerHeight+'px'; }catch(e){} }
+window.addEventListener('resize',fitH);
+window.addEventListener('orientationchange',()=>setTimeout(fitH,150));
+fitH();
 
 (async()=>{ NOTES=await loadNotes(); render(); })();
 </script>

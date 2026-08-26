@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0B0D">
 <link rel="manifest" href="./manifest-termist.webmanifest">
-<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(){});});}</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").then(function(r){if(r.waiting){r.waiting.postMessage("skip");}r.addEventListener("updatefound",function(){var n=r.installing;if(!n)return;n.addEventListener("statechange",function(){if(n.state==="installed"&&navigator.serviceWorker.controller){n.postMessage("skip");}});});}).catch(function(){});var reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(reloading)return;reloading=true;location.reload();});});}</script>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -40,7 +40,7 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh}
 }
 @media (max-width:760px){
   .stage{padding:0}
-  .device{width:100vw;height:100vh;height:100dvh;max-height:none;border:0;border-radius:0;box-shadow:none}
+  .device{width:100vw;height:100vh;height:100svh;height:100dvh;max-height:none;border:0;border-radius:0;box-shadow:none}
 }
 .statusbar{height:26px;margin-top:env(safe-area-inset-top,0px);display:flex;align-items:center;justify-content:space-between;
   padding:0 18px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--steel);letter-spacing:.02em}
@@ -176,12 +176,13 @@ input[type=range]{width:100%;accent-color:var(--orange);margin:6px 0 0}
 /* ---------- FAB + nav ---------- */
 .fab{position:absolute;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:18px;background:var(--orange);
   display:grid;place-items:center;box-shadow:0 10px 26px rgba(255,107,0,.32);cursor:pointer;z-index:30;color:#150900}
-nav{position:absolute;left:0;right:0;bottom:0;height:calc(64px + env(safe-area-inset-bottom,0px));background:rgba(15,15,18,.94);
+nav{position:absolute;left:0;right:0;bottom:0;height:calc(58px + env(safe-area-inset-bottom,0px));background:rgba(15,15,18,.94);
   -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr 1fr 0.66fr;z-index:40;padding-bottom:env(safe-area-inset-bottom,0px)}
-.nb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#63636D;
+.nb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#7C7C87;
   font-size:8.5px;font-family:"Oswald",sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 .nb.on{color:var(--orange)}
-.nb svg{width:19px;height:19px}
+.nb span{display:block;margin-top:1px}
+.nb svg{width:20px;height:20px;flex:none}
 
 /* ---------- misc ---------- */
 .empty{text-align:center;color:var(--steel);padding:46px 24px;font-size:13.5px;line-height:1.6}
@@ -243,7 +244,7 @@ pre.blk{font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.7;bac
     <header>
       <div class="brand">
         <svg class="mark" viewBox="0 0 120 120"><use href="#logo"/></svg>
-        <div class="brandtxt"><b>РАЗРЯД</b><span>Термист · v0.325</span></div>
+        <div class="brandtxt"><b>РАЗРЯД</b><span>Термист · v0.330</span></div>
       </div>
       <h1 class="htitle" id="ttl">Марочник</h1>
       <p class="hsub" id="sub">Режимы закалки и отпуска</p>
@@ -518,6 +519,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const uid=()=>'x'+Math.random().toString(36).slice(2,9);
 
 const CHANGES=[
+ ['0.330','Ввод чисел и нижнее меню','ИСПРАВЛЕНО: в браузере подписи разделов обрезались нижним краем экрана. Поле с числом очищается при нажатии и вызывает цифровую клавиатуру.'],
  ['0.325','Сохранение записей','Заметки к маркам и журнал отпуска теперь можно сохранить файлом и вернуть на другом телефоне — «Добавить к моим» или «Заменить всё». Любой блок с режимом копируется нажатием.'],
  ['0.320','Твёрдость и чистка данных','Новый учебный раздел: шкалы HRC, HRA, HRB, HB, HV и HSD — чем меряют, как выбрать под задачу, таблица приблизительного перевода и правила замера. Из технокарты убраны фамилии составителей: теперь это обезличенный пример, который каждый заполняет своими режимами.'],
  ['0.315','Учёба у термиста','Новая вкладка: обучение по разрядам с 3-го по 6-й, диаграмма железо-углерод с разбором структур простыми и научными словами, превращения при охлаждении с С-образной кривой, разбор дефектов. Разделы собраны по папкам, новая иконка приложения.'],
@@ -560,7 +562,7 @@ const FTITLE=id=>{for(const k in FOLDERS){const f=FOLDERS[k].find(x=>x[0]===id);
 function deeper(){ try{ history.pushState({},''); }catch(e){} }
 function drawNav(){
   $('#nav').innerHTML=TABS.map(t=>`<div class="nb ${t.id===tab?'on':''}" data-tab="${t.id}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">${t.i}</svg>${t.n}</div>`).join('');
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">${t.i}</svg><span>${t.n}</span></div>`).join('');
   $('#nav').querySelectorAll('.nb').forEach(b=>b.onclick=()=>{
     if(b.dataset.tab===tab&&!folder&&!rank) return;
     tab=b.dataset.tab;folder=null;rank=null;filter='Все';$('#q').value='';deeper();render();});
@@ -591,7 +593,7 @@ function render(){
     `<div class="wrap" style="padding-bottom:0"><div class="card" id="upBtn" style="display:flex;align-items:center;gap:10px;padding:11px 13px">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
       <span style="font-family:Oswald;letter-spacing:.08em;text-transform:uppercase;font-size:12px">${rank?'К списку разрядов':'Все разделы'}</span></div></div>`);
-  bind();
+  bind(); numFix();
   s.scrollTop=0;
 }
 function groups(){return ['Все',...new Set(DB.steels.map(s=>s.group.split(' ')[0]))];}
@@ -1338,7 +1340,7 @@ function renderSheet(){
           </div></div>`).join('')}
         <div class="sec">Что важно у печи</div><div class="note">${esc(obj.tip)}</div>
         ${notesHTML(obj)}`;
-      wireNotes(obj);
+      wireNotes(obj); numFix();
     }
     if(kind==='cement'){
       b.innerHTML=`<div class="sec">Режим</div>
@@ -1397,6 +1399,7 @@ function renderSheet(){
     const d=document.createElement('div'); d.innerHTML=opForm({n:'',t:'',e:'',h:'',r:''},$('#ops').children.length);
     $('#ops').appendChild(d.firstChild); bindOpDel();});
   bindOpDel();
+  numFix();
   $('#ok').onclick=commit;
   $('#del').onclick=()=>{ if(!confirm('Удалить запись без возврата?')) return;
     DB[kind]=DB[kind].filter(x=>x.id!==obj.id); save(); closeSheet(); render(); toast('Запись удалена'); };
@@ -1533,6 +1536,26 @@ $('#fab').onclick=addNew;
 (function clock(){const d=new Date();
   $('#clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
   setTimeout(clock,20000);})();
+
+/* высота экрана: подстраховка для браузеров без dvh */
+
+/* --- числовые поля: очищаются при нажатии, цифровая клавиатура --- */
+function numFix(){
+  document.querySelectorAll('input[type=number]').forEach(el=>{
+    if(el.dataset.nf) return; el.dataset.nf='1';
+    el.setAttribute('inputmode','decimal');
+    el.addEventListener('focus',()=>{ el.dataset.prev=el.value; el.value='';
+      setTimeout(()=>{ try{ el.select(); }catch(e){} },0); });
+    el.addEventListener('blur',()=>{ if(el.value.trim()===''){
+      el.value=el.dataset.prev||''; el.dispatchEvent(new Event('input',{bubbles:true})); } });
+  });
+}
+
+function fitH(){ try{ const d=document.querySelector('.device');
+  if(d && window.innerWidth<=760) d.style.height=window.innerHeight+'px'; }catch(e){} }
+window.addEventListener('resize',fitH);
+window.addEventListener('orientationchange',()=>setTimeout(fitH,150));
+fitH();
 
 /* старт */
 (async()=>{ DB=await load(); if(!DB||!DB.steels){DB=seed();} if(!DB.temperLog) DB.temperLog=[]; await save(); render(); })();
