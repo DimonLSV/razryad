@@ -187,6 +187,19 @@ nav{position:absolute;left:0;right:0;bottom:0;height:calc(58px + env(safe-area-i
 .lnk svg{color:var(--orange);flex:none}
 .lnk:active{background:var(--panel3)}
 .dia text.dm{fill:#9FD0FF;font-size:10.5px}
+
+/* на телефоне меню прибито к низу видимой области силами браузера */
+@media (max-width:760px){
+  nav{position:fixed !important;left:0;right:0;bottom:0;
+    height:auto !important;min-height:56px;
+    padding:7px 0 calc(7px + env(safe-area-inset-bottom,0px)) !important}
+  .nb{padding:0 2px !important;gap:4px !important}
+  .nb span{display:block;font-size:10.5px;line-height:1.1;white-space:nowrap}
+  .screen{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px)) !important}
+  .sheetbody{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px)) !important}
+  .fab{position:fixed !important;bottom:calc(88px + env(safe-area-inset-bottom,0px)) !important}
+  .toast{position:fixed !important;bottom:calc(96px + env(safe-area-inset-bottom,0px)) !important}
+}
 </style>
 </head>
 <body>

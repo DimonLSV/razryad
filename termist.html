@@ -222,6 +222,19 @@ pre.blk{font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.7;bac
   color:var(--ember);background:#2a1c0d;border:1px solid #4a331a;border-radius:6px;padding:1px 6px}
 .pill{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;padding:2px 7px;border-radius:6px;
   background:var(--panel3);color:var(--steel);margin:0 4px 4px 0}
+
+/* на телефоне меню прибито к низу видимой области силами браузера */
+@media (max-width:760px){
+  nav{position:fixed !important;left:0;right:0;bottom:0;
+    height:auto !important;min-height:56px;
+    padding:7px 0 calc(7px + env(safe-area-inset-bottom,0px)) !important}
+  .nb{padding:0 2px !important;gap:4px !important}
+  .nb span{display:block;font-size:10.5px;line-height:1.1;white-space:nowrap}
+  .screen{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px)) !important}
+  .sheetbody{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px)) !important}
+  .fab{position:fixed !important;bottom:calc(88px + env(safe-area-inset-bottom,0px)) !important}
+  .toast{position:fixed !important;bottom:calc(96px + env(safe-area-inset-bottom,0px)) !important}
+}
 </style>
 </head>
 <body>
