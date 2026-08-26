@@ -1,0 +1,33 @@
+{
+ "id": "razryad-chpu",
+ "name": "Разряд · Оператор ЧПУ",
+ "short_name": "Разряд ЧПУ",
+ "description": "Справочник для работы у станка. Работает без интернета.",
+ "start_url": "./chpu.html",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#0B0B0D",
+ "theme_color": "#0B0B0D",
+ "lang": "ru",
+ "icons": [
+  {
+   "src": "icon-chpu-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-chpu-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-chpu-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

@@ -1,0 +1,33 @@
+{
+ "id": "razryad-termist",
+ "name": "Разряд · Термист",
+ "short_name": "Разряд Термист",
+ "description": "Справочник для работы у станка. Работает без интернета.",
+ "start_url": "./termist.html",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#0B0B0D",
+ "theme_color": "#0B0B0D",
+ "lang": "ru",
+ "icons": [
+  {
+   "src": "icon-termist-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-termist-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-termist-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

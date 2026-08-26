@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0B0D">
+<link rel="manifest" href="./manifest-termist.webmanifest">
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(){});});}</script>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Разряд · Термист">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="./icon-termist-192.png">
+<link rel="icon" href="./icon-termist-192.png">
+
+<title>РАЗРЯД · Пособие термиста</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B0B0D; --panel:#141417; --panel2:#1B1B20; --panel3:#232329;
+  --line:#2C2C34; --orange:#FF6B00; --ember:#FFA23A; --hot:#FFD166;
+  --steel:#93939D; --paper:#F2EFEA; --red:#D93A2B; --ok:#5BC46B;
+  --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;-webkit-text-size-adjust:100%;overscroll-behavior:none;touch-action:manipulation;background:#050506;color:var(--paper);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh}
+
+/* ---------- device frame (mockup) ---------- */
+.stage{width:100%;display:flex;justify-content:center;align-items:center;padding:24px 12px}
+.device{
+  width:412px;height:900px;max-height:calc(100vh - 48px);
+  background:var(--ink);border-radius:38px;position:relative;overflow:hidden;
+  border:9px solid #17171b;box-shadow:0 0 0 2px #35353d,0 40px 90px rgba(0,0,0,.75),0 0 120px rgba(255,107,0,.07);
+}
+@media (max-width:760px){
+  .stage{padding:0}
+  .device{width:100vw;height:100vh;height:100dvh;max-height:none;border:0;border-radius:0;box-shadow:none}
+}
+.statusbar{height:26px;margin-top:env(safe-area-inset-top,0px);display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--steel);letter-spacing:.02em}
+.statusbar .dots{display:flex;gap:5px;align-items:center}
+.statusbar i{width:5px;height:5px;border-radius:50%;background:var(--steel);display:block}
+
+/* ---------- app shell ---------- */
+.app{position:absolute;inset:0;display:flex;flex-direction:column}
+.screen{flex:1;overflow-y:auto;overscroll-behavior:contain;
+  padding:0 0 calc(104px + env(safe-area-inset-bottom,0px))}
+.screen::-webkit-scrollbar{width:0}
+
+/* ---------- header ---------- */
+header{
+  padding:8px 16px 12px;background:linear-gradient(180deg,#141418 0%,#0B0B0D 100%);
+  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20
+}
+.brand{display:flex;align-items:center;gap:11px}
+.mark{width:34px;height:34px;flex:none}
+.brandtxt{line-height:1}
+.brandtxt b{font-family:"Oswald",sans-serif;font-weight:600;font-size:17px;letter-spacing:.16em;
+  text-transform:uppercase;display:block;color:var(--paper)}
+.brandtxt span{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--orange);
+  font-family:"Oswald",sans-serif;font-weight:400}
+.htitle{font-family:"Oswald",sans-serif;font-weight:600;font-size:26px;letter-spacing:.01em;
+  margin:14px 0 2px;text-transform:uppercase}
+.hsub{font-size:12.5px;color:var(--steel);margin:0}
+
+/* search */
+.search{margin-top:12px;display:flex;align-items:center;gap:9px;background:var(--panel2);
+  border:1px solid var(--line);border-radius:11px;padding:9px 12px}
+.search input{background:none;border:0;outline:0;color:var(--paper);font-size:14.5px;width:100%;
+  font-family:"IBM Plex Sans",sans-serif}
+.search input::placeholder{color:#6A6A74}
+.search svg{flex:none;opacity:.6}
+
+/* chips */
+.chips{display:flex;gap:7px;overflow-x:auto;padding:11px 16px 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--steel);font-size:12px;white-space:nowrap;cursor:pointer;transition:.15s;font-weight:500}
+.chip.on{background:var(--orange);border-color:var(--orange);color:#120800;font-weight:600}
+
+/* ---------- cards ---------- */
+.wrap{padding:14px 16px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;margin-bottom:11px;
+  position:relative;overflow:hidden}
+.card:active{border-color:#3b3b45}
+.card .glow{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--orange);opacity:.9}
+.grade{font-family:"Oswald",sans-serif;font-size:22px;font-weight:600;letter-spacing:.02em;line-height:1}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.tag{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--orange);
+  font-family:"Oswald",sans-serif;font-weight:500}
+.analog{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--steel);margin-top:6px;line-height:1.5}
+.hrcbox{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--hot);font-weight:600;white-space:nowrap}
+
+/* ---------- signature: heat ribbon ---------- */
+.ribbon{position:relative;height:8px;border-radius:4px;margin:12px 0 16px;
+  background:linear-gradient(90deg,#26262c 0%,#3a1c14 18%,#8B1A0E 36%,#D93A2B 50%,#FF6B00 66%,#FFB03A 80%,#FFE7B0 92%,#FFFDF6 100%)}
+.ribbon .pin{position:absolute;top:-5px;width:2px;height:18px;background:var(--paper);border-radius:1px;
+  box-shadow:0 0 8px rgba(255,255,255,.75)}
+.ribbon .pin::after{content:attr(data-l);position:absolute;top:20px;left:50%;transform:translateX(-50%);
+  font-family:"IBM Plex Mono",monospace;font-size:9.5px;color:var(--steel);white-space:nowrap}
+.ribbon.mini{height:5px;margin:10px 0 6px;border-radius:3px}
+.ribbon.mini .pin{top:-3px;height:11px;width:2px}
+.ribbon.mini .pin::after{display:none}
+.scalelab{display:flex;justify-content:space-between;font-family:"IBM Plex Mono",monospace;
+  font-size:9.5px;color:#5E5E68;margin-top:-8px}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-family:"Oswald",sans-serif;font-weight:500;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--steel);text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:bottom}
+td{padding:9px 8px;border-bottom:1px solid #202027;vertical-align:top}
+td.num{font-family:"IBM Plex Mono",monospace;color:var(--hot);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.tscroll{overflow-x:auto;margin:0 -14px;padding:0 14px}
+.tscroll::-webkit-scrollbar{height:0}
+.tscroll table{min-width:520px}
+
+/* ---------- detail sheet ---------- */
+.sheet{position:absolute;inset:0;background:var(--ink);z-index:60;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+.sheet.open{transform:translateY(0)}
+.sheethead{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;
+  background:var(--panel)}
+.iconbtn{width:34px;height:34px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);
+  display:grid;place-items:center;cursor:pointer;flex:none;color:var(--paper)}
+.iconbtn:active{background:var(--panel3)}
+.sheetbody{flex:1;overflow-y:auto;padding:16px 16px calc(110px + env(safe-area-inset-bottom,0px))}
+.sec{font-family:"Oswald",sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--orange);
+  margin:22px 0 9px;display:flex;align-items:center;gap:9px}
+.sec::after{content:"";flex:1;height:1px;background:var(--line)}
+.sec:first-child{margin-top:4px}
+
+.op{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--orange);
+  border-radius:10px;padding:11px 12px;margin-bottom:9px}
+.opname{font-family:"Oswald",sans-serif;font-size:14px;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.opgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px;margin-top:9px}
+.f{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:#6E6E78;font-family:"Oswald",sans-serif}
+.v{font-family:"IBM Plex Mono",monospace;font-size:13.5px;color:var(--paper);margin-top:2px}
+.v.hot{color:var(--ember)}
+.note{background:var(--panel2);border:1px dashed #3a3a44;border-radius:10px;padding:11px 12px;
+  font-size:13px;line-height:1.55;color:#CFCCC6}
+.note b{color:var(--ember);font-weight:600}
+.warn{border-color:#5a2a1c;background:#1d1210}
+.warn b{color:var(--red)}
+
+/* ---------- forms ---------- */
+label.fld{display:block;margin-bottom:11px}
+label.fld span{display:block;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--steel);
+  font-family:"Oswald",sans-serif;margin-bottom:5px}
+input[type=text],textarea,select{-webkit-appearance:none;appearance:none;font-size:16px;width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--paper);
+  border-radius:10px;padding:10px 11px;font-size:14px;outline:0;font-family:"IBM Plex Sans",sans-serif}
+input:focus,textarea:focus,select:focus{border-color:var(--orange)}
+textarea{min-height:82px;resize:vertical;line-height:1.5}
+.opedit{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:9px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border-radius:12px;
+  border:0;background:var(--orange);color:#150900;font-family:"Oswald",sans-serif;font-size:14px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.btn:active{background:#e05f00}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--paper)}
+.btn.danger{background:transparent;border:1px solid #5a2a24;color:var(--red)}
+.btnrow{display:flex;gap:9px;margin-top:14px}
+
+/* ---------- calculator ---------- */
+.calc{background:linear-gradient(160deg,#1d1410,#141417);border:1px solid #38251a;border-radius:var(--r);padding:14px;margin-bottom:12px}
+.out{font-family:"Oswald",sans-serif;font-size:34px;color:var(--ember);letter-spacing:.02em;line-height:1;margin-top:12px}
+.out small{font-size:14px;color:var(--steel);letter-spacing:.06em;margin-left:6px}
+input[type=range]{width:100%;accent-color:var(--orange);margin:6px 0 0}
+
+/* ---------- FAB + nav ---------- */
+.fab{position:absolute;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:18px;background:var(--orange);
+  display:grid;place-items:center;box-shadow:0 10px 26px rgba(255,107,0,.32);cursor:pointer;z-index:30;color:#150900}
+nav{position:absolute;left:0;right:0;bottom:0;height:calc(64px + env(safe-area-inset-bottom,0px));background:rgba(15,15,18,.94);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr 1fr 0.66fr;z-index:40;padding-bottom:env(safe-area-inset-bottom,0px)}
+.nb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#63636D;
+  font-size:8.5px;font-family:"Oswald",sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.nb.on{color:var(--orange)}
+.nb svg{width:19px;height:19px}
+
+/* ---------- misc ---------- */
+.empty{text-align:center;color:var(--steel);padding:46px 24px;font-size:13.5px;line-height:1.6}
+.toast{position:absolute;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--panel3);
+  border:1px solid var(--line);border-radius:11px;padding:10px 16px;font-size:13px;opacity:0;transition:.25s;z-index:70;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.splash{position:absolute;inset:0;background:var(--ink);z-index:99;display:grid;place-items:center;
+  animation:fade .5s ease 1.5s forwards}
+.splash .in{text-align:center;animation:rise .8s cubic-bezier(.2,.8,.2,1)}
+.splash .cap{margin-top:14px;font-family:"Oswald",sans-serif;font-size:11px;letter-spacing:.34em;color:var(--orange);text-transform:uppercase}
+@keyframes fade{to{opacity:0;visibility:hidden}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.credit{text-align:center;font-size:9.5px;letter-spacing:.13em;color:#4E4E58;font-family:"Oswald",sans-serif;
+  text-transform:uppercase;padding:18px 16px 6px}
+.tbox{border:1px solid var(--line);border-radius:11px;padding:10px 11px;background:#141417}
+.tbox.exp{border-color:#4a331a;background:#1c1409}
+.tbox .out{font-size:26px;margin-top:2px}
+.logline{font-family:"IBM Plex Mono",monospace;font-size:11.5px;line-height:1.75;color:#CFCCC6;margin-top:7px}
+.logline b{color:var(--ember);font-weight:500}
+.delrec{color:var(--red);font-family:"Oswald",sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.chipsrow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:11px}
+.dia{width:100%;height:auto;background:#0F0F12;border:1px solid var(--line);border-radius:11px;margin:8px 0 4px;display:block}
+.dia text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:#93939D}
+.dia text.lb{fill:#FFA23A;font-size:10px}
+.dia .ax{stroke:#5A5A66;stroke-width:1}
+pre.blk{font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.7;background:#0F0F12;border:1px solid var(--line);
+  border-radius:10px;padding:11px 12px;overflow-x:auto;margin:9px 0 0;color:#DCD9D3;white-space:pre-wrap}
+.hint{font-size:11.5px;color:#6E6E78;line-height:1.5;margin-top:10px}
+.usernote{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--ember);
+  border-radius:10px;padding:10px 12px;margin-bottom:9px;font-size:13.5px;line-height:1.5;color:#DDDAD4;white-space:pre-wrap}
+.nmeta{display:flex;justify-content:space-between;align-items:center;font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px;color:#6E6E78;margin-bottom:6px}
+.nmeta span{color:var(--red);cursor:pointer;font-family:"Oswald",sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.nbadge{display:inline-flex;align-items:center;gap:4px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  color:var(--ember);background:#2a1c0d;border:1px solid #4a331a;border-radius:6px;padding:1px 6px}
+.pill{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;padding:2px 7px;border-radius:6px;
+  background:var(--panel3);color:var(--steel);margin:0 4px 4px 0}
+</style>
+</head>
+<body>
+<div class="stage">
+<div class="device">
+
+  <!-- splash -->
+  <div class="splash" id="splash"><div class="in">
+    <svg width="96" height="96" viewBox="0 0 120 120"><use href="#logo"/></svg>
+    <div class="cap">Пособие термиста</div>
+    <div style="margin-top:26px;font-size:9.5px;letter-spacing:.14em;color:#4E4E58;font-family:Oswald;text-transform:uppercase">Разработал Онянов Дмитрий Сергеевич</div>
+  </div></div>
+
+  <div class="statusbar">
+    <span id="clock">08:20</span>
+    <span class="dots"><i></i><i></i><i></i><span style="font-size:10px">РАЗРЯД</span></span>
+  </div>
+
+  <div class="app">
+    <header>
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 120 120"><use href="#logo"/></svg>
+        <div class="brandtxt"><b>РАЗРЯД</b><span>Термист · v0.325</span></div>
+      </div>
+      <h1 class="htitle" id="ttl">Марочник</h1>
+      <p class="hsub" id="sub">Режимы закалки и отпуска</p>
+      <div class="search" id="searchbox">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" placeholder="Марка, аналог, группа…" autocomplete="off">
+      </div>
+    </header>
+    <div class="chips" id="chips"></div>
+    <div class="screen" id="screen"></div>
+  </div>
+
+  <div class="fab" id="fab" title="Добавить">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </div>
+
+  <nav id="nav"></nav>
+
+  <!-- detail / editor sheet -->
+  <div class="sheet" id="sheet">
+    <div class="sheethead">
+      <div class="iconbtn" id="close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div id="sheetTitle" style="font-family:Oswald;font-size:19px;font-weight:600;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div id="sheetSub" style="font-size:11px;color:var(--steel)"></div>
+      </div>
+      <div class="iconbtn" id="editBtn" title="Изменить">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L20 8l-4-4L4 16z"/></svg>
+      </div>
+    </div>
+    <div class="sheetbody" id="sheetBody"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+</div>
+
+<svg style="display:none">
+  <g id="logo">
+    <rect x="0" y="0" width="120" height="120" rx="9" fill="#14161B"/>
+    <g stroke="#D64822" stroke-width="7.5" stroke-linecap="round"><line x1="28.5" y1="78.7" x2="15.5" y2="84.0"/><line x1="26.0" y1="66.0" x2="12.0" y2="66.0"/><line x1="28.5" y1="53.3" x2="15.5" y2="48.0"/><line x1="91.5" y1="78.7" x2="104.5" y2="84.0"/><line x1="94.0" y1="66.0" x2="108.0" y2="66.0"/><line x1="91.5" y1="53.3" x2="104.5" y2="48.0"/></g>
+    <g fill="none" stroke="#FF8C28" stroke-width="5" stroke-linecap="round"><path d="M51 33 q5 -6 0 -11"/><path d="M60 33 q5 -6 0 -11"/><path d="M69 33 q5 -6 0 -11"/></g>
+    <path d="M45 45 A15 7.2 0 0 1 75 45 L75 58 L45 58 Z" fill="#FF9226"/>
+    <rect x="45" y="57" width="30" height="14" fill="#F4681F"/>
+    <rect x="45" y="70" width="30" height="14" fill="#E5451D"/>
+    <path d="M45 83 L75 83 L75 97 A15 7.2 0 0 1 45 97 Z" fill="#CE1E1C"/>
+    <ellipse cx="60" cy="45" rx="15" ry="7.2" fill="none" stroke="#14161B" stroke-width="3.4"/>
+  </g>
+</svg>
+
+<script>
+/* хранение на устройстве: Safari, Chrome, любой браузер */
+if(typeof window.storage==='undefined'){window.storage={
+  get:async k=>{const v=localStorage.getItem(k); if(v===null) throw new Error('no key'); return {key:k,value:v};},
+  set:async(k,v)=>{localStorage.setItem(k,v); return {key:k,value:v};},
+  delete:async k=>{localStorage.removeItem(k); return {key:k,deleted:true};},
+  list:async()=>({keys:Object.keys(localStorage)})};}
+</script>
+<script>
+/* ============ storage ============ */
+const KEY='repn-thermist-v2';
+let volatile=false, DB=null;
+
+async function load(){
+  try{ const r=await window.storage.get(KEY); if(r&&r.value) return JSON.parse(r.value); }
+  catch(e){ /* нет ключа или хранилище недоступно */ }
+  return null;
+}
+async function save(){
+  try{ await window.storage.set(KEY, JSON.stringify(DB)); }
+  catch(e){ volatile=true; }
+}
+
+/* ============ данные (справочные; сверять с ГОСТ и техпроцессом) ============ */
+function seed(){return{
+steels:[
+ {id:'s1',grade:'Ст3сп',group:'Углеродистая обычного качества',analogs:'S235JR (EN 1.0038) · ASTM A36 · Q235',
+  ops:[{n:'Нормализация',t:'910–930',e:'Воздух',h:'1 мин/мм',r:'HB 120–150'}],
+  tip:'Закалке на твёрдость не подвергается — углерода мало. Нормализуют для снятия наклёпа и выравнивания структуры после резки и гибки.'},
+ {id:'s2',grade:'20',group:'Цементуемая',analogs:'AISI 1020 · C22E (1.1151) · 20 (GB)',
+  ops:[{n:'Цементация',t:'920–950',e:'Газовая среда / твёрдый карбюризатор',h:'по слою 0,6–1,2 мм',r:'—'},
+       {n:'Закалка',t:'780–800',e:'Вода',h:'1 мин/мм',r:'HRC 56–60 (пов.)'},
+       {n:'Отпуск',t:'180–200',e:'Воздух',h:'90–120 мин',r:'HRC 56–60 / серд. HB 143–179'}],
+  tip:'Сердцевина остаётся вязкой — сталь нехолодостойкая по прокаливаемости, годится только для мелких деталей до Ø30 мм.'},
+ {id:'s3',grade:'20Х',group:'Цементуемая легированная',analogs:'AISI 5120 · 20Cr4 (1.7027) · 20Cr (GB)',
+  ops:[{n:'Цементация',t:'900–920',e:'Газовая среда',h:'слой 0,8–1,2 мм',r:'—'},
+       {n:'Закалка',t:'800–820',e:'Вода или масло',h:'1–1,5 мин/мм',r:'HRC 56–62 (пов.)'},
+       {n:'Отпуск',t:'180–200',e:'Воздух',h:'120 мин',r:'HRC 56–62 / серд. HRC 25–35'}],
+  tip:'Подстуживание с температуры цементации до 820–840 °C перед закалкой уменьшает количество остаточного аустенита и коробление.'},
+ {id:'s4',grade:'18ХГТ',group:'Цементуемая легированная',analogs:'20MnCr5 (1.7147) · AISI 5115 · 18CrMnTi (GB)',
+  ops:[{n:'Цементация',t:'920–950',e:'Газовая среда',h:'слой 1,0–1,5 мм',r:'—'},
+       {n:'Закалка',t:'830–850',e:'Масло 40–60 °C',h:'1,5 мин/мм',r:'HRC 57–63 (пов.)'},
+       {n:'Отпуск',t:'180–200',e:'Воздух',h:'120 мин',r:'HRC 56–62 / серд. HRC 30–45'}],
+  tip:'Основная зубчатая сталь. Титан сдерживает рост зерна — допускает непосредственную закалку прямо из цементационной печи.'},
+ {id:'s5',grade:'12ХН3А',group:'Цементуемая легированная',analogs:'14NiCr14 (1.5752) · AISI 3415 (близко)',
+  ops:[{n:'Цементация',t:'900–920',e:'Газовая среда',h:'слой 0,8–1,4 мм',r:'—'},
+       {n:'Закалка',t:'780–800',e:'Масло',h:'1,5 мин/мм',r:'HRC 56–62'},
+       {n:'Отпуск',t:'160–180',e:'Воздух',h:'120–180 мин',r:'HRC 56–62 / серд. HRC 30–40'}],
+  tip:'Никель повышает вязкость сердцевины, но и долю остаточного аустенита. Для точных деталей — обработка холодом −70 °C после закалки.'},
+ {id:'s6',grade:'20Х2Н4А',group:'Цементуемая легированная',analogs:'1.5920 (близко) · AISI 9310 (близко)',
+  ops:[{n:'Цементация',t:'900–920',e:'Газовая среда',h:'слой 1,0–1,6 мм',r:'—'},
+       {n:'Закалка I',t:'860–880',e:'Масло',h:'1,5 мин/мм',r:'исправление зерна сердцевины'},
+       {n:'Закалка II',t:'760–780',e:'Масло',h:'1,5 мин/мм',r:'HRC 58–62'},
+       {n:'Обработка холодом',t:'−70…−80',e:'Криокамера',h:'60–120 мин',r:'снятие остаточного аустенита'},
+       {n:'Отпуск',t:'160–180',e:'Воздух',h:'180 мин',r:'HRC 58–62'}],
+  tip:'Высоколегированная — остаточного аустенита много, без обработки холодом твёрдость «недобирает» 3–6 HRC и размер «плывёт» со временем.'},
+ {id:'s7',grade:'45',group:'Улучшаемая углеродистая',analogs:'AISI 1045 · C45E (1.1191) · 45 (GB)',
+  ops:[{n:'Закалка',t:'840–860',e:'Вода (сложная форма — вода→масло)',h:'1 мин/мм',r:'HRC 50–55'},
+       {n:'Отпуск (улучшение)',t:'550–600',e:'Воздух/масло',h:'120 мин',r:'HB 200–240'},
+       {n:'Отпуск низкий',t:'180–200',e:'Воздух',h:'120 мин',r:'HRC 48–52'},
+       {n:'Закалка ТВЧ',t:'860–880',e:'Спрейер, вода',h:'по режиму индуктора',r:'HRC 45–52 (слой 1–3 мм)'}],
+  tip:'Склонна к закалочным трещинам в воде на переходах сечений и в шпоночных пазах. При Ø>60 мм — прерывистая закалка вода→масло.'},
+ {id:'s8',grade:'40Х',group:'Улучшаемая легированная',analogs:'AISI 5140 · 41Cr4 (1.7035) · 40Cr (GB)',
+  ops:[{n:'Закалка',t:'840–870',e:'Масло 20–60 °C',h:'150±10 мин (садка 8–15 шт.)',r:'HRC 50–55'},
+       {n:'Отпуск',t:'450±20',e:'Воздух',h:'180±10 мин',r:'HRC 26–32'},
+       {n:'Отпуск высокий',t:'550–600',e:'Воздух',h:'180 мин',r:'HB 220–260'},
+       {n:'Отпуск низкий',t:'200',e:'Воздух',h:'120 мин',r:'HRC 48–52'}],
+  tip:'Рабочая марка карты цеха: 860+20 °C масло, отпуск 450+20 °C → 26–32 HRC. Отпускная хрупкость II рода при 500–560 °C — после высокого отпуска охлаждать в масле или в воде.'},
+ {id:'s9',grade:'40ХН',group:'Улучшаемая легированная',analogs:'AISI 3140 · 40NiCr6 (1.5711)',
+  ops:[{n:'Закалка',t:'820–840',e:'Масло',h:'1,5 мин/мм',r:'HRC 50–55'},
+       {n:'Отпуск',t:'500–550',e:'Воздух',h:'180 мин',r:'HRC 28–35'}],
+  tip:'Прокаливаемость выше, чем у 40Х — держит сечение до Ø80–100 мм. Тоже склонна к отпускной хрупкости, охлаждение с отпуска ускоренное.'},
+ {id:'s10',grade:'40ХН2МА',group:'Улучшаемая легированная',analogs:'AISI 4340 · 34CrNiMo6 (1.6582)',
+  ops:[{n:'Закалка',t:'840–860',e:'Масло',h:'1,5 мин/мм',r:'HRC 52–56'},
+       {n:'Отпуск',t:'560–620',e:'Воздух/масло',h:'180 мин',r:'HRC 30–36'},
+       {n:'Отпуск низкий',t:'200–250',e:'Воздух',h:'120 мин',r:'HRC 48–52'}],
+  tip:'Молибден подавляет отпускную хрупкость. Прокаливается насквозь до Ø100–150 мм — марка для валов и штоков ответственного назначения.'},
+ {id:'s11',grade:'30ХГСА',group:'Улучшаемая легированная',analogs:'30CrMnSiA · близко 1.8161 · AISI 4130 (по применению)',
+  ops:[{n:'Закалка',t:'870–890',e:'Масло',h:'1,5 мин/мм',r:'HRC 50–54'},
+       {n:'Отпуск',t:'520–540',e:'Масло (быстрое охлаждение)',h:'60–120 мин',r:'HRC 32–38, σв ≈1100 МПа'},
+       {n:'Изотермическая закалка',t:'870–890 → ванна 280–320',e:'Селитра, 40–60 мин',h:'—',r:'HRC 44–48, минимум коробления'}],
+  tip:'Сварные узлы после сварки обязательно отпускать. Охлаждение с отпуска в масле — иначе отпускная хрупкость и падение ударной вязкости.'},
+ {id:'s12',grade:'38Х2МЮА',group:'Азотируемая',analogs:'41CrAlMo7 (1.8509) · Nitralloy 135M',
+  ops:[{n:'Закалка',t:'930–950',e:'Масло или вода',h:'1,5 мин/мм',r:'—'},
+       {n:'Отпуск высокий',t:'620–660',e:'Воздух',h:'180 мин',r:'HB 260–290 (основа под азотирование)'},
+       {n:'Азотирование',t:'500–540',e:'Аммиак, диссоциация 20–40 %',h:'24–60 ч (слой 0,3–0,5 мм)',r:'HV 900–1100'}],
+  tip:'Азотирование — финишная операция: после него ни закалки, ни шлифовки «в размер» больше 0,05 мм на сторону. Улучшение делают до азотирования.'},
+ {id:'s13',grade:'65Г',group:'Пружинная',analogs:'AISI 1566 · 66Mn4 (1.1240)',
+  ops:[{n:'Закалка',t:'800–830',e:'Масло',h:'1 мин/мм',r:'HRC 60–63'},
+       {n:'Отпуск',t:'340–400',e:'Воздух',h:'60–90 мин',r:'HRC 45–50'}],
+  tip:'Отпуск в интервале 250–350 °C даёт необратимую отпускную хрупкость I рода — для пружин выходить на 380–420 °C.'},
+ {id:'s14',grade:'60С2А',group:'Пружинная',analogs:'AISI 9260 · 61SiCr7 (1.7108)',
+  ops:[{n:'Закалка',t:'850–870',e:'Масло',h:'1 мин/мм',r:'HRC 58–62'},
+       {n:'Отпуск',t:'420–460',e:'Воздух',h:'60–90 мин',r:'HRC 44–48'}],
+  tip:'Кремний сильно склоняет к обезуглероживанию — греть в защитной атмосфере или оставлять припуск 0,3–0,5 мм на сторону.'},
+ {id:'s15',grade:'50ХФА',group:'Пружинная',analogs:'51CrV4 (1.8159) · AISI 6150',
+  ops:[{n:'Закалка',t:'850–880',e:'Масло',h:'1 мин/мм',r:'HRC 58–62'},
+       {n:'Отпуск',t:'400–450',e:'Воздух',h:'90 мин',r:'HRC 45–50'}],
+  tip:'Ванадий держит мелкое зерно — допускает перегрев до 900 °C без роста зерна. Для теплостойких пружин до 300 °C.'},
+ {id:'s16',grade:'У8А',group:'Инструментальная углеродистая',analogs:'AISI W1-0.8C · C80U (1.1525)',
+  ops:[{n:'Закалка',t:'780–800',e:'Вода→масло (прерывистая)',h:'0,8–1 мин/мм',r:'HRC 60–63'},
+       {n:'Отпуск',t:'180–200',e:'Воздух/масляная ванна',h:'60–90 мин',r:'HRC 57–61'},
+       {n:'Отпуск (ударный инструмент)',t:'250–300',e:'Воздух',h:'60 мин',r:'HRC 50–55'}],
+  tip:'Классика для прерывистой закалки: в воде 1 с на каждые 5–6 мм сечения, затем в масло до полного остывания. Прокаливаемость 10–15 мм.'},
+ {id:'s17',grade:'У10А',group:'Инструментальная углеродистая',analogs:'AISI W1-1.0C · C105U (1.1545)',
+  ops:[{n:'Закалка',t:'760–790',e:'Вода→масло',h:'0,8–1 мин/мм',r:'HRC 62–64'},
+       {n:'Отпуск',t:'160–180',e:'Воздух',h:'60–90 мин',r:'HRC 61–63'}],
+  tip:'Заэвтектоидная — греть только выше Ac1, но ниже Acm: цементит должен остаться нерастворённым, он и держит износостойкость.'},
+ {id:'s18',grade:'ХВГ',group:'Инструментальная легированная',analogs:'100MnCrW4 (1.2510) · AISI O1',
+  ops:[{n:'Закалка',t:'820–840',e:'Масло',h:'1,5 мин/мм',r:'HRC 63–65'},
+       {n:'Отпуск',t:'160–180',e:'Воздух',h:'120 мин',r:'HRC 61–63'}],
+  tip:'Минимальное коробление — марка для длинных протяжек и калибров. Остаточный аустенит снимают отпуском 2 раза или холодом −70 °C.'},
+ {id:'s19',grade:'9ХС',group:'Инструментальная легированная',analogs:'близко 105WCr6 (1.2419) · AISI O7 (по применению)',
+  ops:[{n:'Закалка',t:'860–880',e:'Масло',h:'1,5 мин/мм',r:'HRC 62–64'},
+       {n:'Отпуск',t:'180–200',e:'Воздух',h:'120 мин',r:'HRC 60–62'}],
+  tip:'Держит режущую кромку до 250 °C. Обязателен подогрев 500–600 °C перед нагревом под закалку — сталь склонна к трещинам от термоудара.'},
+ {id:'s20',grade:'Х12МФ',group:'Штамповая холодного деформирования',analogs:'AISI D2 · X153CrMoV12 (1.2379) · SKD11',
+  ops:[{n:'Подогрев',t:'820–860',e:'Печь/соль',h:'выравнивание',r:'—'},
+       {n:'Закалка',t:'1020–1040',e:'Масло или сжатый газ',h:'20–30 мин',r:'HRC 62–64'},
+       {n:'Отпуск низкий',t:'180–200',e:'Воздух, 2 раза',h:'по 120 мин',r:'HRC 60–62'},
+       {n:'Отпуск на вторичную твёрдость',t:'500–520',e:'Воздух, 3 раза',h:'по 60 мин',r:'HRC 58–60, теплостойкость до 450 °C'}],
+  tip:'Провал 300–450 °C по отпуску не использовать — там и твёрдость падает, и вязкость. Между низким и высоким режимом выбирают, а не «усредняют».'},
+ {id:'s21',grade:'5ХНМ',group:'Штамповая горячего деформирования',analogs:'55NiCrMoV7 (1.2713) · AISI L6',
+  ops:[{n:'Закалка',t:'840–860',e:'Масло',h:'1,5 мин/мм',r:'HRC 53–58'},
+       {n:'Отпуск',t:'550–580',e:'Воздух, 2 раза',h:'по 180 мин',r:'HRC 36–42'}],
+  tip:'Молотовые штампы: хвостовик отпускать отдельно на 450–500 °C выше — 38–42 HRC на гравюре и 34–38 на хвосте.'},
+ {id:'s22',grade:'4Х5МФС',group:'Штамповая горячего деформирования',analogs:'AISI H11 · X37CrMoV5-1 (1.2343) · SKD6',
+  ops:[{n:'Подогрев',t:'650 и 850',e:'Ступенчато',h:'выравнивание',r:'—'},
+       {n:'Закалка',t:'1020–1050',e:'Масло, воздух или газ 5–6 бар',h:'20–30 мин',r:'HRC 52–56'},
+       {n:'Отпуск',t:'560–600',e:'Воздух, 2–3 раза',h:'по 120 мин',r:'HRC 45–50'}],
+  tip:'Отпуск строго не менее двух раз с полным охлаждением до 20 °C между циклами: первый снимает свежий мартенсит, второй — мартенсит из распавшегося аустенита.'},
+ {id:'s23',grade:'Р6М5',group:'Быстрорежущая',analogs:'AISI M2 · HS6-5-2 (1.3343) · SKH51',
+  ops:[{n:'Подогрев',t:'450–550 и 850–870',e:'Соляная ванна ступенчато',h:'—',r:'—'},
+       {n:'Закалка',t:'1210–1230',e:'Соль 500–550 → воздух, или масло',h:'8–12 с/мм',r:'HRC 62–64'},
+       {n:'Отпуск',t:'550–560',e:'Воздух, 3 раза',h:'по 60 мин',r:'HRC 63–65'}],
+  tip:'Недогрев под закалку — потеря красностойкости, перегрев выше 1240 °C — оплавление по границам зёрен и брак без исправления. Трёхкратный отпуск обязателен.'},
+ {id:'s24',grade:'ШХ15',group:'Подшипниковая',analogs:'AISI 52100 · 100Cr6 (1.3505) · SUJ2',
+  ops:[{n:'Отжиг сфероидизирующий',t:'790–810',e:'Печь, 10–20 °C/ч до 650',h:'—',r:'HB 179–207'},
+       {n:'Закалка',t:'830–850',e:'Масло 30–60 °C',h:'1,5 мин/мм',r:'HRC 63–65'},
+       {n:'Отпуск',t:'150–170',e:'Воздух',h:'120–180 мин',r:'HRC 61–65'},
+       {n:'Стабилизация (точные детали)',t:'−70 → 150',e:'Холод + отпуск',h:'—',r:'размерная стабильность'}],
+  tip:'Перегрев выше 870 °C растворяет карбиды — падает твёрдость и растёт остаточный аустенит. Контроль структуры: мелкоигольчатый мартенсит + равномерные карбиды.'},
+ {id:'s25',grade:'20Х13',group:'Коррозионностойкая мартенситная',analogs:'AISI 420 · X20Cr13 (1.4021)',
+  ops:[{n:'Закалка',t:'1000–1050',e:'Масло или воздух',h:'1,5 мин/мм',r:'HRC 45–50'},
+       {n:'Отпуск',t:'660–770',e:'Воздух/масло',h:'120 мин',r:'HRC 25–30, HB 220–250'}],
+  tip:'Интервал отпуска 400–580 °C не применять: падает коррозионная стойкость и растёт хрупкость.'},
+ {id:'s26',grade:'40Х13',group:'Коррозионностойкая мартенситная',analogs:'AISI 420 · X39Cr13 (1.4031) · SUS420J2',
+  ops:[{n:'Закалка',t:'1000–1050',e:'Масло или воздух',h:'150±10 мин (садка 8 шт.)',r:'HRC 52–56'},
+       {n:'Отпуск низкий',t:'200–300',e:'Воздух',h:'120 мин',r:'HRC 48–52'},
+       {n:'Отпуск высокий',t:'600±20',e:'Воздух',h:'180±10 мин',r:'HRC 26–32'}],
+  tip:'Режим карты цеха: 1030+20 °C, отпуск 600+20 °C → 26–32 HRC. Провал 450–550 °C запрещён — карбиды хрома по границам, коррозионная стойкость падает.'},
+ {id:'s27',grade:'14Х17Н2',group:'Коррозионностойкая мартенситно-ферритная',analogs:'AISI 431 · X17CrNi16-2 (1.4057)',
+  ops:[{n:'Закалка',t:'975–1040',e:'Масло или воздух',h:'150±10 мин (садка 8 шт.)',r:'HRC 45–50'},
+       {n:'Отпуск низкий',t:'275–350',e:'Воздух',h:'120 мин',r:'HRC 40–45'},
+       {n:'Отпуск высокий',t:'600±20',e:'Воздух',h:'180±10 мин',r:'HRC 26–32'}],
+  tip:'Режим карты цеха: 980+20 °C, отпуск 600+20 °C → 26–32 HRC. Отпуск 450–550 °C даёт межкристаллитную коррозию.'},
+ {id:'s28',grade:'12Х18Н10Т',group:'Коррозионностойкая аустенитная',analogs:'AISI 321 · X6CrNiTi18-10 (1.4541) · SUS321',
+  ops:[{n:'Аустенизация (закалка на мягкость)',t:'1050–1080',e:'Вода',h:'40–60 мин',r:'HB 130–180, немагнитна'},
+       {n:'Стабилизирующий отжиг',t:'850–900',e:'Воздух',h:'90–180 мин',r:'снятие склонности к МКК'}],
+  tip:'Твёрдость закалкой не поднять — упрочняется только наклёпом. Нагрев 450–850 °C вызывает межкристаллитную коррозию; охлаждать этот интервал быстро.'},
+ {id:'s29',grade:'110Г13Л',group:'Износостойкая аустенитная (Гадфильда)',analogs:'Hadfield Mn13 · ASTM A128 Gr.B · X120Mn12 (1.3401)',
+  ops:[{n:'Закалка на аустенит',t:'1050–1100',e:'Вода (перенос не более 30 с)',h:'1 ч на 25 мм',r:'HB 180–220, немагнитна'}],
+  tip:'Отпуск не делают — любой нагрев 250–500 °C выделяет карбиды и охрупчивает отливку. Рабочая твёрдость набирается наклёпом в эксплуатации до HB 500.'},
+ {id:'s30',grade:'09Г2С',group:'Низколегированная конструкционная',analogs:'S355J2 (1.0577) · ASTM A572 Gr.50',
+  ops:[{n:'Нормализация',t:'900–930',e:'Воздух',h:'1 мин/мм',r:'HB 130–160'},
+       {n:'Отпуск после сварки',t:'600–650',e:'Воздух',h:'2,5 мин/мм',r:'снятие сварочных напряжений'}],
+  tip:'Термоупрочнению на твёрдость не подлежит. После правки и сварки толстостенных узлов — высокий отпуск, иначе поведёт при мехобработке.'},
+ {id:'s31',grade:'25Х1МФ',group:'Теплоустойчивая',analogs:'21CrMoV5-7 (1.7709) · близко ASTM A182 F22',
+  ops:[{n:'Закалка',t:'880–900',e:'Масло или воздух',h:'1,5 мин/мм',r:'—'},
+       {n:'Отпуск',t:'640–680',e:'Воздух',h:'180 мин',r:'HB 220–260'}],
+  tip:'Крепёж паровой арматуры. Рабочая температура до 510–540 °C, отпуск всегда минимум на 50 °C выше рабочей.'},
+ {id:'s32',grade:'20ХГНМ',group:'Цементуемая легированная',analogs:'AISI 8620 · 20NiCrMo2-2 (1.6523)',
+  ops:[{n:'Цементация',t:'920–940',e:'Газовая среда',h:'слой 0,8–1,4 мм',r:'—'},
+       {n:'Закалка',t:'820–840',e:'Масло',h:'1,5 мин/мм',r:'HRC 58–62'},
+       {n:'Отпуск',t:'180–200',e:'Воздух',h:'120 мин',r:'HRC 56–62 / серд. HRC 32–42'}],
+  tip:'Прямой аналог самой массовой мировой цементуемой стали 8620 — при подборе замены импортного узла берут её.'}
+],
+cement:[
+ {id:'c1',grade:'20',t:'920–950',depth:'0,6–1,2',media:'Твёрдый карбюризатор / газ',qt:'780–800, вода',cold:'—',temper:'180–200',hrc:'56–60 / серд. HB 143–179'},
+ {id:'c2',grade:'20Х',t:'900–920',depth:'0,8–1,2',media:'Эндогаз + метан',qt:'800–820, масло',cold:'—',temper:'180–200',hrc:'56–62 / серд. 25–35'},
+ {id:'c3',grade:'18ХГТ',t:'920–950',depth:'1,0–1,5',media:'Эндогаз + метан',qt:'830–850, масло (можно прямая закалка)',cold:'—',temper:'180–200',hrc:'57–63 / серд. 30–45'},
+ {id:'c4',grade:'25ХГТ',t:'920–950',depth:'1,0–1,6',media:'Эндогаз + метан',qt:'840–860, масло',cold:'—',temper:'180–200',hrc:'57–63 / серд. 32–45'},
+ {id:'c5',grade:'12ХН3А',t:'900–920',depth:'0,8–1,4',media:'Эндогаз + метан',qt:'780–800, масло',cold:'−70 (для точных)',temper:'160–180',hrc:'56–62 / серд. 30–40'},
+ {id:'c6',grade:'20Х2Н4А',t:'900–920',depth:'1,0–1,6',media:'Эндогаз + метан',qt:'860 масло → 760–780 масло',cold:'−70…−80 обязательно',temper:'160–180',hrc:'58–62 / серд. 35–45'},
+ {id:'c7',grade:'12Х2Н4А',t:'900–920',depth:'0,9–1,5',media:'Эндогаз + метан',qt:'860 масло → 780 масло',cold:'−70',temper:'160–180',hrc:'58–62 / серд. 33–43'},
+ {id:'c8',grade:'20ХГНМ (AISI 8620)',t:'920–940',depth:'0,8–1,4',media:'Эндогаз + метан',qt:'820–840, масло',cold:'—',temper:'180–200',hrc:'58–62 / серд. 32–42'},
+ {id:'c9',grade:'16MnCr5 (1.7131)',t:'900–930',depth:'0,6–1,2',media:'Эндогаз',qt:'820–850, масло',cold:'—',temper:'170–200',hrc:'58–62 / серд. 30–40'},
+ {id:'c10',grade:'20MnCr5 (1.7147)',t:'920–950',depth:'0,8–1,5',media:'Эндогаз',qt:'820–850, масло',cold:'—',temper:'170–200',hrc:'58–62 / серд. 35–45'},
+ {id:'c11',grade:'AISI 9310',t:'900–925',depth:'0,8–1,6',media:'Эндогаз',qt:'845 масло → 790 масло',cold:'−73',temper:'150–175',hrc:'58–63 / серд. 34–44'},
+ {id:'c12',grade:'18CrNiMo7-6 (1.6587)',t:'920–940',depth:'1,0–2,0',media:'Эндогаз',qt:'830–860, масло',cold:'−70 при слое >1,5',temper:'170–200',hrc:'58–62 / серд. 36–46'}
+],
+tips:[
+ {id:'t1',cat:'water',ttl:'Когда вообще нужна закалка вода→масло',body:'Прерывистая (двухсредная) закалка применяется, когда одна среда не годится: в масле деталь не прокалится, а в воде треснет. Типичные случаи — углеродистые инструментальные У7–У13, стали 45 и 50 в сечениях свыше 50–60 мм, детали со ступенями, шпоночными пазами и резкими переходами.'},
+ {id:'t2',cat:'water',ttl:'Правило выдержки в воде',body:'В воде деталь держат из расчёта 1 секунда на каждые 5–6 мм наибольшего сечения, затем сразу переносят в масло до полного остывания. Смысл: воду проходят интервал 750→350 °C (перлитный нос), а мартенситное превращение ниже 300 °C идёт уже в масле — медленно и без трещин.'},
+ {id:'t3',cat:'water',ttl:'Температура сред',body:'Вода: 18–30 °C, выше 40 °C резко теряет закаливающую способность из-за устойчивой паровой рубашки. Соль (5–10 % NaCl) паровую рубашку разрушает и повышает жёсткость охлаждения. Масло: 20–60 °C, не выше 80 °C и не ближе 60 °C к температуре вспышки. Холодное масло гуще и охлаждает хуже.'},
+ {id:'t4',cat:'water',ttl:'Как погружать',body:'Длинные детали — строго вертикально и быстро, одним движением. Тонкой частью вперёд. Детали с глухими отверстиями — отверстием вверх, иначе паровая пробка даст мягкое пятно. Деталь в среде постоянно двигать: восьмёркой или вверх-вниз, без вращения вокруг оси.'},
+ {id:'t5',cat:'water',ttl:'Признаки, что момент переноса упущен',body:'Пережали в воде — трещины по углам, галтелям и краям отверстий, звон при простукивании глухой. Недодержали — твёрдость ниже нормы на 5–15 HRC, в изломе видна светлая полоса непрокала. Контроль: твёрдость в трёх точках + излом или шлиф на структуру от первой детали садки.'},
+ {id:'t6',cat:'water',ttl:'Альтернативы, если брак повторяется',body:'Ступенчатая закалка в горячей селитре 180–250 °C с выдержкой на выравнивание, затем воздух — коробление минимально. Изотермическая закалка в ванне 280–350 °C — бейнит, HRC на 4–8 ниже, зато вязкость и стабильность размеров выше. Для 30ХГСА и 65Г это часто выгоднее прерывистой.'},
+ {id:'t7',cat:'cement',ttl:'Расчёт глубины слоя',body:'Глубина растёт по корню из времени: δ = k·√τ, где τ — часы. Ориентировочно k = 0,44 при 900 °C, 0,52 при 920 °C, 0,58 при 930 °C, 0,70 при 950 °C. То есть удвоение слоя — это вчетверо больше времени в печи. Считать удобнее калькулятором в этой вкладке.'},
+ {id:'t8',cat:'cement',ttl:'Углеродный потенциал',body:'Оптимум на поверхности 0,8–1,0 % C. Выше 1,1 % — сетка цементита по границам зёрен и выкрашивание кромок. Двухступенчатый режим: насыщение при потенциале 1,1–1,2 %, затем диффузионная выдержка при 0,8 % — слой глубже, а поверхность без сетки.'},
+ {id:'t9',cat:'cement',ttl:'Подстуживание перед закалкой',body:'Прямая закалка с 920–950 °C даёт крупное зерно и много остаточного аустенита. Подстуживание до 820–860 °C прямо в печи перед закалкой снимает и то, и другое. Для 18ХГТ прямая закалка допустима — титан сдерживает рост зерна.'},
+ {id:'t10',cat:'cement',ttl:'Остаточный аустенит и холод',body:'На никелевых цементуемых сталях (12ХН3А, 20Х2Н4А, 9310) после закалки остаётся 25–40 % аустенита: твёрдость недобирает 3–6 HRC и размер «уходит» месяцами. Лечение — обработка холодом −70…−80 °C сразу после закалки, до отпуска, затем отпуск 160–180 °C.'},
+ {id:'t11',cat:'cement',ttl:'Защита участков от науглероживания',body:'Омеднение слоем 0,02–0,04 мм, обмазка (жидкое стекло + асбест + оксид железа) или припуск 1,5–2 мм на сторону под последующее снятие. Резьбу мельче М12 цементировать нельзя — слой смыкается и виток становится хрупким.'},
+ {id:'t12',cat:'cement',ttl:'Контроль слоя',body:'Общая глубина — до сердцевинной твёрдости; эффективная — до 550 HV (примерно 52 HRC). Замер на образце-свидетеле из той же плавки, идущем в садке. Норма по чертежу — обычно эффективная глубина, уточнять до запуска садки.'},
+ {id:'t13',cat:'cement',ttl:'Нитроцементация вместо цементации',body:'840–870 °C, слой 0,2–0,8 мм, аммиак 3–8 % к эндогазу. Ниже температура — меньше коробление и износ печи, закалка прямо из печи в масло. Для мелкого зубчатого и крепежа выгоднее цементации, для слоёв глубже 0,8 мм — нет.'}
+],
+temperLog:[],
+card:[
+ {id:'k1',size:'Ø90–100, L=120–150',mat:'40Х',hrc:'26–32',qn:'15',qt:'860+20',qh:'150±10',tn:'30',tt:'450+20',th:'180±10'},
+ {id:'k2',size:'Ø100–120, L=100–150',mat:'40Х',hrc:'26–32',qn:'8',qt:'860+20',qh:'150±10',tn:'16',tt:'450+20',th:'180±10'},
+ {id:'k3',size:'Ø100–120, L=160–250',mat:'40Х',hrc:'26–32',qn:'8',qt:'860+20',qh:'150±10',tn:'16',tt:'450+20',th:'180±10'},
+ {id:'k4',size:'Ø100–120, L=160–250',mat:'14Х17Н2',hrc:'26–32',qn:'8',qt:'980+20',qh:'150±10',tn:'16',tt:'600+20',th:'180±10'},
+ {id:'k5',size:'Ø100–120, L=160–250',mat:'40Х13',hrc:'26–32',qn:'8',qt:'1030+20',qh:'150±10',tn:'16',tt:'600+20',th:'180±10'}
+]
+};}
+
+/* ============ утилиты ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>'x'+Math.random().toString(36).slice(2,9);
+
+const CHANGES=[
+ ['0.325','Сохранение записей','Заметки к маркам и журнал отпуска теперь можно сохранить файлом и вернуть на другом телефоне — «Добавить к моим» или «Заменить всё». Любой блок с режимом копируется нажатием.'],
+ ['0.320','Твёрдость и чистка данных','Новый учебный раздел: шкалы HRC, HRA, HRB, HB, HV и HSD — чем меряют, как выбрать под задачу, таблица приблизительного перевода и правила замера. Из технокарты убраны фамилии составителей: теперь это обезличенный пример, который каждый заполняет своими режимами.'],
+ ['0.315','Учёба у термиста','Новая вкладка: обучение по разрядам с 3-го по 6-й, диаграмма железо-углерод с разбором структур простыми и научными словами, превращения при охлаждении с С-образной кривой, разбор дефектов. Разделы собраны по папкам, новая иконка приложения.'],
+ ['0.310','Правка номера версии','ИСПРАВЛЕНО: в карточке «Версия» из-за автозамены отображалось 0.30505.'],
+ ['0.305','Название и логотип','Приложение стало «Разряд». Своя иконка — калёная деталь с волнами жара. Добавлен список изменений по версиям.'],
+ ['0.300','Системные отступы','Меню больше не уезжает под кнопки навигации. Кнопка «назад» выходит из раздела, а не из приложения; на верхнем уровне спрашивает подтверждение.'],
+ ['0.295','Подбор отпуска','Вкладка «Отпуск»: температура по фактической твёрдости после закалки и требуемому пределу, журнал садок с самообучением расчёта, заметки к маркам.'],
+ ['0.290','Первая сборка','Марочник на 32 стали с аналогами, цементация с расчётом слоя, прерывистая закалка вода→масло, цеховая технокарта.']
+];
+
+const CREDIT='<div class="credit">Разработал Онянов Дмитрий Сергеевич</div>';
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._i);t._i=setTimeout(()=>t.classList.remove('on'),1900);}
+function firstNum(s){const m=String(s).match(/\d{2,4}/);return m?+m[0]:null;}
+function ribbon(temps,mini){
+  const pins=temps.filter(Boolean).map(t=>{
+    const p=Math.max(0,Math.min(100,(t/1300)*100));
+    return `<span class="pin" style="left:${p}%" data-l="${t}°"></span>`;}).join('');
+  return `<div class="ribbon${mini?' mini':''}">${pins}</div>`+(mini?'':`<div class="scalelab"><span>0</span><span>650</span><span>1300 °C</span></div>`);
+}
+
+/* ============ состояние UI ============ */
+let tab='steels', folder=null, rank=null, filter='Все', editing=null;
+
+const TABS=[
+ {id:'steels',n:'Стали',t:'Марочник',s:'Режимы закалки, отпуска и аналоги',i:'<path d="M4 7h16M4 12h16M4 17h10"/>'},
+ {id:'reg',n:'Режимы',t:'Режимы',s:'Отпуск, цементация, закалка, технокарта',i:'<path d="M12 3v6m0 0-3-3m3 3 3-3"/><rect x="4" y="11" width="16" height="9" rx="2"/>'},
+ {id:'learn',n:'Учёба',t:'Учёба',s:'Разряды и теория термообработки',i:'<path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/>'},
+ {id:'more',n:'Ещё',t:'О программе',s:'Разработчик, версия, дисклеймер',i:'<circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>'}];
+const FOLDERS={
+ reg:[['temper','Подбор отпуска','Температура по факту закалки и журнал садок'],
+      ['cement','Цементация','Режимы насыщения и расчёт слоя'],
+      ['water','Вода → масло','Прерывистая закалка: правила и расчёт'],
+      ['card','Технокарта','Типовые режимы, садки и выдержки']],
+ learn:[['rank','Обучение по разрядам','3-й, 4-й, 5-й и 6-й: что знать и уметь'],
+        ['diag','Диаграмма железо-углерод','Что за структуры и куда переходят'],
+        ['trans','Превращения при охлаждении','Мартенсит, бейнит, перлит и скорость'],
+        ['hard','Твёрдость: HRC, HRB, HB, HV','Какие шкалы, чем меряют и как перевести'],
+        ['defect','Дефекты и брак','Причины и что с этим делать']]};
+const FTITLE=id=>{for(const k in FOLDERS){const f=FOLDERS[k].find(x=>x[0]===id); if(f) return f;} return null;};
+function deeper(){ try{ history.pushState({},''); }catch(e){} }
+function drawNav(){
+  $('#nav').innerHTML=TABS.map(t=>`<div class="nb ${t.id===tab?'on':''}" data-tab="${t.id}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">${t.i}</svg>${t.n}</div>`).join('');
+  $('#nav').querySelectorAll('.nb').forEach(b=>b.onclick=()=>{
+    if(b.dataset.tab===tab&&!folder&&!rank) return;
+    tab=b.dataset.tab;folder=null;rank=null;filter='Все';$('#q').value='';deeper();render();});
+}
+
+/* ============ рендер ============ */
+function render(){
+  const T=TABS.find(t=>t.id===tab), F=folder?FTITLE(folder):null;
+  $('#ttl').textContent=F?F[1]:T.t;
+  $('#sub').textContent=F?F[2]:T.s;
+  $('#searchbox').style.display=(tab==='steels')?'flex':'none';
+  $('#fab').style.display=(tab==='steels'||folder==='cement'||folder==='card')?'grid':'none';
+  drawNav(); drawChips();
+  const s=$('#screen'); let h='';
+  if(tab==='steels') h=viewSteels();
+  else if(tab==='more') h=viewMore();
+  else if(!folder) h=`<div class="wrap">`+FOLDERS[tab].map(([k,n,d])=>
+      `<div class="card" data-folder="${k}"><div class="glow"></div>
+        <div style="font-family:Oswald;font-size:17px">${esc(n)}</div>
+        <div class="ct" style="font-size:12.5px;margin-top:3px;color:#CFCCC6">${esc(d)}</div></div>`).join('')+CREDIT+`</div>`;
+  else if(folder==='temper') h=viewTemper();
+  else if(folder==='cement') h=viewCement();
+  else if(folder==='water') h=viewWater();
+  else if(folder==='card') h=viewCard();
+  else h=learnContent(folder);
+  s.innerHTML=h;
+  if(folder) s.insertAdjacentHTML('afterbegin',
+    `<div class="wrap" style="padding-bottom:0"><div class="card" id="upBtn" style="display:flex;align-items:center;gap:10px;padding:11px 13px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+      <span style="font-family:Oswald;letter-spacing:.08em;text-transform:uppercase;font-size:12px">${rank?'К списку разрядов':'Все разделы'}</span></div></div>`);
+  bind();
+  s.scrollTop=0;
+}
+function groups(){return ['Все',...new Set(DB.steels.map(s=>s.group.split(' ')[0]))];}
+function drawChips(){
+  const c=$('#chips');
+  if(tab!=='steels'){c.style.display='none';return;}
+  c.style.display='flex';
+  c.innerHTML=groups().map(g=>`<div class="chip ${g===filter?'on':''}" data-g="${esc(g)}">${esc(g)}</div>`).join('');
+  c.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{filter=ch.dataset.g;render();});
+}
+
+function viewSteels(){
+  const q=$('#q').value.trim().toLowerCase();
+  const list=DB.steels.filter(s=>{
+    const okG=filter==='Все'||s.group.startsWith(filter);
+    const okQ=!q||(s.grade+' '+s.analogs+' '+s.group).toLowerCase().includes(q);
+    return okG&&okQ;});
+  if(!list.length) return `<div class="empty">Ничего не нашлось.<br>Измените запрос или добавьте марку кнопкой «+».</div>`;
+  return `<div class="wrap">`+list.map(s=>{
+    const temps=s.ops.map(o=>firstNum(o.t)).filter(Boolean);
+    const hard=(s.ops.find(o=>/HRC|HB|HV/.test(o.r))||{}).r||'';
+    return `<div class="card" data-open="${s.id}">
+      <div class="glow"></div>
+      <div class="row"><div class="grade">${esc(s.grade)}</div><div class="hrcbox">${esc(hard)}</div></div>
+      <div class="tag" style="margin-top:6px">${esc(s.group)}${(s.notes&&s.notes.length)?` <span class="nbadge">${s.notes.length} зам.</span>`:''}</div>
+      ${ribbon(temps,true)}
+      <div class="analog">${esc(s.analogs)}</div>
+    </div>`;}).join('')+`</div>`;
+}
+
+function viewCement(){
+  const q=$('#q').value.trim().toLowerCase();
+  const list=DB.cement.filter(c=>!q||c.grade.toLowerCase().includes(q));
+  const tips=DB.tips.filter(t=>t.cat==='cement');
+  return `<div class="wrap">
+    <div class="calc">
+      <div class="tag">Калькулятор слоя · δ = k·√τ</div>
+      <label class="fld" style="margin-top:11px"><span>Температура цементации</span>
+        <select id="ct"><option value="0.44">900 °C</option><option value="0.52" selected>920 °C</option><option value="0.58">930 °C</option><option value="0.70">950 °C</option></select></label>
+      <label class="fld"><span>Выдержка: <b id="chL" style="font-family:IBM Plex Mono;color:var(--ember)">6</b> ч</span>
+        <input type="range" id="ch" min="1" max="30" step="0.5" value="6"></label>
+      <div class="out" id="cout">1,27<small>мм слоя</small></div>
+      <div class="hint">Ориентировочный расчёт для газовой цементации при потенциале ~0,9 % C. Слой проверять на образце-свидетеле из той же плавки.</div>
+    </div>
+    ${list.length?`<div class="card"><div class="tag">Режимы по маркам</div>
+      <div class="tscroll" style="margin-top:8px"><table><thead><tr>
+      <th>Марка</th><th>T цем.</th><th>Слой, мм</th><th>Закалка</th><th>Холод</th><th>Отпуск</th><th>HRC</th></tr></thead><tbody>
+      ${list.map(c=>`<tr data-open="${c.id}"><td style="font-family:Oswald;font-size:14px">${esc(c.grade)}</td>
+        <td class="num">${esc(c.t)}</td><td class="num">${esc(c.depth)}</td><td>${esc(c.qt)}</td>
+        <td>${esc(c.cold)}</td><td class="num">${esc(c.temper)}</td><td class="num">${esc(c.hrc)}</td></tr>`).join('')}
+      </tbody></table></div><div class="hint">Строку можно открыть и отредактировать касанием.</div></div>`:''}
+    ${tips.map(t=>`<div class="card" data-open="${t.id}"><div class="tag">Практика</div>
+      <div style="font-family:Oswald;font-size:16px;margin:6px 0 7px">${esc(t.ttl)}</div>
+      <div style="font-size:13px;line-height:1.55;color:#CFCCC6">${esc(t.body)}</div></div>`).join('')}
+  </div>`;
+}
+
+function viewWater(){
+  const tips=DB.tips.filter(t=>t.cat==='water');
+  return `<div class="wrap">
+    <div class="calc">
+      <div class="tag">Время в воде · 1 с на 5–6 мм сечения</div>
+      <label class="fld" style="margin-top:11px"><span>Наибольшее сечение: <b id="whL" style="font-family:IBM Plex Mono;color:var(--ember)">40</b> мм</span>
+        <input type="range" id="wh" min="5" max="200" step="1" value="40"></label>
+      <div class="out" id="wout">7–8<small>секунд в воде, далее масло</small></div>
+      <div class="hint">Отсчёт с момента полного погружения. Деталь всё это время двигать. Первую деталь садки проверить на твёрдость и на трещины, только потом гнать остальные.</div>
+    </div>
+    <div class="card"><div class="tag">Кому подходит прерывистая закалка</div>
+      <div style="margin-top:9px">
+        <span class="pill">У7 · У8 · У10 · У12</span><span class="pill">45 · 50 при Ø>50</span>
+        <span class="pill">40Х крупные сечения</span><span class="pill">ступенчатые валы</span><span class="pill">детали с пазами</span>
+      </div>
+      <div style="margin-top:11px" class="note warn"><b>Не применять:</b> для сталей, штатно закаливаемых на воздухе или в масле — Х12МФ, 4Х5МФС, Р6М5, ШХ15, 40Х13, 14Х17Н2. Вода на них даёт трещины гарантированно.</div>
+    </div>
+    ${tips.map(t=>`<div class="card" data-open="${t.id}"><div class="tag">Практика</div>
+      <div style="font-family:Oswald;font-size:16px;margin:6px 0 7px">${esc(t.ttl)}</div>
+      <div style="font-size:13px;line-height:1.55;color:#CFCCC6">${esc(t.body)}</div></div>`).join('')}
+  </div>`;
+}
+
+function viewCard(){
+  return `<div class="wrap">
+    <div class="card"><div class="tag">Технологическая карта типовых режимов термообработки</div>
+      <div class="hint" style="margin-top:6px">Закалка — печи ПКМ4.8.4/11,5 и КЭП149-1250П · Отпуск — КЭП 370/1200.11 ВПМ</div>
+      <div class="tscroll" style="margin-top:11px"><table><thead><tr>
+        <th>Размер заготовок, мм</th><th>Материал</th><th>HRC</th>
+        <th>Садка,<br>шт.</th><th>T зак.,<br>°C</th><th>Выдержка,<br>мин</th>
+        <th>Садка,<br>шт.</th><th>T отп.,<br>°C</th><th>Выдержка,<br>мин</th></tr></thead><tbody>
+        ${DB.card.map(k=>`<tr data-open="${k.id}"><td>${esc(k.size)}</td>
+          <td style="font-family:Oswald;font-size:14px">${esc(k.mat)}</td><td class="num">${esc(k.hrc)}</td>
+          <td class="num">${esc(k.qn)}</td><td class="num">${esc(k.qt)}</td><td class="num">${esc(k.qh)}</td>
+          <td class="num">${esc(k.tn)}</td><td class="num">${esc(k.tt)}</td><td class="num">${esc(k.th)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="hint">Пример заводской карты типовых режимов. Подставьте свои марки, садки и выдержки — строки редактируются, новые добавляются кнопкой «+».</div>
+    </div>
+    <div class="note">Строку можно открыть касанием и изменить — например, под другую садку или другую печь.</div>
+  </div>`;
+}
+
+function viewMore(){
+  return `<div class="wrap">
+    <div class="card"><div class="tag">Версия</div>
+      <div style="font-size:13px;line-height:1.6;margin-top:8px;color:#CFCCC6">
+        <b style="font-family:IBM Plex Mono;color:var(--ember)">Версия 0.310</b> — подбор отпуска, журнал садок, заметки к маркам.<br>
+        Если вкладки «Отпуск» в нижнем меню нет — установлен старый файл.
+      </div></div>
+    <div class="card"><div class="tag">Данные</div>
+      <div style="font-size:13px;line-height:1.6;margin-top:8px;color:#CFCCC6">
+        Марок в справочнике: <b style="font-family:IBM Plex Mono;color:var(--ember)">${DB.steels.length}</b><br>
+        Режимов цементации: <b style="font-family:IBM Plex Mono;color:var(--ember)">${DB.cement.length}</b><br>
+        Карточек практики: <b style="font-family:IBM Plex Mono;color:var(--ember)">${DB.tips.length}</b><br>
+        Заметок термиста: <b style="font-family:IBM Plex Mono;color:var(--ember)">${DB.steels.reduce((a,s)=>a+((s.notes||[]).length),0)}</b><br>
+        Записей в журнале отпуска: <b style="font-family:IBM Plex Mono;color:var(--ember)">${(DB.temperLog||[]).length}</b><br>
+        Строк технокарты: <b style="font-family:IBM Plex Mono;color:var(--ember)">${DB.card.length}</b>
+      </div>
+      <div class="btnrow"><button class="btn ghost" id="exp">Скопировать базу</button></div>
+      <div class="btnrow"><button class="btn danger" id="rst">Сбросить к заводским</button></div>
+      ${volatile?'<div class="hint" style="color:var(--red)">Хранилище недоступно — правки живут только до перезагрузки.</div>':'<div class="hint">Правки сохраняются на устройстве.</div>'}
+    </div>
+    <div class="card"><div class="tag">Что менялось по версиям</div>
+      <div class="hint" style="margin-bottom:2px">Шаг версии — пять тысячных. Номер 1.0 зарезервирован за готовым релизом.</div>
+      <div style="margin-top:4px">${CHANGES.map((c,i)=>`<div style="padding:11px 0;border-bottom:${i<CHANGES.length-1?'1px solid #202027':'0'}">
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span style="font-family:IBM Plex Mono;font-size:13px;color:var(--ember);min-width:38px">${c[0]}</span>
+          <span style="font-family:Oswald;font-size:14.5px">${esc(c[1])}</span></div>
+        <div class="ct" style="font-size:12.5px;margin-top:5px;line-height:1.5">${esc(c[2])}</div></div>`).join('')}</div>
+    </div>
+    ${bkCard()}
+    <div class="card"><div class="tag">О пособии</div>
+      <div style="font-size:13px;line-height:1.6;margin-top:8px;color:#CFCCC6">
+        Справочник термиста. Собран по данным на отечественные и зарубежные марки с указанием аналогов по AISI/ASTM, EN (DIN), GB и JIS.
+      </div>
+      <div class="note warn" style="margin-top:11px"><b>Перед запуском садки:</b> режим сверять с ГОСТ на марку, чертежом детали и утверждённым техпроцессом предприятия. Аналоги марок близкие, но не тождественные — химсостав и прокаливаемость отличаются.</div>
+    </div>
+  </div>`;
+}
+
+
+
+
+/* ============ сохранение и восстановление записей ============ */
+function bkFile(name,text){
+  try{
+    if(window.Razryad&&window.Razryad.saveText){ window.Razryad.saveText(name,text); toast('Файл сохранён в «Загрузки»'); return; }
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+    a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+    toast('Файл сохранён');
+  }catch(e){ toast('Не удалось сохранить файл'); }
+}
+async function bkCopy(text){
+  try{ await navigator.clipboard.writeText(text); toast('Скопировано в буфер'); return; }catch(e){}
+  try{ const t=document.createElement('textarea'); t.value=text; t.style.position='fixed'; t.style.opacity='0';
+    document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); toast('Скопировано в буфер');
+  }catch(e){ toast('Буфер недоступен'); }
+}
+function bkStamp(){ const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes()); }
+function bkCard(){
+  return `<div class="card"><div class="tag">Мои записи: сохранить и восстановить</div>
+    <div class="ct" style="margin-top:7px">Записи хранятся в памяти телефона. Очистка данных, переустановка или новый телефон — и они пропадут.
+      Сохраните файл, и его можно будет вернуть в любой момент или перенести на другой аппарат.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px">
+      <button class="btn" id="bkSave">Сохранить в файл</button>
+      <button class="btn ghost" id="bkCopy">Скопировать</button>
+    </div>
+    <div class="f" style="margin:14px 0 6px">Восстановить</div>
+    <textarea id="bkIn" placeholder="Откройте сохранённый файл любым текстовым редактором, скопируйте всё содержимое и вставьте сюда"></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px">
+      <button class="btn ghost" id="bkAdd">Добавить к моим</button>
+      <button class="btn ghost" id="bkRep">Заменить всё</button>
+    </div>
+    <div class="hint">«Добавить» подмешает записи из файла к текущим, «Заменить» сотрёт нынешние и поставит из файла.</div>
+  </div>`;
+}
+
+/* ============ учебный раздел термиста ============ */
+const TRANKS=[['3','3-й разряд','Работа по готовой карте'],
+              ['4','4-й разряд','Назначение режима по марке'],
+              ['5','5-й разряд','Разработка режимов и ХТО'],
+              ['6','6-й разряд','Ответственные детали и весь участок']];
+const TRD={
+ '3':{c:'Третий разряд работает по утверждённой технологической карте: загрузить садку, выдержать режим, замерить твёрдость, сдать детали.',
+  know:['Устройство камерной печи, где термопара и почему её показания могут врать.',
+   'Что такое закалка, отпуск и отжиг — чем отличаются по цели.',
+   'Закалочные среды: вода, масло, воздух, селитра — какая для чего.',
+   'Твердомер Роквелла: как замерить и почему замер на окалине не считается.',
+   'Безопасность: рукавицы и щиток, вода рядом с маслом — источник выброса, у закалочного бака не курят.'],
+  can:['Прочитать технологическую карту и найти нужную строку по марке и сечению.',
+   'Разложить детали в садку так, чтобы они прогревались равномерно и не деформировались.',
+   'Выдержать температуру и время по карте, вести журнал садки.',
+   'Перенести деталь в закалочную среду за отведённое время и правильно двигать её в баке.',
+   'Замерить твёрдость в трёх точках и сдать результат.'],
+  how:`ПОРЯДОК РАБОТЫ ПО КАРТЕ
+1. Найти в карте строку по марке стали и сечению детали.
+2. Вывести печь на температуру и выдержать её до стабилизации.
+3. Загрузить садку. Считать выдержку от момента, когда печь вернулась на заданную температуру, а не от загрузки.
+4. Перенос в бак — не дольше 5–10 секунд. Деталь двигать восьмёркой, длинную опускать строго вертикально.
+5. После закалки сразу на отпуск: незакалённая деталь может треснуть, пролежав ночь.
+6. Замер твёрдости по зачищенной площадке, три точки, запись в журнал.`,
+  no:['Менять температуру и время «на глаз», если деталь не добрала твёрдость.',
+   'Класть в масло деталь с водой на поверхности — будет выброс.',
+   'Оставлять закалённые детали без отпуска до следующей смены.',
+   'Мерить твёрдость по окалине или по неровной поверхности.']},
+ '4':{c:'Четвёртый разряд назначает режим сам: по марке стали, сечению и требуемой твёрдости, а не только по готовой карте.',
+  know:['Как углерод и легирующие влияют на закаливаемость и прокаливаемость — это разные вещи.',
+   'Критические точки: Ac1, Ac3, Accm — что происходит на каждой.',
+   'Почему доэвтектоидную сталь греют выше Ac3, а заэвтектоидную — только выше Ac1.',
+   'Отпуск: низкий, средний, высокий — какая структура и твёрдость получается.',
+   'Отпускная хрупкость первого и второго рода: где интервалы и как обойти.'],
+  can:['Назначить температуру закалки и среду по марке и сечению.',
+   'Подобрать температуру отпуска под требуемую твёрдость и проверить расчёт на образце.',
+   'Определить причину недобора твёрдости: недогрев, малая выдержка, мягкая среда или обезуглероживание.',
+   'Работать с разными типами печей и правильно располагать садку в каждой.',
+   'Вести и корректировать технологическую карту.'],
+  how:`КАК НАЗНАЧИТЬ РЕЖИМ
+Температура закалки: для доэвтектоидной стали Ac3 + 30…50 °C, для заэвтектоидной Ac1 + 30…50 °C.
+Для 40Х это 850–870 °C, для У10 — 760–790 °C, и это не описка: у заэвтектоидной
+цементит должен остаться нерастворённым, он и держит износостойкость.
+
+Выдержка: 1–1,5 минуты на миллиметр сечения для легированных,
+около минуты для углеродистых, плюс время на прогрев садки.
+
+Среда: чем больше углерода и легирующих, тем мягче среда.
+Углеродистые — вода, легированные — масло, высоколегированные — воздух.`,
+  no:['Греть заэвтектоидную сталь выше Accm — вырастет зерно и появится хрупкость.',
+   'Назначать режим по марке, не глядя на сечение: прокаливаемость решает всё.']},
+ '5':{c:'Пятый разряд разрабатывает режимы и ведёт химико-термическую обработку: цементацию, азотирование, нитроцементацию.',
+  know:['Химико-термическая обработка: механизм насыщения, углеродный потенциал, глубина слоя от времени.',
+   'Изотермические диаграммы превращения: критическая скорость закалки, где перлит, где бейнит.',
+   'Обработка холодом и зачем она на никелевых цементуемых сталях.',
+   'Контроль структуры: что видно на шлифе, сколько остаточного аустенита допустимо.',
+   'Приборы и их поверка, работа с образцами-свидетелями.'],
+  can:['Разработать режим на новую деталь и обосновать его.',
+   'Вести цементацию с расчётом слоя и контролем на свидетеле.',
+   'Назначить двойную закалку и обработку холодом там, где это нужно.',
+   'Определить причину коробления и заложить в режим меры против него.',
+   'Оценить структуру по излому и по твёрдости, назначить исправляющую обработку.'],
+  how:`ГЛУБИНА СЛОЯ ПРИ ЦЕМЕНТАЦИИ
+Слой растёт по корню из времени: удвоить слой — вчетверо больше времени в печи.
+Подстуживание перед закалкой с 920 до 840 °C снимает крупное зерно и лишний аустенит.
+На никелевых сталях после закалки обязателен холод −70 °C: иначе твёрдость
+недоберёт 3–6 HRC, а размер будет уходить месяцами.
+
+ИСПРАВЛЕНИЕ БРАКА
+Недогрев или малая выдержка — повторная закалка после нормализации.
+Перегрев с крупным зерном — отжиг на мелкое зерно, затем закалка заново.
+Обезуглероженный слой — только снятие механической обработкой.`,
+  no:['Исправлять недокал повторной закалкой без нормализации — зерно останется крупным.',
+   'Судить о слое по одной детали, не заложив в садку образец-свидетель.']},
+ '6':{c:'Шестой разряд — высшая квалификация: особо ответственные детали, аттестация режимов, теплотехника печей и обучение смены.',
+  know:['Теплотехника печи: равномерность поля температур, влияние загрузки, поверка термопар.',
+   'Поведение сложных сплавов: нержавеющих, жаропрочных, инструментальных высоколегированных.',
+   'Термообработка крупногабаритных и тонкостенных деталей, борьба с короблением и трещинами.',
+   'Взаимосвязь термообработки с механической: где оставить припуск, что править после закалки.',
+   'Нормативная база: ГОСТ на марки, требования чертежа, порядок оформления отступлений.'],
+  can:['Аттестовать режим и защитить его перед технологом и заказчиком.',
+   'Вести деталь, от которой отказались: тонкостенную, длинную, из капризного сплава.',
+   'Проверить печь на равномерность поля и обосновать ремонт.',
+   'Разобрать сложный брак, где сходятся металлургия, механика и термообработка.',
+   'Обучать термистов и принимать у них работу.'],
+  how:`КОРОБЛЕНИЕ: ЧЕМ МЕНЬШЕ, ТЕМ ДОРОЖЕ
+Длинные детали греть вертикально в подвеске, не на поду.
+Ступенчатая закалка в селитре 180–250 °C с выравниванием, затем воздух —
+коробление кратно меньше, чем при прямой закалке в масло.
+Перед закалкой снять напряжения отжигом: деталь, обработанная резанием
+без отжига, поведёт независимо от режима закалки.
+
+ПОЛЕ ТЕМПЕРАТУР В ПЕЧИ
+Проверяется контрольными термопарами в нескольких точках рабочего пространства.
+Разброс более ±10 °C для ответственных деталей недопустим:
+одна и та же садка выйдет с разной твёрдостью с краю и в центре.`,
+  no:['Брать ответственную деталь в печь, поле которой давно не проверялось.',
+   'Подписывать результат, не имея замеров на образце из той же плавки.']}
+};
+
+function fdCurve(){
+  const W=320,H=215,L=46,B=H-32,R=W-16,T=22;
+  const x=c=>L+(c/2.2)*(R-L), y=t=>B-((t-600)/(1160-600))*(B-T);
+  return `<svg class="dia" viewBox="0 0 ${W} ${H}">
+    <line class="ax" x1="${L}" y1="${B}" x2="${R}" y2="${B}"/>
+    <line class="ax" x1="${L}" y1="${B}" x2="${L}" y2="${T}"/>
+    <path d="M ${x(0)} ${y(911)} Q ${x(0.4)} ${y(830)} ${x(0.8)} ${y(727)}" fill="none" stroke="#FF6B00" stroke-width="2"/>
+    <path d="M ${x(0.8)} ${y(727)} Q ${x(1.5)} ${y(870)} ${x(2.14)} ${y(1147)}" fill="none" stroke="#FFA23A" stroke-width="2"/>
+    <line x1="${x(0)}" y1="${y(727)}" x2="${x(2.14)}" y2="${y(727)}" stroke="#D93A2B" stroke-width="2"/>
+    <circle cx="${x(0.8)}" cy="${y(727)}" r="3.5" fill="#F2EFEA"/>
+    <text x="${x(0.55)}" y="${y(727)-8}">0,8 % · 727 °C</text>
+    <text class="lb" x="${x(0.3)}" y="${y(950)}">аустенит</text>
+    <text x="${x(0.02)}" y="${y(670)}">феррит</text>
+    <text x="${x(1.15)}" y="${y(660)}">перлит + цементит</text>
+    <text x="${x(0.02)}" y="${y(900)-6}">A3</text>
+    <text x="${x(1.9)}" y="${y(1030)}">Acm</text>
+    <text x="${x(1.95)}" y="${y(727)-6}">A1</text>
+    <text x="${L-40}" y="${T+4}">1150 °C</text>
+    <text x="${L-30}" y="${B+3}">600</text>
+    <text x="${R-70}" y="${B+18}">углерод, %</text>
+  </svg>`;
+}
+function ttCurve(){
+  const W=320,H=215,L=54,B=H-30,R=W-14,T=16;
+  const yA=T+8, yMn=B-46, yMk=B-16;
+  return `<svg class="dia" viewBox="0 0 ${W} ${H}">
+    <line class="ax" x1="${L}" y1="${B}" x2="${R}" y2="${B}"/>
+    <line class="ax" x1="${L}" y1="${B}" x2="${L}" y2="${T}"/>
+    <line x1="${L}" y1="${yA}" x2="${R}" y2="${yA}" stroke="#5A5A66" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="${L-46}" y="${yA+3}">727 °C</text>
+    <path d="M ${L+4} ${yA+6} C ${L+64} ${yA+14}, ${L+50} ${yA+52}, ${L+92} ${yA+70}
+             C ${L+140} ${yA+86}, ${L+180} ${yA+92}, ${R-6} ${yA+96}" fill="none" stroke="#FFA23A" stroke-width="2"/>
+    <text x="${L+96}" y="${yA+62}">нос кривой</text>
+    <line x1="${L}" y1="${yMn}" x2="${R}" y2="${yMn}" stroke="#5FA8FF" stroke-width="2"/>
+    <text x="${L-46}" y="${yMn+3}">Мн 250</text>
+    <line x1="${L}" y1="${yMk}" x2="${R}" y2="${yMk}" stroke="#5FA8FF" stroke-width="2" stroke-dasharray="4 3"/>
+    <text x="${L-46}" y="${yMk+3}">Мк</text>
+    <path d="M ${L+4} ${yA+2} L ${L+34} ${yMk-4}" stroke="#D93A2B" stroke-width="2.5"/>
+    <text class="lb" x="${L+8}" y="${yMk+14}">закалка</text>
+    <path d="M ${L+4} ${yA+2} C ${L+80} ${yA+50}, ${L+150} ${yA+92}, ${R-8} ${yA+112}" fill="none" stroke="#8FD07F" stroke-width="2"/>
+    <text x="${R-104}" y="${yA+124}">медленно → перлит</text>
+    <text x="${R-64}" y="${B+16}">время, лог</text>
+  </svg>`;
+}
+function learnContent(f){
+  if(f==='rank'){
+    if(!rank) return `<div class="wrap">
+      <div class="note">Что должен знать и уметь термист на каждом разряде. Ниже — порядок работы и то, чего делать нельзя.</div>
+      ${TRANKS.map(([k,n,d])=>`<div class="card" data-rank="${k}"><div class="glow"></div>
+        <div style="display:flex;align-items:center;gap:13px">
+          <div style="font-family:Oswald;font-size:30px;color:var(--orange);line-height:1">${k}</div>
+          <div><div style="font-family:Oswald;font-size:17px">${esc(n)}</div>
+            <div class="ct" style="font-size:12.5px;margin-top:2px;color:#CFCCC6">${esc(d)}</div></div></div></div>`).join('')}
+      `+CREDIT+`</div>`;
+    const r=TRD[rank], nm=TRANKS.find(x=>x[0]===rank);
+    const list=(t,a)=>`<div class="card"><div class="tag">${t}</div><div style="margin-top:9px">${a.map(x=>
+      `<div style="display:flex;gap:9px;margin-bottom:8px;font-size:13.5px;line-height:1.5;color:#CFCCC6">
+        <span style="color:var(--orange)">•</span><span>${esc(x)}</span></div>`).join('')}</div></div>`;
+    return `<div class="wrap">
+      <div class="card"><div class="glow"></div><div class="tag">${esc(nm[1])}</div>
+        <div style="margin-top:8px;font-size:13.5px;line-height:1.55;color:#CFCCC6">${esc(r.c)}</div></div>
+      ${list('Что нужно знать',r.know)}
+      ${list('Что должен уметь',r.can)}
+      <div class="card"><div class="tag">Как это делается</div><pre class="blk">${esc(r.how)}</pre></div>
+      <div class="card"><div class="tag">Чего делать нельзя</div><div style="margin-top:9px">${r.no.map(x=>
+        `<div style="display:flex;gap:9px;margin-bottom:8px;font-size:13.5px;line-height:1.5;color:#CFCCC6">
+          <span style="color:var(--red)">✕</span><span>${esc(x)}</span></div>`).join('')}</div></div>
+      `+CREDIT+`</div>`;
+  }
+
+
+  if(f==='hard') return `<div class="wrap">
+    <div class="note">Твёрдость — это сопротивление вдавливанию. Меряют её всегда одинаково: вдавливают наконечник и смотрят,
+      насколько глубоко он вошёл. А вот наконечник и нагрузка бывают разные — отсюда и разные шкалы.</div>
+
+    <div class="card"><div class="tag">Почему шкал несколько</div>
+      <div class="note" style="margin-top:8px">Одним наконечником всё не измеришь. Стальной шарик на закалённой стали сам сомнётся —
+      получите твёрдость шарика, а не детали. Алмазный конус на отожжённой стали провалится слишком глубоко, и точность потеряется.
+      Крупный отпечаток усреднит структуру, но продавит тонкий слой насквозь. Поэтому под каждый диапазон и под каждую толщину
+      есть своя пара «наконечник плюс нагрузка».</div>
+    </div>
+
+    <div class="card"><div class="tag">Шкалы, которые встречаются в термичке</div>
+      <div class="tscroll" style="margin-top:8px"><table><thead><tr>
+        <th>Шкала</th><th>Наконечник</th><th>Нагрузка</th><th>Для чего</th></tr></thead><tbody>
+        <tr><td><b>HRC</b></td><td>алмазный конус 120°</td><td class="num">150 кгс</td><td>Закалённая и улучшенная сталь, 20–70 HRC. Основная шкала термиста</td></tr>
+        <tr><td><b>HRA</b></td><td>алмазный конус 120°</td><td class="num">60 кгс</td><td>Твёрдые сплавы, тонкие цементованные и азотированные слои</td></tr>
+        <tr><td><b>HRB</b></td><td>шарик 1,588 мм</td><td class="num">100 кгс</td><td>Мягкое: отожжённая сталь, чугун, латунь, бронза. До 100 HRB</td></tr>
+        <tr><td><b>HB</b></td><td>шарик 10 мм</td><td class="num">3000 кгс</td><td>Сырьё, поковки, отливки, состояние поставки. До 450 HB</td></tr>
+        <tr><td><b>HV</b></td><td>алмазная пирамида 136°</td><td class="num">1–100 кгс</td><td>Единая шкала для всего: от мягкого до твёрдого сплава, тонкие слои</td></tr>
+        <tr><td><b>HSD</b></td><td>боёк с алмазом</td><td class="num">отскок</td><td>Крупные детали на месте, без снятия со станка. Ориентировочно</td></tr>
+      </tbody></table></div>
+      <div class="hint">Буква R в HRC, HRA, HRB — это Роквелл, метод один, различаются наконечник и нагрузка. HB — Бринелль, HV — Виккерс, HSD — Шор.</div>
+    </div>
+
+    <div class="card"><div class="tag">Как выбрать шкалу</div>
+      <div class="note" style="margin-top:8px"><b>Заготовка пришла на участок</b> — HB. Отпечаток крупный, усредняет неоднородность проката и литья.</div>
+      <div class="note" style="margin-top:9px"><b>После закалки и отпуска</b> — HRC. Быстро, без микроскопа, прямо у печи.</div>
+      <div class="note" style="margin-top:9px"><b>Цементованный или азотированный слой</b> — HRA или HV. У HRC отпечаток глубокий: продавит тонкий слой и покажет твёрдость сердцевины.</div>
+      <div class="note" style="margin-top:9px"><b>Отожжённая деталь мягче 20 HRC</b> — HRB или HB. Ниже 20 единиц шкала HRC перестаёт быть точной.</div>
+      <div class="note warn" style="margin-top:9px"><b>Не мерьте закалённую сталь по Бринеллю.</b> Выше 450 HB шарик деформируется сам, и результат ничего не значит.</div>
+    </div>
+
+    <div class="card"><div class="tag">Приблизительный перевод</div>
+      <div class="tscroll" style="margin-top:8px"><table><thead><tr>
+        <th>HRC</th><th>HV</th><th>HB</th><th>HRB</th><th>Что это по состоянию</th></tr></thead><tbody>
+        ${[[20,238,226,'98','улучшение, мягкий предел'],[25,266,253,'102','улучшение'],
+           [30,302,286,'—','улучшение, вал под нагрузкой'],[35,345,327,'—','улучшение, шестерни'],
+           [40,392,371,'—','высокая прочность'],[45,446,421,'—','пружины, штампы горячие'],
+           [50,513,481,'—','инструмент после среднего отпуска'],[55,595,'—','—','режущий инструмент'],
+           [60,697,'—','—','низкий отпуск, ШХ15, У10'],[65,800,'—','—','быстрорез после трёх отпусков']]
+          .map(r=>`<tr><td class="num" style="color:var(--ember)">${r[0]}</td><td class="num">${r[1]}</td>
+            <td class="num">${r[2]}</td><td class="num">${r[3]}</td><td>${r[4]}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="note warn" style="margin-top:10px">Перевод всегда приблизительный. Методы измеряют разное: Роквелл — глубину,
+      Бринелль и Виккерс — площадь отпечатка. Единой формулы пересчёта не существует, таблицы построены на опыте
+      и расходятся на несколько единиц. <b>Если в чертеже стоит HRC — меряйте по HRC, а не пересчитывайте из HB.</b></div>
+    </div>
+
+    <div class="card"><div class="tag">Правила замера</div>
+      <div style="margin-top:9px">${[
+        'Поверхность зачистить до металла: по окалине прибор покажет что угодно.',
+        'Толщина детали не меньше десятикратной глубины отпечатка — иначе меряете стол под деталью.',
+        'От края и от соседнего отпечатка отступать не меньше трёх диаметров отпечатка.',
+        'Деталь должна лежать устойчиво: качнулась под нагрузкой — результат в мусор.',
+        'Три точки в разных местах, в журнал идёт разброс, а не одно удобное значение.',
+        'На цилиндре есть поправка: на выпуклой поверхности прибор занижает, для малых диаметров вводят коэффициент.'
+      ].map(x=>`<div style="display:flex;gap:9px;margin-bottom:8px;font-size:13.5px;line-height:1.5;color:#CFCCC6">
+        <span style="color:var(--orange)">•</span><span>${x}</span></div>`).join('')}</div>
+    </div>
+    `+CREDIT+`</div>`;
+
+  if(f==='diag') return `<div class="wrap">
+    <div class="card"><div class="tag">Диаграмма железо — цементит</div>
+      ${fdCurve()}
+      <div class="hint">Упрощённо: показан только участок сталей до 2,14 % углерода — то, с чем работают в термичке.</div>
+    </div>
+    <div class="card"><div class="tag">Простыми словами</div>
+      <div class="note" style="margin-top:8px">Железо умеет перестраивать свою решётку. При нагреве атомы встают по-другому,
+      и в новой укладке появляется место для углерода. Остыло медленно — углерод успел выйти и собраться в отдельные прослойки.
+      Остыло быстро — не успел, и остался запертым внутри, распирая решётку. Отсюда и твёрдость.</div>
+    </div>
+    <div class="card"><div class="tag">Кто есть кто</div>
+      <div class="tscroll" style="margin-top:8px"><table><thead><tr><th>Структура</th><th>Что это</th><th>Твёрдость</th></tr></thead><tbody>
+        <tr><td>Феррит</td><td>Чистое железо с крохой углерода, мягкое и вязкое</td><td class="num">HB 80–100</td></tr>
+        <tr><td>Аустенит</td><td>Горячая форма железа, растворяет до 2 % углерода. Только выше 727 °C</td><td class="num">HB 170–220</td></tr>
+        <tr><td>Цементит</td><td>Карбид железа Fe₃C, очень твёрдый и хрупкий</td><td class="num">HB ≈ 800</td></tr>
+        <tr><td>Перлит</td><td>Смесь феррита и цементита пластинками. Обычное состояние стали</td><td class="num">HB 180–250</td></tr>
+        <tr><td>Мартенсит</td><td>Аустенит, застигнутый врасплох: углерод не успел выйти</td><td class="num">HRC 55–65</td></tr>
+        <tr><td>Бейнит</td><td>Промежуточный: мягче мартенсита, но вязче и стабильнее</td><td class="num">HRC 40–55</td></tr>
+      </tbody></table></div>
+    </div>
+    <div class="card"><div class="tag">Научно</div>
+      <div class="note" style="margin-top:8px">Ниже 727 °C железо существует как <b>феррит</b> — объёмноцентрированная кубическая решётка,
+      растворимость углерода в ней до 0,02 %. Выше 727 °C идёт полиморфное превращение в <b>аустенит</b> —
+      гранецентрированную решётку, где растворимость углерода доходит до 2,14 %.
+      Точка 0,8 % углерода при 727 °C называется эвтектоидной: там перлит превращается в аустенит целиком, без промежуточных состояний.</div>
+      <div class="note" style="margin-top:9px">Стали до 0,8 % углерода — <b>доэвтектоидные</b>, их греют выше линии A3, чтобы весь феррит ушёл в аустенит.
+      Стали свыше 0,8 % — <b>заэвтектоидные</b>, их греют лишь чуть выше A1: часть цементита должна остаться нерастворённой,
+      именно она и даёт износостойкость. Нагрев такой стали выше Acm растворяет цементит, укрупняет зерно и портит деталь.</div>
+    </div>
+    `+CREDIT+`</div>`;
+
+  if(f==='trans') return `<div class="wrap">
+    <div class="card"><div class="tag">Что происходит при охлаждении</div>
+      ${ttCurve()}
+      <div class="hint">С-образная кривая: слева время, сверху вниз температура. Чем правее нос кривой, тем легче закалить сталь.</div>
+    </div>
+    <div class="card"><div class="tag">Три дороги из аустенита</div>
+      <div class="note" style="margin-top:8px"><b>Медленно, с печью.</b> Углерод успевает разойтись, растут пластинки феррита и цементита — получается <b>перлит</b>.
+      Сталь мягкая и вязкая. Это отжиг.</div>
+      <div class="note" style="margin-top:9px"><b>Средне, на воздухе или в селитре.</b> Углерод выходит частично, структура мельче — <b>бейнит</b>.
+      Твёрдость ниже закалочной, зато вязкость выше и деталь почти не ведёт.</div>
+      <div class="note warn" style="margin-top:9px"><b>Быстро, в воде или масле.</b> Углерод не успевает никуда: решётка перестраивается сдвигом,
+      оставаясь пересыщенной. Это <b>мартенсит</b> — та самая твёрдость и те самые трещины.</div>
+    </div>
+    <div class="card"><div class="tag">Мартенситное превращение</div>
+      <div class="note" style="margin-top:8px">Идёт без диффузии: атомы не перемещаются, а разом сдвигаются на доли межатомного расстояния.
+      Поэтому оно не зависит от времени — только от температуры. Начинается в точке <b>Мн</b> и заканчивается в <b>Мк</b>.
+      Для стали с 0,4 % углерода Мн около 350 °C, для 0,8 % — около 200 °C. Чем больше углерода, тем ниже обе точки.</div>
+      <div class="note" style="margin-top:9px">Если Мк лежит ниже комнатной температуры, часть аустенита так и останется непревращённой —
+      это <b>остаточный аустенит</b>. Он мягкий, занижает твёрдость и со временем превращается сам,
+      меняя размер детали. Лечится обработкой холодом при −70 °C сразу после закалки.</div>
+    </div>
+    <div class="card"><div class="tag">Критическая скорость и прокаливаемость</div>
+      <div class="note" style="margin-top:8px">Чтобы получить мартенсит, кривая охлаждения должна пройти левее носа С-образной кривой.
+      Минимальная такая скорость называется <b>критической скоростью закалки</b>.
+      Легирующие элементы сдвигают нос вправо — критическая скорость падает, и сталь калится в масле, а не в воде.</div>
+      <div class="note" style="margin-top:9px">Сердцевина крупной детали остывает медленнее поверхности. Если её скорость оказалась ниже критической,
+      внутри останется перлит: снаружи твёрдо, внутри мягко. Это и есть <b>прокаливаемость</b> — она зависит от марки,
+      а не от того, как сильно вы старались при закалке.</div>
+    </div>
+    `+CREDIT+`</div>`;
+
+  return `<div class="wrap">
+    ${[['Недостаточная твёрдость','Недогрев, малая выдержка, мягкая закалочная среда или обезуглероженный слой. Проверяют термопару, время и температуру среды; обезуглероживание снимают механически.'],
+       ['Мягкие пятна','Паровая рубашка на поверхности при закалке в воде, окалина или грязь. Деталь двигать в баке, воду подсаливать, поверхность зачищать до закалки.'],
+       ['Закалочные трещины','Резкое охлаждение, острые углы и переходы, перегрев под закалку, задержка с отпуском. Смягчить среду, скруглить концентраторы, отпускать сразу.'],
+       ['Коробление','Неравномерный нагрев или охлаждение, собственный вес детали, напряжения от резания. Греть вертикально, применять ступенчатую закалку, снимать напряжения отжигом до закалки.'],
+       ['Перегрев и крупное зерно','Температура выше нормы или чрезмерная выдержка. Излом крупнозернистый, ударная вязкость низкая. Исправляется отжигом на мелкое зерно и повторной закалкой.'],
+       ['Пережог','Оплавление по границам зёрен, окисление. Не исправляется — деталь в брак.'],
+       ['Обезуглероживание','Длительный нагрев без защитной атмосферы. Поверхность мягкая при твёрдой сердцевине. Оставлять припуск или греть в защитной среде.']]
+      .map(([t,d])=>`<div class="card"><div class="glow d"></div>
+        <div style="font-family:Oswald;font-size:16px">${esc(t)}</div>
+        <div style="margin-top:6px;font-size:13.5px;line-height:1.5;color:#CFCCC6">${esc(d)}</div></div>`).join('')}
+    `+CREDIT+`</div>`;
+}
+
+/* ============ подбор температуры отпуска ============ */
+const TC=[
+ {id:'f1',n:'Углеродистые улучшаемые (35, 45, 50)',asq:55,cool:'на воздухе',rep:1,
+  pts:[[180,53],[250,50],[300,46],[350,42],[400,37],[450,32],[500,29],[550,26],[600,23],[650,20]],
+  w:['250–350 °C — отпускная хрупкость I рода: ударная вязкость падает, интервал проходить не задерживаясь.']},
+ {id:'f2',n:'Хромистые улучшаемые (40Х, 40ХН, 38ХС)',asq:53,cool:'в масле или воде при отпуске выше 500 °C',rep:1,
+  pts:[[200,51],[250,48],[300,45],[350,40],[400,35],[450,29],[500,26],[550,24],[600,21],[650,19]],
+  w:['500–560 °C — отпускная хрупкость II рода: после выдержки охлаждать ускоренно, а не с печью.']},
+ {id:'f3',n:'Легированные Cr-Ni-Mo (40ХН2МА, 30ХГСА, 34ХН3М)',asq:55,cool:'на воздухе; для 30ХГСА — в масле',rep:1,
+  pts:[[200,53],[250,51],[300,48],[350,45],[400,42],[450,39],[500,36],[550,32],[600,29],[650,25]],
+  w:['Молибден подавляет отпускную хрупкость, но для 30ХГСА охлаждение с высокого отпуска всё равно ускоренное.']},
+ {id:'f4',n:'Пружинные (65Г, 60С2А, 50ХФА)',asq:61,cool:'на воздухе',rep:1,
+  pts:[[200,58],[250,56],[300,53],[350,50],[400,47],[450,44],[500,40],[550,35]],
+  w:['250–350 °C — необратимая отпускная хрупкость: для пружин выходить на 380–460 °C.']},
+ {id:'f5',n:'Инструментальные углеродистые (У7–У12)',asq:63,cool:'на воздухе',rep:1,
+  pts:[[150,62],[180,61],[200,60],[250,57],[300,53],[350,48],[400,43],[450,38],[500,34]],
+  w:['Для ударного инструмента (зубила, бойки) берут 250–300 °C, для режущего — 160–200 °C.']},
+ {id:'f6',n:'Инструментальные легированные (9ХС, ХВГ)',asq:63,cool:'на воздухе',rep:1,
+  pts:[[150,62],[180,61],[200,60],[250,57],[300,54],[350,50],[400,45],[450,40]],
+  w:['Для размерного инструмента полезен второй отпуск на той же температуре — снимает остаточный аустенит.']},
+ {id:'f7',n:'Подшипниковая ШХ15',asq:64,cool:'на воздухе',rep:1,
+  pts:[[150,63],[170,62],[200,60],[250,57],[300,52],[350,47],[400,42]],
+  w:['Рабочий диапазон 150–170 °C. Выше 200 °C сталь теряет контактную выносливость.']},
+ {id:'f8',n:'Цементованный слой (20Х, 18ХГТ, 12ХН3А)',asq:62,cool:'на воздухе',rep:1,
+  pts:[[160,61],[180,60],[200,58],[250,55],[300,50],[350,45]],
+  w:['Слой отпускают только низко: 160–200 °C. Более высокий отпуск съедает износостойкость, ради которой цементировали.']},
+ {id:'f9',n:'Штамповая холодного деформирования (Х12МФ)',asq:63,cool:'на воздухе',rep:2,forb:[300,450],
+  pts:[[180,62],[200,61],[250,60],[300,59],[350,58],[400,57],[450,57],[500,59],[520,58],[550,55],[580,51],[600,47]],
+  w:['Два режима на выбор: низкий 180–200 °C (максимум твёрдости) либо на вторичную твёрдость 500–520 °C трижды.',
+     'Интервал 300–450 °C не даёт ни твёрдости, ни вязкости — его не применяют.']},
+ {id:'f10',n:'Штамповая горячего деформирования (5ХНМ, 4Х5МФС)',asq:54,cool:'на воздухе',rep:2,
+  pts:[[400,52],[450,51],[500,50],[550,47],[560,46],[580,44],[600,41],[620,38],[650,34]],
+  w:['Отпуск не менее двух раз с полным охлаждением до 20 °C между циклами.',
+     'Отпуск должен быть минимум на 50 °C выше рабочей температуры штампа.']},
+ {id:'f11',n:'Быстрорежущая (Р6М5, Р18)',asq:63,cool:'на воздухе',rep:3,
+  pts:[[500,63],[550,65],[560,64],[580,62],[600,58],[620,54],[650,50]],
+  w:['Три отпуска по 1 часу при 550–560 °C — обязательны, вторичная твёрдость набирается именно так.',
+     'Один отпуск оставляет остаточный аустенит: инструмент «садится» в работе.']},
+ {id:'f12',n:'Нержавеющие мартенситные (20Х13, 40Х13, 14Х17Н2)',asq:52,cool:'на воздухе',rep:1,forb:[450,580],
+  pts:[[200,50],[250,49],[300,47],[350,45],[400,43],[600,31],[650,27],[700,24]],
+  w:['Интервал 450–580 °C запрещён: выделяются карбиды хрома, падает коррозионная стойкость и растёт хрупкость.',
+     'Работают либо низкий отпуск 200–300 °C (твёрдость), либо высокий 600–680 °C (вязкость и стойкость).']}
+];
+
+function viewTemper(){
+  return `<div class="wrap">
+    <div class="calc">
+      <div class="tag">Отпуск по факту закалки</div>
+      <label class="fld" style="margin-top:11px"><span>Сталь или группа</span>
+        <select id="tpG">${TC.map(f=>`<option value="${f.id}">${esc(f.n)}</option>`).join('')}</select></label>
+      <div class="two">
+        <label class="fld"><span>Твёрдость до отпуска, HRC</span><input type="number" id="tpA" value="53" step="1"></label>
+        <label class="fld"><span>Сечение детали, мм</span><input type="number" id="tpS" value="40" step="1"></label>
+      </div>
+      <div class="f" style="margin-bottom:7px">Требуемая твёрдость, HRC</div>
+      <div class="chipsrow" id="tpP">
+        <div class="chip" data-lo="26" data-hi="32">26–32</div>
+        <div class="chip" data-lo="36" data-hi="42">36–42</div>
+        <div class="chip" data-lo="50" data-hi="56">50–56</div>
+        <div class="chip" data-lo="56" data-hi="62">56–62</div>
+      </div>
+      <div class="two">
+        <label class="fld"><span>Не менее</span><input type="number" id="tpLo" value="26" step="1"></label>
+        <label class="fld"><span>Не более</span><input type="number" id="tpHi" value="32" step="1"></label>
+      </div>
+      <div id="tpOutWrap" style="margin-top:6px"></div>
+    </div>
+    <div id="tpInfo"></div>
+    <div class="card"><div class="glow"></div><div class="tag">Записать результат в журнал</div>
+      <div class="hint" style="margin:6px 0 11px">Сталь, твёрдость до отпуска и требуемый предел берутся из полей выше. Внесите, при какой температуре реально отпускали и что получилось — программа учтёт это в следующем расчёте.</div>
+      <div class="two">
+        <label class="fld"><span>Отпускали при, °C</span><input type="number" id="tpUsed" step="5"></label>
+        <label class="fld"><span>Получили, HRC</span><input type="number" id="tpGot" step="1"></label>
+      </div>
+      <label class="fld"><span>Комментарий</span><textarea id="tpTxt" placeholder="Печь, номер садки, что заметили…"></textarea></label>
+      <button class="btn" id="tpSave">Сохранить в журнал</button>
+    </div>
+    <div id="tpLog"></div>
+    <div class="card"><div class="tag">Чем задаётся результат</div>
+      <div class="tscroll" style="margin-top:8px"><table><thead><tr><th>Отпуск</th><th>°C</th><th>Что получаем</th></tr></thead><tbody>
+        <tr><td>Низкий</td><td class="num">150–250</td><td>Максимум твёрдости, снимаются закалочные напряжения. Режущий и мерительный инструмент, цементованный слой</td></tr>
+        <tr><td>Средний</td><td class="num">350–450</td><td>Высокий предел упругости. Пружины, рессоры, ударный инструмент</td></tr>
+        <tr><td>Высокий</td><td class="num">500–680</td><td>Улучшение: вязкость и работоспособность при ударе. Валы, шестерни, крепёж</td></tr>
+      </tbody></table></div>
+      <div class="hint">Поправка примерно 10 °C по температуре меняет твёрдость на 1 HRC. Точнее — только по образцу-свидетелю из той же плавки.</div>
+    </div>
+  </div>`;
+}
+
+function tpHRC(f,T){
+  const p=f.pts;
+  if(T<=p[0][0]) return p[0][1];
+  if(T>=p[p.length-1][0]) return p[p.length-1][1];
+  for(let i=0;i<p.length-1;i++){ if(T>=p[i][0]&&T<=p[i+1][0])
+    return p[i][1]+(T-p[i][0])*(p[i+1][1]-p[i][1])/(p[i+1][0]-p[i][0]); }
+  return p[p.length-1][1];
+}
+/* прогноз твёрдости по справочной кривой с поправкой на фактическую закалку */
+function tpPred(f,T,asq){ return tpHRC(f,T)-(f.asq-(+asq||f.asq)); }
+
+/* поправка, выученная по журналу: насколько факт отличается от расчёта */
+function tpCorr(famId){
+  const f=TC.find(x=>x.id===famId);
+  const recs=(DB.temperLog||[]).filter(r=>r.fam===famId&&r.tUsed&&r.hrcGot).slice(0,8);
+  if(!f||!recs.length) return {n:0,dT:0,err:0};
+  let sum=0; recs.forEach(r=>{ sum+=r.hrcGot-tpPred(f,r.tUsed,r.asq); });
+  const err=sum/recs.length;
+  return {n:recs.length,err,dT:Math.max(-60,Math.min(60,err*10))};
+}
+
+/* справочная температура без поправки */
+function tpBase(f,asq,lo,hi){
+  const mid=(lo+hi)/2, shift=f.asq-asq, eff=mid+shift, p=f.pts;
+  let T=null,edge='';
+  for(let i=0;i<p.length-1;i++){
+    const [t1,h1]=p[i],[t2,h2]=p[i+1];
+    if((h1>=eff&&h2<=eff)||(h1<=eff&&h2>=eff)){ T=t1+(h1===h2?0:(eff-h1)*(t2-t1)/(h2-h1)); break; }
+  }
+  if(T===null){ if(eff>p[0][1]){T=p[0][0];edge='low';} else {T=p[p.length-1][0];edge='high';} }
+  return {T:Math.round(T/10)*10,shift,edge};
+}
+
+function tpCalc(){
+  const f=TC.find(x=>x.id===$('#tpG').value); if(!f) return;
+  const asq=+$('#tpA').value||0, sec=+$('#tpS').value||0;
+  let lo=+$('#tpLo').value||0, hi=+$('#tpHi').value||0;
+  if(hi<lo){const t=lo;lo=hi;hi=t;}
+  const wrap=$('#tpOutWrap'), info=$('#tpInfo');
+  const box=(cls,txt)=>`<div class="card"><div class="note ${cls}">${txt}</div></div>`;
+  tpLog();
+  if(!asq||!lo||!hi){ wrap.innerHTML='<div class="out">—</div>'; info.innerHTML=''; return; }
+  if(asq<=hi){
+    wrap.innerHTML='<div class="out">—<small style="font-size:13px">отпуском не поднять</small></div>';
+    info.innerHTML=box('warn',`<b>Твёрдость до отпуска ${asq} HRC не выше требуемого предела ${hi} HRC.</b> Отпуск твёрдость только снижает. Причина обычно в недогреве под закалку, обезуглероженном слое или слабой закалочной среде — деталь идёт на повторную закалку с проверкой печи по термопаре.`);
+    return;
+  }
+  const b=tpBase(f,asq,lo,hi), T=b.T, cor=tpCorr(f.id);
+  let T2=cor.n?Math.round((T+cor.dT)/10)*10:null;
+  if(T2===T) T2=null;
+  $('#tpUsed').value=T2||T;
+
+  if(T2===null){
+    wrap.innerHTML=`<div class="f">Рекомендуемая температура отпуска</div>
+      <div class="out">${T}<small>°C ± 15</small></div>
+      <div class="hint">${cor.n?`Справочник и ваш опыт (${cor.n} зап.) дают одну и ту же температуру.`:'Пока считает только справочник — в журнале нет записей по этой группе.'}</div>`;
+  } else {
+    wrap.innerHTML=`<div class="f" style="margin-bottom:7px">Рекомендуемая температура отпуска</div>
+      <div class="two">
+        <div class="tbox"><div class="f">По справочнику</div><div class="out">${T}<small>°C</small></div></div>
+        <div class="tbox exp"><div class="f">По вашему опыту · ${cor.n} зап.</div><div class="out">${T2}<small>°C</small></div></div>
+      </div>
+      <div class="hint">Расхождение ${(T2>T?'+':'')+(T2-T)} °C. Решение за вами: справочник — усреднённая кривая, опыт — ваши печь, садка и плавка.</div>`;
+  }
+
+  const hold=Math.max(90,Math.round(sec*2/10)*10);
+  let msgs=[`<div class="card"><div class="glow"></div><div class="tag">Режим отпуска</div>
+    <div class="opgrid" style="margin-top:10px">
+      <div><div class="f">Температура</div><div class="v hot">${T2||T} ± 15 °C</div></div>
+      <div><div class="f">Выдержка</div><div class="v">${hold} мин</div></div>
+      <div><div class="f">Охлаждение</div><div class="v">${esc(f.cool)}</div></div>
+      <div><div class="f">Число отпусков</div><div class="v">${f.rep}</div></div>
+    </div>
+    <div class="hint">Выдержка считана как 2 мин на 1 мм сечения, но не менее 90 мин, и отсчитывается от выхода печи на температуру.</div></div>`];
+
+  if(cor.n){
+    const zn=cor.err>0?'выше':'ниже';
+    msgs.push(box('',`<b>Поправка по журналу.</b> По ${cor.n} ${cor.n===1?'записи':'записям'} для этой группы фактическая твёрдость выходит в среднем на ${Math.abs(cor.err).toFixed(1)} HRC ${zn} расчёта, поэтому температура сдвинута на ${(cor.dT>0?'+':'')+Math.round(cor.dT)} °C.`
+      +(cor.n<3?' Записей пока мало — поправка ориентировочная, проверяйте на образце.':'')));
+  }
+  if(b.edge==='low') msgs.push(box('','Требуемая твёрдость выше того, что даёт эта группа даже при минимальном отпуске. Взят низший режим — твёрдость получится выше заказанной.'));
+  if(b.edge==='high') msgs.push(box('warn','Требуемая твёрдость ниже, чем даёт отпуск в рабочем диапазоне. Нужен высокий отпуск на верхнем пределе, а при недоборе — отжиг или нормализация.'));
+  if(b.shift>2) msgs.push(box('',`Закалка дала ${asq} HRC при типовых для группы ${f.asq} HRC. Температура снижена примерно на ${Math.round(b.shift*10)} °C относительно справочной, иначе деталь уйдёт ниже нижнего предела.`));
+  if(b.shift<-2) msgs.push(box('',`Закалка дала ${asq} HRC — выше типовых ${f.asq} HRC для группы. Температура поднята примерно на ${Math.round(-b.shift*10)} °C.`));
+  const Tf=T2||T;
+  if(f.forb&&Tf>=f.forb[0]&&Tf<=f.forb[1]){
+    const a=Math.round(tpPred(f,f.forb[0],asq)), c=Math.round(tpPred(f,f.forb[1],asq));
+    msgs.push(box('warn',`<b>Расчёт попал в запрещённый интервал ${f.forb[0]}–${f.forb[1]} °C.</b> Выбирайте край: ${f.forb[0]} °C даёт примерно ${a} HRC, ${f.forb[1]} °C — примерно ${c} HRC. Требуемый диапазон придётся согласовать с конструктором.`));
+  }
+  (f.w||[]).forEach(w=>msgs.push(box('',w)));
+  msgs.push(box('warn','Расчёт справочный. Перед садкой прогоняйте образец-свидетель из той же плавки и того же сечения, замеряйте твёрдость в трёх точках и записывайте результат в журнал — со следующей садки программа будет считать по вашим данным.'));
+  info.innerHTML=msgs.join('');
+}
+
+/* журнал: сопоставление «до отпуска → рекомендовано → применено → получилось» */
+function tpLog(){
+  const el=$('#tpLog'); if(!el) return;
+  const cur=$('#tpG')?$('#tpG').value:null;
+  const L=DB.temperLog||[];
+  if(!L.length){ el.innerHTML=`<div class="card"><div class="tag">Журнал отпусков</div>
+    <div class="hint" style="margin-top:7px">Пока пусто. Первая же запись начнёт корректировать расчёт под вашу печь.</div></div>`; return; }
+  el.innerHTML=`<div class="card"><div class="tag">Журнал отпусков · ${L.length}</div>
+    <div class="hint" style="margin-top:6px">Записи по выбранной группе отмечены оранжевой полосой — именно они формируют поправку.</div></div>`
+   +L.map(r=>{
+      const f=TC.find(x=>x.id===r.fam);
+      const dev=f&&r.tUsed&&r.hrcGot?(r.hrcGot-tpPred(f,r.tUsed,r.asq)):null;
+      const devTxt=dev===null?'':`${dev>0?'+':''}${dev.toFixed(1)} HRC к расчёту`;
+      const hit=r.lo&&r.hi?(r.hrcGot>=r.lo&&r.hrcGot<=r.hi):null;
+      return `<div class="card">${r.fam===cur?'<div class="glow"></div>':''}
+        <div class="row"><div style="font-family:Oswald;font-size:15px;letter-spacing:.02em">${esc(f?f.n.split(' (')[0]:'—')}</div>
+          <div class="hrcbox" style="font-size:11px;color:${hit===null?'var(--steel)':hit?'#7BC46B':'var(--red)'}">${hit===null?'':hit?'в допуске':'вне допуска'}</div></div>
+        <div class="logline">До отпуска <b>${esc(r.asq)} HRC</b> · требовалось <b>${esc(r.lo)}–${esc(r.hi)} HRC</b>
+Программа: <b>${esc(r.tRec)} °C</b> · отпускали при <b>${esc(r.tUsed)} °C</b> · получили <b>${esc(r.hrcGot)} HRC</b>${devTxt?`
+Отклонение от расчёта: <b>${esc(devTxt)}</b>`:''}</div>
+        ${r.txt?`<div class="usernote" style="margin-top:9px">${esc(r.txt)}</div>`:''}
+        <div class="nmeta" style="margin-top:9px">${esc(r.ts)}<span class="delrec" data-del="${r.id}">Удалить</span></div>
+      </div>`;}).join('');
+  el.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    DB.temperLog=DB.temperLog.filter(x=>x.id!==b.dataset.del); save(); tpCalc(); toast('Запись удалена');});
+}
+
+function tpSaveRec(){
+  const f=TC.find(x=>x.id===$('#tpG').value);
+  const asq=+$('#tpA').value||0, tUsed=+$('#tpUsed').value||0, hrcGot=+$('#tpGot').value||0;
+  let lo=+$('#tpLo').value||0, hi=+$('#tpHi').value||0; if(hi<lo){const t=lo;lo=hi;hi=t;}
+  if(!f||!asq||!tUsed||!hrcGot){ toast('Заполните температуру и полученную твёрдость'); return; }
+  const rec=tpBase(f,asq,lo,hi);
+  DB.temperLog=DB.temperLog||[];
+  DB.temperLog.unshift({id:uid(),fam:f.id,asq,lo,hi,tRec:rec.T,tUsed,hrcGot,
+    txt:$('#tpTxt').value.trim(),
+    ts:new Date().toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})});
+  save(); $('#tpGot').value=''; $('#tpTxt').value='';
+  tpCalc(); toast('Записано в журнал');
+}
+
+/* ============ карточка / редактор ============ */
+function find(id){
+  for(const k of ['steels','cement','tips','card']){const o=DB[k].find(x=>x.id===id); if(o) return {kind:k,obj:o};}
+  return null;
+}
+function openSheet(id){
+  const f=find(id); if(!f) return;
+  editing={...f,mode:'view'};
+  $('#editBtn').style.display='grid';
+  renderSheet(); showSheet();
+}
+function showSheet(){ $('#sheet').classList.add('open'); deeper(); }
+function deeper(){ try{ history.pushState({},''); }catch(e){} }
+function renderSheet(){
+  const {kind,obj,mode}=editing;
+  const b=$('#sheetBody');
+  if(kind==='steels'){$('#sheetTitle').textContent=obj.grade;$('#sheetSub').textContent=obj.group;}
+  if(kind==='cement'){$('#sheetTitle').textContent=obj.grade;$('#sheetSub').textContent='Режим цементации';}
+  if(kind==='tips'){$('#sheetTitle').textContent=obj.ttl;$('#sheetSub').textContent=obj.cat==='water'?'Вода → масло':'Цементация';}
+  if(kind==='card'){$('#sheetTitle').textContent=obj.mat;$('#sheetSub').textContent=obj.size;}
+
+  if(mode==='view'){
+    if(kind==='steels'){
+      const temps=obj.ops.map(o=>firstNum(o.t)).filter(Boolean);
+      b.innerHTML=`<div class="sec">Температурная шкала</div>${ribbon(temps)}
+        <div class="sec">Зарубежные аналоги</div>
+        <div class="note" style="font-family:IBM Plex Mono;font-size:12.5px">${esc(obj.analogs)}</div>
+        <div class="sec">Операции</div>
+        ${obj.ops.map(o=>`<div class="op"><div class="opname">${esc(o.n)}</div>
+          <div class="opgrid">
+            <div><div class="f">Температура</div><div class="v hot">${esc(o.t)} °C</div></div>
+            <div><div class="f">Среда</div><div class="v">${esc(o.e)}</div></div>
+            <div><div class="f">Выдержка</div><div class="v">${esc(o.h)}</div></div>
+            <div><div class="f">Результат</div><div class="v">${esc(o.r)}</div></div>
+          </div></div>`).join('')}
+        <div class="sec">Что важно у печи</div><div class="note">${esc(obj.tip)}</div>
+        ${notesHTML(obj)}`;
+      wireNotes(obj);
+    }
+    if(kind==='cement'){
+      b.innerHTML=`<div class="sec">Режим</div>
+        <div class="op"><div class="opname">Насыщение</div><div class="opgrid">
+          <div><div class="f">Температура</div><div class="v hot">${esc(obj.t)} °C</div></div>
+          <div><div class="f">Слой</div><div class="v">${esc(obj.depth)} мм</div></div>
+          <div style="grid-column:1/-1"><div class="f">Среда</div><div class="v">${esc(obj.media)}</div></div></div></div>
+        <div class="op"><div class="opname">Закалка и отпуск</div><div class="opgrid">
+          <div style="grid-column:1/-1"><div class="f">Закалка</div><div class="v hot">${esc(obj.qt)}</div></div>
+          <div><div class="f">Обработка холодом</div><div class="v">${esc(obj.cold)}</div></div>
+          <div><div class="f">Отпуск</div><div class="v hot">${esc(obj.temper)} °C</div></div>
+          <div style="grid-column:1/-1"><div class="f">Твёрдость</div><div class="v">${esc(obj.hrc)}</div></div></div></div>`;
+    }
+    if(kind==='tips') b.innerHTML=`<div class="note" style="font-size:14px">${esc(obj.body)}</div>`;
+    if(kind==='card'){
+      b.innerHTML=`<div class="sec">Закалка</div>
+        <div class="op"><div class="opgrid">
+          <div><div class="f">Садка</div><div class="v">${esc(obj.qn)} шт.</div></div>
+          <div><div class="f">Температура</div><div class="v hot">${esc(obj.qt)} °C</div></div>
+          <div><div class="f">Выдержка</div><div class="v">${esc(obj.qh)} мин</div></div>
+          <div><div class="f">Твёрдость</div><div class="v">${esc(obj.hrc)} HRC</div></div></div></div>
+        <div class="sec">Отпуск</div>
+        <div class="op"><div class="opgrid">
+          <div><div class="f">Садка</div><div class="v">${esc(obj.tn)} шт.</div></div>
+          <div><div class="f">Температура</div><div class="v hot">${esc(obj.tt)} °C</div></div>
+          <div><div class="f">Выдержка</div><div class="v">${esc(obj.th)} мин</div></div></div></div>`;
+    }
+    b.insertAdjacentHTML('beforeend',CREDIT);
+    return;
+  }
+
+  /* ---- режим правки ---- */
+  const F=(k,l,v,ta)=>ta?`<label class="fld"><span>${l}</span><textarea data-k="${k}">${esc(v)}</textarea></label>`
+                        :`<label class="fld"><span>${l}</span><input type="text" data-k="${k}" value="${esc(v)}"></label>`;
+  let h='';
+  if(kind==='steels'){
+    h=F('grade','Марка',obj.grade)+F('group','Группа',obj.group)+F('analogs','Зарубежные аналоги',obj.analogs,1)
+      +`<div class="sec">Операции</div><div id="ops">`
+      +obj.ops.map((o,i)=>opForm(o,i)).join('')+`</div>
+      <button class="btn ghost" id="addop">+ Операция</button>`
+      +`<div class="sec">Что важно у печи</div>`+F('tip','',obj.tip,1);
+  }
+  if(kind==='cement') h=F('grade','Марка',obj.grade)+`<div class="two">`+F('t','T цементации',obj.t)+F('depth','Слой, мм',obj.depth)+`</div>`
+    +F('media','Среда',obj.media)+F('qt','Закалка',obj.qt)+`<div class="two">`+F('cold','Обработка холодом',obj.cold)+F('temper','Отпуск, °C',obj.temper)+`</div>`+F('hrc','Твёрдость',obj.hrc);
+  if(kind==='tips') h=F('ttl','Заголовок',obj.ttl)+`<label class="fld"><span>Раздел</span><select data-k="cat">
+      <option value="water"${obj.cat==='water'?' selected':''}>Вода → масло</option>
+      <option value="cement"${obj.cat==='cement'?' selected':''}>Цементация</option></select></label>`+F('body','Текст',obj.body,1);
+  if(kind==='card') h=F('size','Размер заготовок',obj.size)+`<div class="two">`+F('mat','Материал',obj.mat)+F('hrc','Твёрдость HRC',obj.hrc)+`</div>`
+    +`<div class="sec">Закалка</div><div class="two">`+F('qn','Садка, шт.',obj.qn)+F('qt','T, °C',obj.qt)+`</div>`+F('qh','Выдержка, мин',obj.qh)
+    +`<div class="sec">Отпуск</div><div class="two">`+F('tn','Садка, шт.',obj.tn)+F('tt','T, °C',obj.tt)+`</div>`+F('th','Выдержка, мин',obj.th);
+
+  b.innerHTML=h+`<div class="btnrow"><button class="btn" id="ok">Сохранить</button></div>
+    <div class="btnrow"><button class="btn danger" id="del">Удалить запись</button></div>`;
+
+  $('#addop')&&($('#addop').onclick=()=>{
+    const d=document.createElement('div'); d.innerHTML=opForm({n:'',t:'',e:'',h:'',r:''},$('#ops').children.length);
+    $('#ops').appendChild(d.firstChild); bindOpDel();});
+  bindOpDel();
+  $('#ok').onclick=commit;
+  $('#del').onclick=()=>{ if(!confirm('Удалить запись без возврата?')) return;
+    DB[kind]=DB[kind].filter(x=>x.id!==obj.id); save(); closeSheet(); render(); toast('Запись удалена'); };
+}
+function opForm(o,i){return `<div class="opedit" data-op="${i}">
+  <div class="two">
+    <label class="fld"><span>Операция</span><input type="text" data-o="n" value="${esc(o.n)}"></label>
+    <label class="fld"><span>Температура, °C</span><input type="text" data-o="t" value="${esc(o.t)}"></label>
+  </div>
+  <label class="fld"><span>Среда охлаждения</span><input type="text" data-o="e" value="${esc(o.e)}"></label>
+  <div class="two">
+    <label class="fld"><span>Выдержка</span><input type="text" data-o="h" value="${esc(o.h)}"></label>
+    <label class="fld"><span>Результат</span><input type="text" data-o="r" value="${esc(o.r)}"></label>
+  </div>
+  <button class="btn ghost delop" style="padding:8px;font-size:11px">Убрать операцию</button></div>`;}
+function bindOpDel(){document.querySelectorAll('.delop').forEach(b=>b.onclick=e=>{e.target.closest('.opedit').remove();});}
+
+function commit(){
+  const {kind,obj}=editing;
+  $('#sheetBody').querySelectorAll('[data-k]').forEach(el=>{obj[el.dataset.k]=el.value.trim();});
+  if(kind==='steels'){
+    obj.ops=[...$('#ops').children].map(d=>{const g=k=>d.querySelector(`[data-o="${k}"]`).value.trim();
+      return {n:g('n'),t:g('t'),e:g('e'),h:g('h'),r:g('r')};}).filter(o=>o.n);
+  }
+  if(kind==='steels'&&!obj.grade){toast('Укажите марку');return;}
+  if(!DB[kind].some(x=>x.id===obj.id)) DB[kind].push(obj);
+  save(); editing.mode='view'; renderSheet(); render(); toast('Сохранено');
+}
+function notesHTML(o){
+  const n=o.notes||[];
+  return `<div class="sec">Заметки термиста</div>
+    <textarea id="ntxt" placeholder="Фактическая садка, время, замеры твёрдости, что дало брак…"></textarea>
+    <button class="btn" id="nadd" style="margin:9px 0 14px">Добавить заметку</button>
+    ${n.length?n.map(x=>`<div class="usernote"><div class="nmeta">${esc(x.ts)}<span data-ndel="${x.id}">Удалить</span></div>${esc(x.txt)}</div>`).join('')
+      :`<div class="hint" style="margin-bottom:8px">Пока пусто. Записывайте фактические режимы и результаты — по своей печи они точнее любого справочника.</div>`}`;
+}
+function wireNotes(o){
+  const add=$('#nadd'); if(!add) return;
+  add.onclick=()=>{const t=$('#ntxt').value.trim(); if(!t){toast('Напишите текст заметки');return;}
+    o.notes=o.notes||[];
+    o.notes.unshift({id:uid(),ts:new Date().toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}),txt:t});
+    save(); renderSheet(); render(); toast('Заметка сохранена');};
+  document.querySelectorAll('[data-ndel]').forEach(el=>el.onclick=()=>{
+    o.notes=(o.notes||[]).filter(x=>x.id!==el.dataset.ndel); save(); renderSheet(); render(); toast('Заметка удалена');});
+}
+function hideSheet(){$('#sheet').classList.remove('open');editing=null;}
+function closeSheet(){ history.back(); }
+window.addEventListener('popstate',()=>{
+  if($('#sheet').classList.contains('open')){ hideSheet(); return; }
+  if(rank){ rank=null; render(); return; }
+  if(folder){ folder=null; render(); return; }
+  if(tab!=='steels'){ tab='steels'; filter='Все'; render(); }
+});
+
+function addNew(){
+  const blanks={
+    steels:{id:uid(),grade:'',group:'Улучшаемая легированная',analogs:'',tip:'',ops:[{n:'Закалка',t:'',e:'',h:'',r:''},{n:'Отпуск',t:'',e:'',h:'',r:''}]},
+    cement:{id:uid(),grade:'',t:'920–950',depth:'',media:'Эндогаз + метан',qt:'',cold:'—',temper:'180–200',hrc:''},
+    water:{id:uid(),cat:'water',ttl:'',body:''},
+    card:{id:uid(),size:'',mat:'',hrc:'',qn:'',qt:'',qh:'',tn:'',tt:'',th:''}
+  };
+  let kind=tab, obj;
+  if(tab==='water'){kind='tips';obj=blanks.water;}
+  else if(tab==='cement'){
+    const wantTip=confirm('OK — новый режим цементации.\nОтмена — новая карточка практики.');
+    if(wantTip){kind='cement';obj=blanks.cement;} else {kind='tips';obj={id:uid(),cat:'cement',ttl:'',body:''};}
+  } else obj=blanks[kind];
+  editing={kind,obj,mode:'edit'};
+  $('#sheetTitle').textContent='Новая запись';$('#sheetSub').textContent='';
+  $('#editBtn').style.display='none';
+  renderSheet(); showSheet();
+}
+
+/* ============ привязки ============ */
+function bind(){
+  document.querySelectorAll('[data-open]').forEach(el=>el.onclick=()=>openSheet(el.dataset.open));
+  document.querySelectorAll('[data-folder]').forEach(e=>e.onclick=()=>{folder=e.dataset.folder;rank=null;deeper();render();});
+  document.querySelectorAll('[data-rank]').forEach(e=>e.onclick=()=>{rank=e.dataset.rank;deeper();render();});
+  const up=$('#upBtn'); if(up) up.onclick=()=>history.back();
+  const bs=$('#bkSave');
+  if(bs){
+    const dump=()=>JSON.stringify({app:'razryad-termist',ver:'0.325',date:new Date().toISOString(),db:DB},null,1);
+    bs.onclick=()=>bkFile('razryad-termist-zapisi-'+bkStamp()+'.json',dump());
+    $('#bkCopy').onclick=()=>bkCopy(dump());
+    const load=(mode)=>{ let o;
+      try{ o=JSON.parse($('#bkIn').value.trim()); }catch(e){ toast('Не похоже на сохранённый файл'); return; }
+      const src=o&&o.db?o.db:o;
+      if(!src||!src.steels){ toast('В файле нет данных'); return; }
+      if(mode==='rep') DB=src;
+      else {
+        ['steels','cement','tips','card','temperLog'].forEach(k=>{
+          const a=DB[k]||[], b=src[k]||[];
+          const ids=new Set(a.map(x=>x.id));
+          DB[k]=a.concat(b.filter(x=>!ids.has(x.id)));});
+      }
+      if(!DB.temperLog) DB.temperLog=[];
+      save(); $('#bkIn').value=''; render();
+      toast(mode==='rep'?'Данные заменены':'Данные добавлены');};
+    $('#bkAdd').onclick=()=>load('add');
+    $('#bkRep').onclick=()=>load('rep');
+  }
+  document.querySelectorAll('pre.blk').forEach(pre=>{
+    if(pre.dataset.cp) return; pre.dataset.cp='1'; pre.style.cursor='pointer';
+    pre.title='Нажмите, чтобы скопировать';
+    pre.onclick=()=>bkCopy(pre.textContent);});
+  const ct=$('#ct'),ch=$('#ch');
+  if(ct&&ch){const calc=()=>{const d=(+ct.value)*Math.sqrt(+ch.value);
+    $('#chL').textContent=(+ch.value).toString().replace('.',',');
+    $('#cout').innerHTML=d.toFixed(2).replace('.',',')+'<small>мм слоя</small>';};
+    ct.onchange=calc; ch.oninput=calc; calc();}
+  const wh=$('#wh');
+  if(wh){const calc=()=>{const s=+wh.value; $('#whL').textContent=s;
+    $('#wout').innerHTML=`${Math.round(s/6)}–${Math.round(s/5)}<small>секунд в воде, далее масло</small>`;};
+    wh.oninput=calc; calc();}
+  const tg=$('#tpG');
+  if(tg){ ['tpG','tpA','tpS','tpLo','tpHi'].forEach(i=>{const el=$('#'+i); if(el){el.oninput=tpCalc; el.onchange=tpCalc;}});
+    document.querySelectorAll('#tpP .chip').forEach(c=>c.onclick=()=>{
+      document.querySelectorAll('#tpP .chip').forEach(x=>x.classList.remove('on'));
+      c.classList.add('on'); $('#tpLo').value=c.dataset.lo; $('#tpHi').value=c.dataset.hi; tpCalc();});
+    document.querySelector('#tpP .chip').classList.add('on');
+    $('#tpSave').onclick=tpSaveRec; tpCalc(); }
+  const e=$('#exp'); if(e) e.onclick=async()=>{
+    try{ await navigator.clipboard.writeText(JSON.stringify(DB)); toast('База скопирована в буфер'); }
+    catch(err){ toast('Буфер недоступен'); }};
+  const r=$('#rst'); if(r) r.onclick=()=>{ if(!confirm('Вернуть заводские данные? Все правки пропадут.')) return;
+    DB=seed(); save(); render(); toast('Данные сброшены'); };
+}
+$('#q').oninput=()=>{ if(tab==='steels'||tab==='cement'){ $('#screen').innerHTML=tab==='steels'?viewSteels():viewCement(); bind(); } };
+$('#close').onclick=()=>{ if(editing&&editing.mode==='edit'&&DB[editing.kind].some(x=>x.id===editing.obj.id)){editing.mode='view';renderSheet();return;} closeSheet(); };
+$('#editBtn').onclick=()=>{ editing.mode='edit'; renderSheet(); };
+$('#fab').onclick=addNew;
+
+/* часы в статусбаре */
+(function clock(){const d=new Date();
+  $('#clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  setTimeout(clock,20000);})();
+
+/* старт */
+(async()=>{ DB=await load(); if(!DB||!DB.steels){DB=seed();} if(!DB.temperLog) DB.temperLog=[]; await save(); render(); })();
+</script>
+</body>
+</html>

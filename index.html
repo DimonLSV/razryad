@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0B0D">
+<title>РАЗРЯД — справочники для рабочих специальностей</title>
+<meta name="description" content="Пособия для оператора ЧПУ и термиста. Коды, циклы, расчёт контуров, режимы термообработки. Работают без интернета.">
+<link rel="icon" href="./icon-chpu-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0B0B0D;--panel:#141417;--panel2:#1B1B20;--line:#2C2C34;--orange:#FF6B00;
+ --ember:#FFA23A;--steel:#93939D;--paper:#F2EFEA;--red:#D93A2B}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--ink);color:var(--paper);
+ font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+ -webkit-text-size-adjust:100%;line-height:1.55}
+.wrap{max-width:760px;margin:0 auto;padding:26px 18px 60px}
+header{display:flex;align-items:center;gap:14px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+header img{width:52px;height:52px;border-radius:12px}
+h1{font-family:"Oswald",sans-serif;font-size:27px;letter-spacing:.16em;margin:0;text-transform:uppercase}
+header p{margin:3px 0 0;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;
+ color:var(--orange);font-family:"Oswald",sans-serif}
+.lead{font-size:15px;color:#CFCCC6;margin:22px 0 26px}
+.app{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;
+ position:relative;overflow:hidden}
+.app::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--orange)}
+.app.t::before{background:#E2461E}
+.top{display:flex;align-items:center;gap:14px}
+.top img{width:56px;height:56px;border-radius:13px;flex:none}
+.nm{font-family:"Oswald",sans-serif;font-size:20px;letter-spacing:.02em}
+.ver{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ember)}
+.desc{font-size:14px;color:#CFCCC6;margin:13px 0 4px}
+ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;color:#B6B3AD}
+li{margin-bottom:4px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+a.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 10px;border-radius:12px;
+ text-decoration:none;font-family:"Oswald",sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase}
+a.go{background:var(--orange);color:#150900;font-weight:600}
+a.dl{background:transparent;border:1px solid var(--line);color:var(--paper)}
+a.btn:active{opacity:.8}
+.note{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 15px;
+ font-size:13.5px;color:#CFCCC6;margin-top:22px}
+.note.warn{border-color:#5a2a1c;background:#1d1210}
+.note b{color:var(--ember)}
+h2{font-family:"Oswald",sans-serif;font-size:14px;letter-spacing:.15em;text-transform:uppercase;
+ color:var(--orange);margin:32px 0 12px}
+.steps{counter-reset:s;padding:0;list-style:none;margin:0}
+.steps li{counter-increment:s;position:relative;padding-left:34px;margin-bottom:12px;font-size:14px;color:#CFCCC6}
+.steps li::before{content:counter(s);position:absolute;left:0;top:-2px;width:23px;height:23px;border-radius:7px;
+ background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;
+ font-family:"Oswald",sans-serif;font-size:12px;color:var(--orange)}
+.links{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.links a{display:inline-flex;align-items:center;gap:8px;padding:11px 15px;border-radius:11px;
+ background:var(--panel2);border:1px solid var(--line);color:var(--paper);text-decoration:none;font-size:13.5px}
+footer{margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
+ font-size:12px;color:#5E5E68;text-align:center;letter-spacing:.1em;
+ font-family:"Oswald",sans-serif;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <img src="./icon-chpu-192.png" alt="">
+  <div><h1>Разряд</h1><p>Справочники для работы у станка</p></div>
+</header>
+
+<p class="lead">Два карманных пособия для цеха. Открываются в браузере, работают без интернета,
+ничего никуда не отправляют. Можно поставить ярлыком на экран телефона или скачать приложением для Android.</p>
+
+<div class="app">
+  <div class="top">
+    <img src="./icon-chpu-192.png" alt="">
+    <div><div class="nm">Оператор ЧПУ</div><div class="ver">версия 0.930</div></div>
+  </div>
+  <div class="desc">Токарный и фрезерный — переключаются в шапке, и всё содержимое меняется под выбранный станок.</div>
+  <ul>
+    <li>G- и M-коды с разбором различий Haas и Fanuc</li>
+    <li>Постоянные циклы с готовыми кадрами</li>
+    <li>Расчёт контура: 23 случая с координатами всех точек и коррекцией на радиус пластины</li>
+    <li>Режимы резания, резьба, допуски и посадки</li>
+    <li>Обучение по разрядам с 3-го по 6-й, примеры программ, типовые ошибки</li>
+  </ul>
+  <div class="btns">
+    <a class="btn go" href="./chpu.html">Открыть</a>
+    <a class="btn dl" href="./razryad-chpu-v0.930.apk">Скачать APK</a>
+  </div>
+</div>
+
+<div class="app t">
+  <div class="top">
+    <img src="./icon-termist-192.png" alt="">
+    <div><div class="nm">Термист</div><div class="ver">версия 0.325</div></div>
+  </div>
+  <div class="desc">Режимы термообработки и теория — от загрузки садки до разбора брака.</div>
+  <ul>
+    <li>Марочник: 32 стали с зарубежными аналогами и режимами</li>
+    <li>Подбор отпуска по фактической твёрдости с журналом садок</li>
+    <li>Цементация с расчётом слоя, прерывистая закалка вода→масло</li>
+    <li>Диаграмма железо-углерод и превращения при охлаждении</li>
+    <li>Шкалы твёрдости, обучение по разрядам, дефекты и брак</li>
+  </ul>
+  <div class="btns">
+    <a class="btn go" href="./termist.html">Открыть</a>
+    <a class="btn dl" href="./razryad-termist-v0.325.apk">Скачать APK</a>
+  </div>
+</div>
+
+<h2>Поставить на экран телефона</h2>
+<ol class="steps">
+  <li>Откройте нужное пособие кнопкой «Открыть».</li>
+  <li><b>Android:</b> меню браузера — «Установить приложение» или «Добавить на главный экран».</li>
+  <li><b>iPhone:</b> кнопка «Поделиться» внизу Safari — «На экран Домой».</li>
+  <li>Запустится во весь экран, без адресной строки, и будет работать без интернета.</li>
+</ol>
+
+<div class="note warn">
+  <b>Всё в приложениях носит рекомендательный характер.</b> Это не нормативный документ.
+  Сделано прежде всего для начинающих: сверяйтесь с чертежом, руководством на свою стойку и техпроцессом предприятия.
+  Пока номер версии меньше единицы — приложения дорабатываются, ошибки возможны.
+</div>
+
+<h2>Нашли ошибку</h2>
+<p style="font-size:14px;color:#CFCCC6;margin:0">Напишите пример с цифрами: что вводили, что выдало, как должно быть. Поправлю и выпущу обновление.</p>
+<div class="links">
+  <a href="https://vk.ru/dmitriylsv">ВКонтакте · dmitriylsv</a>
+  <a href="https://telegram.me/SergeyPanteleevi4Mavr0di">Telegram</a>
+</div>
+
+<footer>Разработал Онянов Дмитрий Сергеевич</footer>
+
+</div>
+</body>
+</html>

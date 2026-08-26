@@ -1,0 +1,2264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0B0D">
+<link rel="manifest" href="./manifest-chpu.webmanifest">
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(){});});}</script>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Разряд · ЧПУ">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="./icon-chpu-192.png">
+<link rel="icon" href="./icon-chpu-192.png">
+
+<title>РАЗРЯД · Пособие оператора ЧПУ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B0B0D; --panel:#141417; --panel2:#1B1B20; --panel3:#232329;
+  --line:#2C2C34; --orange:#FF6B00; --ember:#FFA23A; --hot:#FFD166;
+  --steel:#93939D; --paper:#F2EFEA; --red:#D93A2B; --haas:#FFA23A; --fanuc:#5FA8FF;
+  --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;-webkit-text-size-adjust:100%;overscroll-behavior:none;touch-action:manipulation;background:#050506;color:var(--paper);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.stage{width:100%;display:flex;justify-content:center;align-items:center;padding:24px 12px}
+.device{width:412px;height:900px;max-height:calc(100vh - 48px);background:var(--ink);border-radius:38px;
+  position:relative;overflow:hidden;border:9px solid #17171b;
+  box-shadow:0 0 0 2px #35353d,0 40px 90px rgba(0,0,0,.75),0 0 120px rgba(255,107,0,.07)}
+@media (max-width:760px){.stage{padding:0}.device{width:100vw;height:100vh;height:100dvh;max-height:none;border:0;border-radius:0;box-shadow:none}}
+.statusbar{height:26px;margin-top:env(safe-area-inset-top,0px);display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+  font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--steel)}
+.statusbar .dots{display:flex;gap:5px;align-items:center}
+.statusbar i{width:5px;height:5px;border-radius:50%;background:var(--steel);display:block}
+.app{position:absolute;inset:0;display:flex;flex-direction:column}
+.screen{flex:1;overflow-y:auto;overscroll-behavior:contain;
+  padding:0 0 calc(104px + env(safe-area-inset-bottom,0px))}
+.screen::-webkit-scrollbar{width:0}
+header{padding:8px 16px 12px;background:linear-gradient(180deg,#141418,#0B0B0D);border-bottom:1px solid var(--line);
+  position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:11px}
+.mark{width:34px;height:34px;flex:none}
+.brandtxt b{font-family:"Oswald",sans-serif;font-weight:600;font-size:17px;letter-spacing:.16em;text-transform:uppercase;display:block}
+.brandtxt span{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange);font-family:"Oswald",sans-serif}
+.htitle{font-family:"Oswald",sans-serif;font-weight:600;font-size:26px;margin:14px 0 2px;text-transform:uppercase}
+.hsub{font-size:12.5px;color:var(--steel);margin:0}
+.search{margin-top:12px;display:flex;align-items:center;gap:9px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:11px;padding:9px 12px}
+.search input{background:none;border:0;outline:0;color:var(--paper);font-size:14.5px;width:100%}
+.search input::placeholder{color:#6A6A74}
+.chips{display:flex;gap:7px;overflow-x:auto;padding:11px 16px 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--steel);font-size:12px;white-space:nowrap;cursor:pointer;font-weight:500}
+.chip.on{background:var(--orange);border-color:var(--orange);color:#120800;font-weight:600}
+.wrap{padding:14px 16px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;margin-bottom:11px;
+  position:relative;overflow:hidden}
+.card .glow{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--orange)}
+.card .glow.d{background:var(--red)}
+.code{font-family:"Oswald",sans-serif;font-size:22px;font-weight:600;line-height:1;letter-spacing:.03em}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.tag{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--orange);font-family:"Oswald",sans-serif;font-weight:500}
+.ct{font-size:13.5px;color:#DDDAD4;margin-top:7px;line-height:1.45}
+.badge{font-family:"Oswald",sans-serif;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 7px;border-radius:6px;white-space:nowrap}
+.b-diff{background:#2b1210;color:#FF7A6A;border:1px solid #52251f}
+.b-same{background:#12210f;color:#8FD07F;border:1px solid #2b4423}
+.b-haas{background:#2a1c0d;color:var(--haas);border:1px solid #4a331a}
+.b-fanuc{background:#0f1c2b;color:var(--fanuc);border:1px solid #1e3a56}
+.sheet{position:absolute;inset:0;background:var(--ink);z-index:60;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+.sheet.open{transform:translateY(0)}
+.sheethead{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;background:var(--panel)}
+.iconbtn{width:34px;height:34px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);
+  display:grid;place-items:center;cursor:pointer;flex:none;color:var(--paper)}
+.sheetbody{flex:1;overflow-y:auto;padding:16px 16px calc(110px + env(safe-area-inset-bottom,0px))}
+.sec{font-family:"Oswald",sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--orange);
+  margin:22px 0 9px;display:flex;align-items:center;gap:9px}
+.sec::after{content:"";flex:1;height:1px;background:var(--line)}
+.sec:first-child{margin-top:2px}
+.stack{display:grid;gap:9px}
+.ctrl{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--panel)}
+.ctrl.h{border-left:3px solid var(--haas)}
+.ctrl.f{border-left:3px solid var(--fanuc)}
+.ctrlname{font-family:"Oswald",sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+.ctrl.h .ctrlname{color:var(--haas)} .ctrl.f .ctrlname{color:var(--fanuc)}
+.mono{font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.65;color:#E6E3DD;white-space:pre-wrap;word-break:break-word}
+pre.blk{font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.7;background:#0F0F12;border:1px solid var(--line);
+  border-radius:10px;padding:11px 12px;overflow-x:auto;margin:0;color:#DCD9D3}
+pre.blk b{color:var(--ember);font-weight:500}
+.note{background:var(--panel2);border:1px dashed #3a3a44;border-radius:10px;padding:11px 12px;font-size:13px;
+  line-height:1.55;color:#CFCCC6}
+.note b{color:var(--ember);font-weight:600}
+.warn{border-color:#5a2a1c;background:#1d1210}
+.warn b{color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-family:"Oswald",sans-serif;font-weight:500;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--steel);text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid #202027;vertical-align:top}
+td.num{font-family:"IBM Plex Mono",monospace;color:var(--hot);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.tscroll{overflow-x:auto;margin:0 -14px;padding:0 14px}
+.tscroll::-webkit-scrollbar{height:0}
+.tscroll table{min-width:460px}
+.calc{background:linear-gradient(160deg,#1d1410,#141417);border:1px solid #38251a;border-radius:var(--r);padding:14px;margin-bottom:12px}
+label.fld{display:block;margin-bottom:11px}
+label.fld span{display:block;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--steel);
+  font-family:"Oswald",sans-serif;margin-bottom:5px}
+input[type=text],input[type=number],textarea,select{-webkit-appearance:none;appearance:none;font-size:16px;width:100%;background:var(--panel2);border:1px solid var(--line);
+  color:var(--paper);border-radius:10px;padding:10px 11px;font-size:14px;outline:0;font-family:"IBM Plex Mono",monospace}
+input:focus,textarea:focus,select:focus{border-color:var(--orange)}
+textarea{min-height:76px;resize:vertical;font-family:"IBM Plex Sans",sans-serif;line-height:1.5}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.out{font-family:"Oswald",sans-serif;font-size:30px;color:var(--ember);line-height:1.1;margin-top:6px}
+.out small{font-size:13px;color:var(--steel);letter-spacing:.06em;margin-left:6px}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;padding:12px;border-radius:12px;border:0;
+  background:var(--orange);color:#150900;font-family:"Oswald",sans-serif;font-size:13.5px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--paper)}
+.usernote{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--ember);border-radius:10px;
+  padding:10px 12px;margin-bottom:9px;font-size:13.5px;line-height:1.5;color:#DDDAD4;white-space:pre-wrap}
+.nmeta{display:flex;justify-content:space-between;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:#6E6E78;margin-bottom:6px}
+.nmeta span{color:var(--red);cursor:pointer;font-family:"Oswald",sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.nbadge{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ember);
+  background:#2a1c0d;border:1px solid #4a331a;border-radius:6px;padding:1px 6px}
+nav{position:absolute;left:0;right:0;bottom:0;height:calc(64px + env(safe-area-inset-bottom,0px));background:rgba(15,15,18,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr 1fr 0.66fr;z-index:40;padding-bottom:env(safe-area-inset-bottom,0px)}
+.nb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#63636D;font-size:10px;
+  font-family:"Oswald",sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.nb.on{color:var(--orange)}
+.nb svg{width:22px;height:22px}
+.credit{text-align:center;font-size:9.5px;letter-spacing:.14em;color:#4E4E58;font-family:"Oswald",sans-serif;
+  text-transform:uppercase;padding:16px 16px 6px}
+.empty{text-align:center;color:var(--steel);padding:46px 24px;font-size:13.5px;line-height:1.6}
+.toast{position:absolute;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--panel3);border:1px solid var(--line);
+  border-radius:11px;padding:10px 16px;font-size:13px;opacity:0;transition:.25s;z-index:70;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.dia{width:100%;height:auto;background:#0F0F12;border:1px solid var(--line);border-radius:11px;margin:4px 0 12px;display:block}
+.dia text{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#FFA23A}
+.dia text.d{fill:#93939D;font-size:10px}
+.dia text.dm{fill:#9FD0FF;font-size:10.5px}
+.dia .part{fill:#1B1B20;stroke:#FF6B00;stroke-width:2;stroke-linejoin:round}
+.dia .dim{stroke:#6E6E78;stroke-width:1}
+.dia .ax{stroke:#5A5A66;stroke-width:1;stroke-dasharray:10 4 2 4}
+.dia .tool{fill:none;stroke:#5FA8FF;stroke-width:2}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin:2px 0 10px}
+.res .f{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:#6E6E78;font-family:"Oswald",sans-serif}
+.res .v{font-family:"IBM Plex Mono",monospace;font-size:15px;color:var(--ember);margin-top:2px}
+.res .v.hot,.v.hot{color:var(--hot)}
+.hint{font-size:11.5px;color:#6E6E78;line-height:1.5;margin-top:9px}
+.splash{position:absolute;inset:0;background:var(--ink);z-index:99;display:grid;place-items:center;animation:fade .5s ease 1.5s forwards}
+.splash .in{text-align:center;animation:rise .8s cubic-bezier(.2,.8,.2,1)}
+.splash .cap{margin-top:14px;font-family:"Oswald",sans-serif;font-size:11px;letter-spacing:.3em;color:var(--orange);text-transform:uppercase}
+.splash .cr{margin-top:26px;font-size:9.5px;letter-spacing:.16em;color:#4E4E58;font-family:"Oswald",sans-serif;text-transform:uppercase}
+@keyframes fade{to{opacity:0;visibility:hidden}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+
+/* --- тумблер коррекции --- */
+.swrow{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:6px 0 14px}
+.swlab{font-size:13.5px;line-height:1.35;color:#E6E3DD;flex:1 1 auto;min-width:0}
+.swlab small{display:block;font-size:11px;color:#8A8A94;margin-top:3px}
+.sw{width:58px;height:32px;border-radius:16px;background:#2A2A31;border:1px solid var(--line);
+  position:relative;flex:0 0 58px;cursor:pointer;transition:background .18s,border-color .18s}
+.sw.on{background:var(--orange);border-color:var(--orange)}
+.sw i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#8A8A94;
+  transition:left .18s,background .18s;display:block}
+.sw.on i{left:29px;background:#150900}
+/* --- ссылки обратной связи --- */
+.mseg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:12px;padding:4px;margin-top:12px}
+.mseg div{text-align:center;padding:9px 6px;border-radius:9px;font-family:"Oswald",sans-serif;font-size:12.5px;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--steel);cursor:pointer;transition:.15s}
+.mseg div.on{background:var(--orange);color:#150900;font-weight:600}
+.lnk{display:flex;align-items:center;gap:11px;margin-top:10px;padding:12px;border-radius:11px;
+  background:var(--panel2);border:1px solid var(--line);color:var(--paper);text-decoration:none;font-size:13.5px}
+.lnk svg{color:var(--orange);flex:none}
+.lnk:active{background:var(--panel3)}
+.dia text.dm{fill:#9FD0FF;font-size:10.5px}
+</style>
+</head>
+<body>
+<div class="stage"><div class="device">
+
+  <div class="splash" id="splash"><div class="in">
+    <svg width="96" height="96" viewBox="0 0 120 120"><use href="#logo"/></svg>
+    <div class="cap">Пособие оператора ЧПУ</div>
+    <div class="cr">Разработал Онянов Дмитрий Сергеевич</div>
+  </div></div>
+
+  <div class="statusbar"><span id="clock">08:20</span>
+    <span class="dots"><i></i><i></i><i></i><span style="font-size:10px">РАЗРЯД</span></span></div>
+
+  <div class="app">
+    <header>
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 120 120"><use href="#logo"/></svg>
+        <div class="brandtxt"><b>РАЗРЯД</b><span>Оператор ЧПУ · v0.930</span></div>
+      </div>
+      <h1 class="htitle" id="ttl">G-коды</h1>
+      <p class="hsub" id="sub">Haas и Fanuc: что совпадает, а что нет</p>
+      <div class="mseg" id="mseg"></div>
+      <div class="search" id="searchbox">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity=".6"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" placeholder="Код или назначение…" autocomplete="off" aria-label="Поиск по кодам">
+      </div>
+    </header>
+    <div class="chips" id="chips"></div>
+    <div class="screen" id="screen"></div>
+  </div>
+
+  <nav id="nav"></nav>
+
+  <div class="sheet" id="sheet">
+    <div class="sheethead">
+      <div class="iconbtn" id="close" role="button" aria-label="Закрыть карточку" tabindex="0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></div>
+      <div style="flex:1;min-width:0">
+        <div id="sheetTitle" style="font-family:Oswald;font-size:19px;font-weight:600;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div id="sheetSub" style="font-size:11px;color:var(--steel)"></div>
+      </div>
+    </div>
+    <div class="sheetbody" id="sheetBody"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div></div>
+
+<svg style="display:none">
+  
+  <g id="logo">
+    <rect x="0" y="0" width="120" height="120" rx="9" fill="#14161B"/>
+    <!-- ромбическая пластина: острый угол сверху и снизу -->
+    <path d="M60 12 L104 60 L60 108 L16 60 Z" fill="none" stroke="#FF6B00" stroke-width="9" stroke-linejoin="miter"/>
+    <circle cx="60" cy="60" r="19" fill="none" stroke="#FF6B00" stroke-width="9"/>
+  </g>
+</svg>
+
+<script>
+/* хранение на устройстве: Safari, Chrome, любой браузер */
+if(typeof window.storage==='undefined'){window.storage={
+  get:async k=>{const v=localStorage.getItem(k); if(v===null) throw new Error('no key'); return {key:k,value:v};},
+  set:async(k,v)=>{localStorage.setItem(k,v); return {key:k,value:v};},
+  delete:async k=>{localStorage.removeItem(k); return {key:k,deleted:true};},
+  list:async()=>({keys:Object.keys(localStorage)})};}
+</script>
+<script>
+/* ============ хранилище ============ */
+const KEY='repn-cnc-v1';
+let volatile=false, NOTES={};
+async function loadNotes(){try{const r=await window.storage.get(KEY);if(r&&r.value)return JSON.parse(r.value);}catch(e){}return{};}
+async function saveNotes(){try{await window.storage.set(KEY,JSON.stringify(NOTES));}catch(e){volatile=true;}}
+
+/* ============ данные ============ */
+const G=[
+ {c:'G00',g:'Движение',mc:'b',t:'Ускоренное позиционирование',d:0,
+  h:'Скорость задана параметрами станка, регулируется рукояткой RAPID (5/25/50/100 %). Setting 10 ограничивает быстрый ход 50 %.',
+  f:'Скорость задана параметрами. Регулируется рукояткой G00 (F0/25/50/100 %).',
+  ex:'G00 G90 G54 X0. Y0.\nG43 H01 Z50. M03 S1200',
+  n:'На обеих стойках траектория при перемещении по двум осям — не обязательно прямая линия. Над оснасткой поднимайтесь отдельным кадром по Z.'},
+ {c:'G01',g:'Движение',mc:'b',t:'Линейная интерполяция с подачей',d:0,h:'F — мм/мин (G94) или мм/об (G95).',f:'То же. На токарном по умолчанию мм/об (G99).',
+  ex:'G01 Z-5. F150.\nX50. Y30. F400.',n:'Подача F модальна: задали один раз — действует до смены.'},
+ {c:'G02 / G03',g:'Движение',mc:'b',t:'Круговая интерполяция по / против часовой',d:0,
+  h:'Формат I J K (от начала дуги к центру) либо R. Полная окружность — только через I J K.',
+  f:'Идентично. R со знаком «минус» — дуга больше 180°.',
+  ex:'G02 X40. Y20. R10. F300\nG03 X0. Y0. I-20. J0. F300',
+  n:'Направление смотрят со стороны плюса третьей оси. В плоскости G17 (XY) — сверху.'},
+ {c:'G04',g:'Режимы',mc:'b',t:'Пауза (выдержка)',d:1,
+  h:'G04 P__ — секунды при записи с точкой (P1.0 = 1 с), миллисекунды без точки (P1000 = 1 с).',
+  f:'G04 X__ — секунды (X1.0), G04 P__ — миллисекунды целым числом (P1000). Буква X на токарном может конфликтовать с осью — надёжнее P.',
+  ex:'Haas:  G04 P1.0\nFanuc: G04 X1.0   или   G04 P1000',
+  n:'Десятичная точка решает всё: на Haas G04 P10 — это 10 миллисекунд, а не 10 секунд. Хотели секунду — пишите P1.0 или P1000. Самая частая причина, почему станок «не делает паузу».'},
+ {c:'G09',g:'Режимы',mc:'b',t:'Точный останов в кадре',d:0,h:'Однократный, действует только в своём кадре.',f:'То же.',ex:'G09 G01 X50. F400',n:'Убирает скругление угла на быстрых подачах ценой времени цикла.'},
+ {c:'G10',g:'Системы координат',mc:'b',t:'Ввод коррекций из программы',d:1,
+  h:'G10 L2 P1 X__ Y__ Z__ — нулевая точка G54. L10 — длина, L11 — износ длины, L12 — радиус, L13 — износ радиуса. L20 P__ для G154.',
+  f:'G10 L2 P1 X__ Y__ Z__ — то же. L10 — геометрия H, L11 — износ H, L12 — геометрия D, L13 — износ D. L20 для G54.1 P.',
+  ex:'G10 L2 P1 X-320.5 Y-180.2 Z0.\nG10 L10 P1 R125.35',
+  n:'Мощный, но опасный код: ошибка в номере P перезапишет чужую нулевую точку. Перед запуском — распечатка текущих смещений.'},
+ {c:'G12 / G13',g:'Циклы',mc:'f',t:'Круговой карман по / против часовой',d:2,
+  h:'Готовый цикл фрезерования круглого кармана одним кадром: G12 I__ K__ Q__ D__ F__.',
+  f:'Отсутствует. Круглый карман программируется вручную или макросом.',
+  ex:'Haas: G12 I5. K20. Q2. D01 F400',
+  n:'Одно из главных удобств Haas. При переносе программы на Fanuc такой кадр придётся расписать дугами.'},
+ {c:'G17 / G18 / G19',g:'Плоскости',mc:'b',t:'Выбор плоскости XY / XZ / YZ',d:0,h:'G17 по умолчанию на фрезерном.',f:'То же. На токарном по умолчанию G18.',ex:'G17 G90 G94 G40 G49 G80',n:'Плоскость определяет работу дуг, коррекции радиуса и осей цикла сверления.'},
+ {c:'G20 / G21',g:'Плоскости',mc:'b',t:'Дюймы / миллиметры',d:1,
+  h:'G20 дюймы, G21 мм. Дублируется настройкой Setting 9 — при расхождении станок выдаст тревогу.',
+  f:'G20 дюймы, G21 мм. Задаётся также параметром при включении.',
+  ex:'G21 G17 G40 G49 G80 G90',
+  n:'Первое, что проверяют в чужой программе. Ошибка здесь даёт масштаб 25,4 — гарантированная поломка.'},
+ {c:'G28',g:'Системы координат',mc:'b',t:'Возврат в исходную точку станка',d:0,
+  h:'Через промежуточную точку. Безопасно: G91 G28 Z0. затем G91 G28 X0. Y0.',
+  f:'Идентично.',ex:'G91 G28 Z0.\nG91 G28 X0. Y0.\nG90',
+  n:'Без G91 промежуточной точкой станет X0 Y0 текущей нулевой — инструмент поедет через деталь. Не забывайте вернуть G90.'},
+ {c:'G31',g:'Циклы',mc:'b',t:'Пропуск кадра по сигналу (щуп)',d:1,
+  h:'G31 с щупом; координата касания пишется в макропеременные #5061…',
+  f:'G31 аналогично, переменные #5061… Требует опции.',ex:'G31 Z-50. F300',n:'Работает только с исправным щупом и включённой опцией. Проверяйте M78/M79 (Haas) на срабатывание.'},
+ {c:'G40 / G41 / G42',g:'Коррекции',mc:'b',t:'Отмена / коррекция радиуса слева / справа',d:0,
+  h:'Номер коррекции — буква D. Ввод и вывод только на линейном перемещении не короче радиуса фрезы.',
+  f:'То же, буква D.',ex:'G41 D01 X10. Y10. F400\n…\nG40 X0. Y0.',
+  n:'Сторона определяется по направлению движения инструмента. Забытый G40 перед сменой инструмента — типовая авария.'},
+ {c:'G43 / G44 / G49',g:'Коррекции',mc:'f',t:'Коррекция длины инструмента + / − / отмена',d:0,
+  h:'G43 H__ Z__ в одном кадре с подводом. Номер H обычно равен номеру инструмента.',
+  f:'То же. Таблица H и D — общая, разделена на геометрию и износ.',
+  ex:'G43 H01 Z50. M08',n:'Перед сменой инструмента длину отменяют: G49 или G28 по Z. Проверяйте, что H совпадает с T.'},
+ {c:'G50 / G51',g:'Режимы',mc:'b',t:'Отмена / включение масштабирования (фрезерный)',d:1,
+  h:'G51 X__ Y__ Z__ P__ — центр и коэффициент. G50 — отмена.',
+  f:'G51 X__ Y__ Z__ P__, отмена G50. На токарном G50 — совсем другое: ограничение оборотов шпинделя.',
+  ex:'G51 X0. Y0. P2000  (масштаб 2,0)\n…\nG50',
+  n:'Не путайте фрезерный и токарный смысл G50. На токарном G50 S3000 — предохранитель от разрыва кулачков.'},
+ {c:'G52',g:'Системы координат',mc:'b',t:'Локальная система координат',d:2,
+  h:'Поведение зависит от Setting 33: в режиме FANUC — локальный сдвиг поверх G54, в режиме HAAS — глобальный сдвиг всех смещений.',
+  f:'Локальная СК поверх активной G54–G59. Отмена: G52 X0. Y0. Z0.',
+  ex:'G52 X50. Y0.\n…\nG52 X0. Y0.',
+  n:'Самое коварное отличие стоек. Оставленный G52 живёт после M30, если так настроен станок — обнуляйте его явно.'},
+ {c:'G53',g:'Системы координат',mc:'b',t:'Перемещение в машинных координатах',d:0,h:'Некодовое, действует один кадр: G53 G00 Z0.',f:'То же.',
+  ex:'G00 G53 Z0.',n:'Самый надёжный способ увести шпиндель в верх хода перед сменой инструмента, независимо от смещений. В режиме приращений G91 команда G53 игнорируется — писать G91 G53 бессмысленно и опасно, кадр может отработать не так, как ждёте.'},
+ {c:'G54–G59',g:'Системы координат',mc:'b',t:'Нулевые точки детали 1–6',d:0,h:'Плюс дополнительные G154 P1–P99.',f:'Плюс дополнительные G54.1 P1–P48 (опция).',
+  ex:'G90 G54 G00 X0. Y0.',n:'Модальны. Если в программе нет G54, работает то, что осталось от прошлой детали.'},
+ {c:'G154 P__',g:'Системы координат',mc:'b',t:'Дополнительные нулевые точки (Haas)',d:2,
+  h:'G154 P1 … P99 — 99 дополнительных смещений вместо старых G110–G129.',
+  f:'Аналог — G54.1 P1 … P48, опция «дополнительные системы координат». На современных стойках диапазон бывает шире — уточняйте по руководству на свою модель.',
+  ex:'Haas:  G154 P12 G00 X0. Y0.\nFanuc: G54.1 P12 G00 X0. Y0.',
+  n:'Прямой перенос кадра между стойками невозможен — меняется и код, и максимальный номер.'},
+ {c:'G61 / G64',g:'Режимы',mc:'b',t:'Точный останов (модально) / режим резания',d:1,
+  h:'Поддерживаются, но точность контура на Haas обычно задают через G187.',
+  f:'G61 — останов в каждом кадре, G64 — обычное резание. Для скоростной обработки G05.1 Q1 (AICC).',
+  ex:'G61 G01 X50. F300\n…\nG64',n:'G61 сильно увеличивает время цикла. Применяйте только на участках, где важна геометрия угла.'},
+ {c:'G65',g:'Режимы',mc:'b',t:'Вызов макропрограммы',d:1,h:'G65 P__ A__ B__ … Требует опции макросов (на большинстве машин включена).',
+  f:'G65 P__ L__ с аргументами A–Z. Опция «пользовательские макросы B».',
+  ex:'G65 P9100 A10. B5. C2.',n:'Аргументы попадают в локальные переменные #1–#33. Синтаксис в целом совместим — проще всего переносится именно макро.'},
+ {c:'G68 / G69',g:'Системы координат',mc:'f',t:'Поворот системы координат / отмена',d:0,h:'G68 G17 X__ Y__ R__ — центр и угол.',f:'То же, требует опции поворота координат.',
+  ex:'G68 G17 X0. Y0. R45.\n…\nG69',n:'Комбинация G68 с коррекцией радиуса требует внимания: сначала поворот, потом G41/G42.'},
+ {c:'G73',g:'Циклы',mc:'f',t:'Сверление с дроблением стружки',d:1,
+  h:'G73 Z__ R__ Q__ F__, плюс переменный шаг через I J K.',
+  f:'G73 Z__ R__ Q__ F__. Величина отскока задаётся параметром №5114.',
+  ex:'G73 Z-40. R2. Q5. F120.',n:'Сверло отходит на доли миллиметра — только ломает стружку. Для глубоких отверстий берите G83.'},
+ {c:'G74',g:'Циклы',mc:'f',t:'Нарезание левой резьбы метчиком',d:1,
+  h:'Жёсткое нарезание встроено, дополнительных кодов не нужно.',
+  f:'Перед циклом обязателен M29 S__ для жёсткого нарезания.',
+  ex:'Haas:  G74 Z-20. R5. F1.5 (шаг при G95)\nFanuc: M29 S500\n       G74 Z-20. R5. F750.',
+  n:'На токарном Fanuc G74 — это цикл сверления/канавок по торцу, совсем другая функция. Смотрите тип станка.'},
+ {c:'G76',g:'Циклы',mc:'f',t:'Чистовое растачивание с отводом (фрезерный)',d:0,
+  h:'G76 Z__ R__ Q__ P__ F__ — Q задаёт величину и сторону отвода перед подъёмом.',
+  f:'То же. Направление отвода определяется ориентацией шпинделя.',
+  ex:'G76 Z-30. R2. Q0.5 P500 F80.',
+  n:'На токарном станке G76 — цикл нарезания резьбы. Один код, две совершенно разные функции.'},
+ {c:'G80',g:'Циклы',mc:'f',t:'Отмена постоянного цикла',d:0,h:'Отменяет G73–G89, восстанавливает обычное движение.',f:'То же.',
+  ex:'G80 G00 Z50.',n:'Забытый G80 — и следующее перемещение выполнит сверление там, где не надо. В стартовый кадр G80 ставят всегда.'},
+ {c:'G81 / G82',g:'Циклы',mc:'f',t:'Сверление / сверление с выдержкой на дне',d:0,
+  h:'G81 X__ Y__ Z__ R__ F__ ; G82 добавляет P (выдержка). Повтор по сетке — буква L.',
+  f:'Формат тот же, но повтор — буква K.',
+  ex:'Haas:  G81 Z-15. R2. F150. L3\nFanuc: G81 Z-15. R2. F150. K3',
+  n:'Различие L/K касается всех циклов сверления. При переносе программы это правится в первую очередь.'},
+ {c:'G83',g:'Циклы',mc:'f',t:'Глубокое сверление с полным выводом',d:1,
+  h:'G83 Z__ R__ Q__ F__; переменный шаг I (первый), J (уменьшение), K (минимальный). Величина возврата — Setting 22 и 52.',
+  f:'G83 Z__ R__ Q__ F__. Величина недохода при возврате — параметр №5115.',
+  ex:'Haas:  G83 Z-60. I8. J1. K3. R2. F100.\nFanuc: G83 Z-60. Q6. R2. F100.',
+  n:'Переменный шаг I J K есть только у Haas. На Fanuc глубину клевка Q делают постоянной и с запасом.'},
+ {c:'G84',g:'Циклы',mc:'f',t:'Нарезание правой резьбы метчиком',d:2,
+  h:'Жёсткое нарезание работает без дополнительных кодов. При G94 подача = шаг × обороты, при G95 — шаг напрямую.',
+  f:'Обязательно M29 S__ в кадре перед G84, иначе цикл пойдёт в режиме плавающего патрона.',
+  ex:'Haas:  G84 Z-20. R5. F1.25 (G95, шаг 1,25)\nFanuc: M29 S600\n       G84 Z-20. R5. F750. (600×1.25)',
+  n:'Самое частое отличие в цеху. Забытый M29 на Fanuc — сорванная резьба или сломанный метчик.'},
+ {c:'G85 / G86 / G89',g:'Циклы',mc:'f',t:'Развёртывание / расточка со стопом / расточка с выдержкой',d:0,
+  h:'G85 — выход на подаче, G86 — стоп шпинделя и быстрый выход, G89 — как G85 с паузой.',f:'Идентично.',
+  ex:'G85 Z-25. R2. F80.',n:'G86 оставляет след на стенке при выходе — для чистовых поверхностей берите G76.'},
+ {c:'G87 / G88',g:'Циклы',mc:'f',t:'Обратное растачивание',d:0,h:'Инструмент вводится в отверстие со смещением, растачивает снизу вверх.',f:'Идентично.',
+  ex:'G87 Z-40. R-50. Q0.5 F60.',n:'Требует специальной обратной оправки. Ошибка в знаке R — гарантированный удар.'},
+ {c:'G90 / G91',g:'Режимы',mc:'b',t:'Абсолютные / относительные размеры',d:2,
+  h:'Фрезерный — как обычно. Токарный Haas: G90 — цикл наружного точения, абсолют задаётся адресами X Z, приращения — U W.',
+  f:'Фрезерный — как обычно. Токарный (система G-кодов A): G90 — цикл точения, абсолют X Z, приращения U W.',
+  ex:'Фрезер: G90 G54 G00 X0. Y0.\nТокарный: G90 X50. Z-40. F0.25',
+  n:'На токарных станках G91 в привычном смысле не используют. Приращение — это адреса U и W.'},
+ {c:'G94 / G95',g:'Режимы',mc:'b',t:'Подача мм/мин / мм/об',d:0,h:'На фрезерном по умолчанию G94.',f:'На токарном соответствуют G98 / G99.',
+  ex:'G94 F400.   (мм/мин)\nG95 F0.15   (мм/об)',n:'Перепутанный режим даёт подачу в сотни раз больше или меньше нужной. Проверяйте перед первой деталью.'},
+ {c:'G96 / G97',g:'Токарные',mc:'t',t:'Постоянная скорость резания / постоянные обороты',d:0,
+  h:'G96 S180 — 180 м/мин. Обязательно ограничение G50 S__.',f:'Идентично.',
+  ex:'G50 S2500\nG96 S180 M03\n…\nG97 S1200',
+  n:'При подходе к центру детали в режиме G96 обороты уходят в максимум — ограничение G50 обязательно, особенно с кулачками.'},
+ {c:'G98 / G99',g:'Циклы',mc:'b',t:'Возврат в исходную плоскость / на плоскость R',d:2,
+  h:'Фрезерный — как описано. Токарный Haas: G98 — подача мм/мин, G99 — мм/об.',
+  f:'Фрезерный — как описано. Токарный: G98 — мм/мин, G99 — мм/об.',
+  ex:'Фрезер: G99 G81 Z-10. R2. F150.\nТокарный: G99 G01 X50. F0.2',
+  n:'Один код с двумя смыслами на разных типах станков. На фрезерном G99 экономит время между отверстиями, но не перепрыгнет прижим.'},
+ {c:'G100 / G101',g:'Режимы',mc:'f',t:'Отмена / включение зеркала (Haas)',d:2,h:'G101 X__ — зеркало по оси. Отмена G100.',
+  f:'Аналог — G51.1 X0. (включение) и G50.1 (отмена).',
+  ex:'Haas:  G101 X0.\nFanuc: G51.1 X0.',n:'При зеркале меняется сторона коррекции радиуса — попутное фрезерование становится встречным.'},
+ {c:'G103',g:'Режимы',mc:'b',t:'Ограничение просмотра кадров вперёд (Haas)',d:2,
+  h:'G103 P1 — станок читает один кадр вперёд. Удобно при отладке и работе с макропеременными.',
+  f:'Прямого аналога нет; глубина просмотра задаётся параметрами.',
+  ex:'G103 P1   (отладка)\nG103 P0   (снять ограничение)',
+  n:'При P1 экран показывает реально исполняемый кадр. Оставленный G103 P1 замедляет обработку сложных контуров.'},
+ {c:'G150',g:'Циклы',mc:'f',t:'Фрезерование произвольного кармана (Haas)',d:2,
+  h:'G150 P__ (подпрограмма контура) X Y Z Q R S I J K F — черновая и чистовая обработка кармана любой формы.',
+  f:'Отсутствует. Карман программируется CAM-системой или макросом.',
+  ex:'G150 P1000 X0. Y0. Z-10. Q3. R2. I1. J0.5 K0.2 F500',
+  n:'Экономит массу времени на простых карманах, но полностью привязан к Haas.'},
+ {c:'G187',g:'Режимы',mc:'b',t:'Настройка точности и сглаживания (Haas)',d:2,
+  h:'G187 P1 — точно (медленно), P2 — средне, P3 — быстро; E — допуск сглаживания.',
+  f:'Аналог по смыслу — G05.1 Q1 (AICC) вместе с G64 и параметрами допуска.',
+  ex:'Haas:  G187 P2 E0.05\nFanuc: G05.1 Q1',
+  n:'Это компромисс точность/время цикла. Для чистовой 3D-обработки — P1, для черновой — P3.'},
+ {c:'G70 / G71 / G72',g:'Токарные',mc:'t',t:'Чистовой / черновой продольный / черновой поперечный циклы',d:2,
+  h:'Однокадровый формат: G71 P__ Q__ U__ W__ D__ F__ (D — глубина прохода в тысячных или с точкой).',
+  f:'Двухкадровый формат: G71 U(глубина) R(отход); G71 P Q U W F.',
+  ex:'Haas:  G71 P10 Q20 U0.4 W0.1 D2. F0.3\nFanuc: G71 U2. R0.5\n       G71 P10 Q20 U0.4 W0.1 F0.3',
+  n:'U — припуск по диаметру, W — по торцу. Один и тот же адрес U в первом и втором кадре Fanuc означает разное: глубину прохода и припуск.'},
+ {c:'G74 / G75',g:'Токарные',mc:'t',t:'Циклы сверления по торцу / прорезки канавок',d:1,
+  h:'G74 — торцевое сверление с дроблением, G75 — канавки по диаметру: G75 X__ Z__ I__ K__ F__.',
+  f:'То же назначение, формат с адресами X Z P Q R F.',
+  ex:'Haas:  G75 X20. Z-30. I3. K5. F0.1\nFanuc: G75 R0.5\n       G75 X20. Z-30. P3000 Q5000 F0.1',
+  n:'У Fanuc величины P и Q задаются в микронах без точки — источник ошибок на порядок.'},
+ {c:'G76',g:'Токарные',mc:'t',t:'Цикл нарезания резьбы резцом',d:2,
+  h:'G76 X__ Z__ K__ D__ F__ A__ P__ — K высота профиля на радиус, D первый проход, A угол, P тип врезания (P1 — одной кромкой, постоянный съём).',
+  f:'Два кадра: G76 P(чистовых,сбег,угол) Q(мин. врезание, мкм) R(припуск); G76 X Z P(высота, мкм) Q(первый проход, мкм) F(шаг).',
+  ex:'(М20x1.5: h=0.613x1.5=0.920, X=20-2x0.920=18.160)\nHaas:  G76 X18.16 Z-25. K0.92 D0.376 F1.5 A60 P1\nFanuc: G76 P011060 Q100 R0.05\n       G76 X18.16 Z-25. P920 Q376 F1.5',
+  n:'У Fanuc P — слитное шестизначное число, а глубины в микронах. Проверяйте на воздухе с завышенным X перед первой резьбой.'}
+];
+
+const M=[
+ {c:'M00',t:'Безусловный останов программы',mc:'b',d:0,h:'Останов до нажатия CYCLE START.',f:'То же.',n:'Шпиндель и СОЖ выключаются. Удобно для замера детали.'},
+ {c:'M01',t:'Условный останов',mc:'b',d:0,h:'Работает только при включённой клавише OPTIONAL STOP.',f:'То же.',n:'Ставят между инструментами при отладке новой программы.'},
+ {c:'M02 / M30',t:'Конец программы / конец с возвратом в начало',mc:'b',d:1,
+  h:'M30 — конец, перемотка, счётчик деталей +1. Настройка Setting 56 определяет, восстанавливать ли исходные G-коды.',
+  f:'M02 — конец без перемотки, M30 — с перемоткой.',n:'M30 не отменяет активные смещения G52/G92 автоматически — снимайте их явно.'},
+ {c:'M03 / M04 / M05',t:'Шпиндель вперёд / назад / стоп',mc:'b',d:0,h:'M03 S1200 — можно в одном кадре.',f:'То же.',n:'На токарном направление зависит от расположения резца (сверху/снизу) — проверяйте на малых оборотах.'},
+ {c:'M06',t:'Смена инструмента',mc:'f',d:1,
+  h:'T1 M06 — номер и смена в одном кадре. Перед сменой шпиндель уводится в верх хода автоматически.',
+  f:'Обычно T01 M06; на станках с цепным магазином инструмент предварительно вызывают в предыдущем кадре (T02 в работе, потом M06).',
+  n:'Перед M06 отменяйте коррекцию длины (G49) и радиуса (G40), уводите Z в G53 Z0.'},
+ {c:'M08 / M09',t:'СОЖ включить / выключить',mc:'b',d:0,h:'Основной поток.',f:'То же.',n:'Проверяйте уровень в баке до запуска — сухая работа твердосплавом по стали убивает пластину за проход.'},
+ {c:'M07',t:'Дополнительный поток / туман',mc:'b',d:1,h:'Обмыв стола (shower coolant) на части моделей.',f:'Обычно масляный туман; назначение задаёт изготовитель станка.',n:'На Fanuc многие M-коды за пределами базовых определяет производитель — сверяйтесь с паспортом станка.'},
+ {c:'M19',t:'Ориентация шпинделя',mc:'f',d:1,h:'M19 с адресом P — поворот на заданный угол.',f:'M19 без угла (фиксированное положение), угол задаётся параметром.',n:'Нужна для обратного растачивания и смены инструмента.'},
+ {c:'M29',t:'Жёсткое нарезание резьбы',mc:'b',d:2,h:'Не используется — жёсткое нарезание встроено в G84/G74.',f:'M29 S__ обязателен в кадре перед G84/G74.',n:'Ключевое отличие стоек при нарезании резьбы метчиком.'},
+ {c:'M31 / M33',t:'Транспортёр стружки вперёд / стоп',mc:'b',d:2,h:'M31 — вперёд, M32 — назад (импульсно), M33 — стоп.',f:'Определяется изготовителем станка.',n:'Не оставляйте транспортёр включённым непрерывно — по регламенту он работает циклами.'},
+ {c:'M34 / M35',t:'Программируемое сопло СОЖ (Haas)',mc:'f',d:2,h:'M34 — сместить сопло P-cool вниз на позицию, M35 — вверх.',f:'Отсутствует.',n:'Позицию сопла подбирают для каждого инструмента по длине вылета.'},
+ {c:'M41 / M42',t:'Низкий / высокий диапазон шпинделя',mc:'b',d:1,h:'Есть на токарных и части фрезерных.',f:'То же, на станках с коробкой передач.',n:'Переключение только при остановленном шпинделе.'},
+ {c:'M88 / M89',t:'СОЖ через шпиндель (Haas)',mc:'f',d:2,h:'M88 — включить TSC, M89 — выключить. Перед сменой инструмента TSC должен быть выключен.',f:'Реализуется своим M-кодом изготовителя, часто M50/M51.',n:'Для TSC нужен инструмент со сквозным каналом, иначе сработает защита по давлению.'},
+ {c:'M97',t:'Вызов локальной подпрограммы (Haas)',mc:'b',d:2,
+  h:'M97 P__ — переход на номер кадра N внутри той же программы; L__ — число повторов.',
+  f:'Отсутствует. Используется только M98 с отдельной программой.',
+  n:'M97 P1000 ищет строку N1000 в этой же программе — номер программы тут ни при чём.'},
+ {c:'M98 / M99',t:'Вызов подпрограммы / возврат',mc:'b',d:1,
+  h:'M98 P__ — номер программы Oxxxxx на станке, L__ — повторы. M99 — возврат.',
+  f:'M98 P__ L__ либо слитный формат P(повторы+номер). M99 — возврат; M99 в главной программе зацикливает её.',
+  n:'M99 без M30 в конце главной программы гоняет цикл бесконечно — на приёмке деталей это ловушка.'},
+ {c:'M198',t:'Вызов программы с внешнего устройства (Fanuc)',mc:'b',d:2,h:'Отсутствует; работа с внешних носителей идёт через DNC-режим.',f:'M198 P__ — подпрограмма с карты памяти или сервера.',n:'Требует настройки ввода-вывода и свободной памяти стойки.'},
+ {c:'M109',t:'Интерактивный ввод оператора (Haas)',mc:'b',d:2,h:'M109 P__ — вывод сообщения и ожидание нажатия клавиши; работает с макропеременными.',f:'Отсутствует.',n:'Применяется в наладочных программах: «переверни деталь и нажми…».'},
+ {c:'M138 / M139',t:'Изменение оборотов шпинделя SSV (Haas)',mc:'b',d:2,h:'M138 — включить колебание оборотов для гашения вибраций, M139 — выключить.',f:'Реализуется опцией изготовителя.',n:'Хорошо помогает при расточке длинных отверстий и на тонкостенных деталях.'}
+];
+
+const CYC=[
+ {id:'c-drill',mc:'f',ttl:'Сверление: G81, G82, G83, G73',sub:'Фрезерные постоянные циклы',
+  body:[
+   {k:'Общий формат',v:'G98/G99  G8x  X__ Y__ Z__ R__ Q__ P__ F__  L/K__'},
+   {k:'Z',v:'конечная глубина (абсолютная при G90)'},
+   {k:'R',v:'плоскость подхода — обычно 2–5 мм над деталью'},
+   {k:'Q',v:'глубина одного клевка (G83, G73)'},
+   {k:'P',v:'выдержка на дне в миллисекундах (G82)'},
+   {k:'F',v:'подача сверления'},
+   {k:'L / K',v:'число повторов: Haas — L, Fanuc — K'}
+  ],
+  haas:'G99 G81 X10. Y10. Z-18. R2. F160.\nX30.\nY30.\nG80 G00 Z50.',
+  fanuc:'G99 G81 X10. Y10. Z-18. R2. F160. K1\nX30.\nY30.\nG80 G00 Z50.',
+  warn:'G99 возвращает только на плоскость R. Если между отверстиями стоит прижим — берите G98 (возврат в исходную плоскость), иначе инструмент пройдёт сквозь него.',
+  tips:['Цикл срабатывает на каждый следующий кадр с координатами — координаты пишут без повторения G81.',
+        'Глубина Z для сверла считается по цилиндрической части; на конус добавляйте 0,3·D.',
+        'G73 — только дробление стружки (отход доли мм), G83 — полный вывод из отверстия. Глубже 3·D берите G83.']},
+ {id:'c-tap',mc:'f',ttl:'Нарезание резьбы: G84 и G74',sub:'Главное отличие Haas от Fanuc',
+  body:[
+   {k:'G84',v:'правая резьба, G74 — левая'},
+   {k:'Z',v:'глубина резьбы (для глухого отверстия минус 1,5 витка)'},
+   {k:'R',v:'плоскость подхода, для метчика 5–10 мм'},
+   {k:'F при G94',v:'подача = обороты × шаг, мм/мин'},
+   {k:'F при G95',v:'подача = шаг резьбы, мм/об'},
+   {k:'M29',v:'Fanuc: обязателен перед циклом. Haas: не используется'}
+  ],
+  haas:'S500 M03\nG99 G95\nG84 Z-20. R5. F1.25\nG80 G00 Z50.',
+  fanuc:'M29 S500\nG94\nG84 Z-20. R5. F625.\nG80 G00 Z50.',
+  warn:'Забытый M29 на Fanuc переводит цикл в режим плавающего патрона: синхронизация теряется, резьба срывается либо ломается метчик.',
+  tips:['Проверка подачи для G94: F = S × шаг. 500 об/мин × 1,25 мм = 625 мм/мин.',
+        'Отверстие под метрическую резьбу: D = D_резьбы − шаг. М10×1,5 → сверло 8,5 мм.',
+        'Не крутите корректор подачи во время нарезания — на жёстком цикле он игнорируется, на обычном сорвёт резьбу.']},
+ {id:'c-bore',mc:'f',ttl:'Растачивание: G76, G85, G86, G87',sub:'Чистовые отверстия',
+  body:[
+   {k:'G76',v:'расточка с ориентацией шпинделя и отводом резца — след на стенке отсутствует'},
+   {k:'Q в G76',v:'величина отвода, направление задано ориентацией'},
+   {k:'G85',v:'вход и выход на подаче — развёртывание'},
+   {k:'G86',v:'стоп шпинделя внизу и быстрый выход — оставляет риску'},
+   {k:'G87',v:'обратное растачивание снизу вверх'}
+  ],
+  haas:'G76 X50. Y40. Z-30. R2. Q0.5 P200 F80.\nG80 G00 Z50.',
+  fanuc:'G76 X50. Y40. Z-30. R2. Q0.5 P200 F80.\nG80 G00 Z50.',
+  warn:'На токарном станке G76 — цикл нарезания резьбы. Это разные функции с одинаковым кодом; ориентируйтесь по типу станка.',
+  tips:['Q всегда положительное и меньше припуска на чистовой проход.',
+        'Перед G76 шпиндель должен уметь ориентироваться (M19) — на старых станках опция отсутствует.']},
+ {id:'c-turn',mc:'t',ttl:'Токарные G71 / G70: черновой и чистовой',sub:'Разный формат у Haas и Fanuc',
+  body:[
+   {k:'P',v:'номер первого кадра контура'},
+   {k:'Q',v:'номер последнего кадра контура'},
+   {k:'U',v:'припуск на чистовой по диаметру (X)'},
+   {k:'W',v:'припуск на чистовой по торцу (Z)'},
+   {k:'D / U(1-й кадр)',v:'глубина чернового прохода: Haas — D, Fanuc — U первого кадра'},
+   {k:'R',v:'Fanuc: величина отвода после прохода'}
+  ],
+  haas:'G00 X52. Z2.\nG71 P10 Q20 U0.4 W0.1 D2. F0.3\nN10 G00 X20.\nG01 Z-30. F0.15\n X40. Z-50.\nN20 X52.\nG70 P10 Q20',
+  fanuc:'G00 X52. Z2.\nG71 U2. R0.5\nG71 P10 Q20 U0.4 W0.1 F0.3\nN10 G00 X20.\nG01 Z-30. F0.15\n X40. Z-50.\nN20 X52.\nG70 P10 Q20',
+  warn:'Контур между N-кадрами P и Q должен быть монотонным: сначала по X, потом по Z, без возвратов. Нарушение даёт тревогу или зарез.',
+  tips:['U — припуск по диаметру, то есть на сторону остаётся половина.',
+        'В первом кадре контура (номер P) не должно быть перемещения по Z — только по X.',
+        'G70 выполняет чистовой проход по тому же контуру с подачей из кадров контура.']},
+ {id:'c-thread',mc:'t',ttl:'Токарная резьба G76',sub:'Форматы стоек различаются сильнее всего',
+  body:[
+   {k:'X',v:'конечный ⌀ = номинал − 2h. Для М20×1,5: 20 − 2×0,920 = 18,16'},
+   {k:'Z',v:'конец резьбы с учётом сбега'},
+   {k:'F',v:'шаг резьбы'},
+   {k:'Haas K / Fanuc P(2)',v:'высота профиля'},
+   {k:'Haas D / Fanuc Q',v:'глубина первого прохода'},
+   {k:'Haas A / Fanuc P(3)',v:'угол профиля, для метрической 60°'}
+  ],
+  haas:'(М20x1.5, 6 проходов)\nG97 S800 M03\nG00 X22. Z3.\nG76 X18.16 Z-25. K0.92 D0.376 F1.5 A60 P1\nG00 X100. Z100.',
+  fanuc:'(М20x1.5, 6 проходов)\nG97 S800 M03\nG00 X22. Z3.\nG76 P011060 Q100 R0.05\nG76 X18.16 Z-25. P920 Q376 F1.5\nG00 X100. Z100.',
+  warn:'У Fanuc P в первом кадре — слитное число: 01 (число чистовых проходов) 10 (сбег ×0,1 шага) 60 (угол). Величины во втором кадре — в микронах без десятичной точки.',
+  tips:['Высота профиля метрической резьбы ≈ 0,613 × шаг. Для 1,5 мм это 0,92 мм.',
+        'Первый прогон делайте с X больше на 2–3 мм, чтобы проверить траекторию без съёма.',
+        'Обороты при резьбе ограничивайте: сбег должен уместиться в длину канавки.']},
+ {id:'c-start',mc:'b',ttl:'Безопасный старт и завершение программы',sub:'Шаблоны для обеих стоек',
+  body:[
+   {k:'Зачем',v:'привести стойку в известное состояние независимо от того, что осталось от прошлой программы'},
+   {k:'Обязательно',v:'G17 плоскость, G21 мм, G40 отмена радиуса, G49 отмена длины, G80 отмена цикла, G90 абсолют, G94 подача'},
+   {k:'Завершение',v:'отвод по Z в машинных координатах, отмена коррекций, M30'}
+  ],
+  haas:'%\nO01234 (KRYSHKA)\nG00 G17 G21 G40 G49 G80 G90 G94\nT1 M06\nG00 G90 G54 X0. Y0. S1200 M03\nG43 H01 Z50. M08\n…\nG00 G53 Z0. M09\nG53 Y0. M05\nM30\n%',
+  fanuc:'O1234 (KRYSHKA)\nG17 G21 G40 G49 G80 G90 G94\nG91 G28 Z0.\nT01 M06\nG90 G54 G00 X0. Y0. S1200 M03\nG43 H01 Z50. M08\n…\nG91 G28 Z0. M09\nG91 G28 Y0. M05\nG90\nM30',
+  warn:'На Haas программа обязана начинаться и заканчиваться знаком % и иметь номер Oxxxxx. Без этого файл не загрузится в память стойки.',
+  tips:['Проверьте: T в кадре смены совпадает с H в G43 и с D в G41/G42.',
+        'Первый запуск — Single Block, корректор быстрого хода 5 %, подача 10 %, палец на кнопке FEED HOLD.',
+        'Dry Run гоняйте с поднятой на 50 мм нулевой точкой по Z, а не «на глаз».']}
+];
+
+const DIFF=[
+ {id:'d1',ttl:'Структура программы',
+  h:'Обязательны знаки % в начале и конце файла, номер программы Oxxxxx в первой строке. Комментарий — только в круглых скобках.',
+  f:'% требуется при передаче через порт; в памяти стойки достаточно Oxxxx. Комментарий в скобках, точка с запятой — конец кадра.',
+  n:'Файл, снятый с Fanuc, часто не грузится в Haas именно из-за отсутствующих % и номера программы.'},
+ {id:'d2',ttl:'Подпрограммы',
+  h:'M98 P — отдельная программа Oxxxxx в памяти. M97 P — переход на номер кадра N внутри текущей программы. Повтор — L.',
+  f:'Только M98 P с номером программы; повтор — L либо слитный формат P (4 цифры повторов + 4 цифры номера). M198 — вызов с внешнего носителя.',
+  n:'M97 не имеет аналога на Fanuc: при переносе локальную подпрограмму выносят в отдельную O-программу.'},
+ {id:'d3',ttl:'Дополнительные нулевые точки',
+  h:'G154 P1–P99. Старый формат G110–G129 сохранён для совместимости.',
+  f:'G54.1 P1–P48, требуется опция. Ввод из программы — G10 L20 P__.',
+  n:'Для многоместных приспособлений считайте заранее, хватит ли 48 смещений на Fanuc.'},
+ {id:'d4',ttl:'Нарезание резьбы метчиком',
+  h:'Жёсткое нарезание встроено: достаточно G84 (правая) или G74 (левая). Подачу удобно задавать в мм/об через G95.',
+  f:'Перед циклом обязателен M29 S__. Подача обычно в мм/мин: F = обороты × шаг.',
+  n:'Отличие № 1 по числу поломанных метчиков при переносе программ между станками цеха.'},
+ {id:'d5',ttl:'Точность контура и скорость',
+  h:'G187 P1/P2/P3 и допуск E. Настройка действует до конца программы или до следующего G187.',
+  f:'G61 точный останов, G64 обычное резание, G05.1 Q1 — предпросмотр контура AICC (опция).',
+  n:'При переносе 3D-обработки чистовой G187 P1 меняют на G05.1 Q1 либо на G64 с ужатыми параметрами.'},
+ {id:'d6',ttl:'Зеркало, масштаб, поворот',
+  h:'Зеркало G101/G100, масштаб G51/G50, поворот G68/G69.',
+  f:'Зеркало G51.1/G50.1, масштаб G51/G50 (фрезерный), поворот G68/G69.',
+  n:'Совпадают только поворот и масштаб. Кадр с зеркалом правится при каждом переносе.'},
+ {id:'d7',ttl:'Пауза и повторы циклов',
+  h:'Пауза G04 P (секунды с точкой или миллисекунды без неё). Повтор цикла — адрес L.',
+  f:'Пауза G04 X (секунды) или P (миллисекунды целым). Повтор цикла — адрес K.',
+  n:'Две мелочи, дающие самые незаметные ошибки: цикл повторяется не столько раз, сколько нужно, или станок стоит лишнюю минуту.'},
+ {id:'d8',ttl:'Коррекции инструмента',
+  h:'Отдельные колонки: длина (Geometry), износ длины (Wear), радиус (Radius), износ радиуса. Ввод из программы G10 L10–L13.',
+  f:'Общая таблица offsets с разделением на геометрию и износ для H и D. Ввод G10 L10–L13.',
+  n:'На Haas износ вводится со знаком относительно геометрии — «минус» углубляет инструмент в деталь.'},
+ {id:'d9',ttl:'Настройки против параметров',
+  h:'Раздел Settings доступен оператору: Setting 9 (дюймы/мм), 22 (отход в циклах), 33 (режим координат FANUC/HAAS), 56 (сброс G-кодов по M30), 103 (Cycle Start = Single Block).',
+  f:'Параметры защищены и меняются наладчиком; часть влияет на те же вещи: №5114/5115 (отход в циклах сверления).',
+  n:'Setting 33 меняет поведение G52 и G92 — прежде чем ругать программу, проверьте эту настройку.'},
+ {id:'d10',ttl:'Панель и режимы работы',
+  h:'Клавиши по функциям: EDIT, MEM, MDI/DNC, HANDLE JOG, ZERO RETURN. Графика — F4/цикл в режиме GRAPHICS. Корректоры быстрого хода 5/25/50/100 %.',
+  f:'Переключатель режимов: EDIT, MEM(AUTO), MDI, JOG, HANDLE, REF. Графика — GRAPH. Корректор быстрого хода F0/25/50/100 %.',
+  n:'Первый прогон на обеих стойках: Single Block + Dry Run + корректоры на минимум, рука на FEED HOLD.'},
+ {id:'d11',ttl:'Что делать при тревоге',
+  h:'Экран ALARMS показывает номер и текст. RESET снимает тревогу, но не устраняет причину. История — в разделе ALARM HISTORY.',
+  f:'Кнопка ALARM/MESSAGE, номер вида PS0010, SV0401, OT0500. Расшифровка — в руководстве по эксплуатации на серию (0i, 30i).',
+  n:'Записывайте номер тревоги и последний исполнявшийся кадр до нажатия RESET — без этого причину не найти.'},
+ {id:'d12',ttl:'Перенос программы между стойками — чек-лист',
+  h:'Проверить: % и Oxxxxx, G154 вместо G54.1, M97 → отдельная подпрограмма, G101 вместо G51.1, G187 вместо G05.1, L вместо K, G84 без M29.',
+  f:'Проверить обратное: убрать %, заменить G154 на G54.1, вставить M29 перед G84, K вместо L, G51.1 вместо G101, пересчитать формат G71/G76.',
+  n:'Полный перенос без CAM-постпроцессора всегда проверяется на воздухе с завышенной нулевой точкой по Z на 50 мм.'}
+];
+
+const VC=[
+ ['Сталь 45, 40Х (HB 200)','Твёрдый сплав','120–180','0,08–0,15'],
+ ['Сталь 45, 40Х (HB 200)','Быстрорез','25–35','0,05–0,10'],
+ ['Сталь легированная (HRC 30–35)','Твёрдый сплав','80–120','0,06–0,12'],
+ ['Нержавеющая 12Х18Н10Т','Твёрдый сплав','60–100','0,05–0,10'],
+ ['Чугун серый СЧ20','Твёрдый сплав','120–200','0,10–0,20'],
+ ['Алюминий Д16, АМг','Твёрдый сплав','400–1000','0,10–0,25'],
+ ['Бронза, латунь','Твёрдый сплав','200–400','0,08–0,20'],
+ ['Титан ВТ6','Твёрдый сплав','30–60','0,04–0,08'],
+ ['Закалённая сталь HRC 45–55','Твёрдый сплав с покрытием','50–90','0,03–0,08']
+];
+
+/* ============ утилиты ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>'x'+Math.random().toString(36).slice(2,9);
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._i);t._i=setTimeout(()=>t.classList.remove('on'),1900);}
+const CREDIT=`<div class="credit">Версия 0.930 · Разработал Онянов Дмитрий Сергеевич</div>`;
+function dbadge(d){return d===0?'<span class="badge b-same">одинаково</span>'
+  :d===1?'<span class="badge b-diff">есть отличия</span>'
+  :'<span class="badge b-diff">только у одной стойки</span>';}
+
+/* ============ навигация ============ */
+let tab='codes', folder=null, filter='Все', mach='turn', rank=null;
+const TABS=[
+ {id:'codes',n:'Коды',i:'<path d="M9 6 4 12l5 6M15 6l5 6-5 6"/>'},
+ {id:'calc', n:'Расчёты',i:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h2M13 11h2M9 15h2M13 15h2"/>'},
+ {id:'learn',n:'Учёба',i:'<path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/>'},
+ {id:'more', n:'Ещё',i:'<circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>'}];
+const FOLDERS_BASE={
+ codes:[['g','G-коды','Что совпадает у Haas и Fanuc, а что нет'],
+        ['m','M-коды','Вспомогательные функции станка'],
+        ['c','Циклы','Постоянные циклы с примерами'],
+        ['d','Стойки Haas и Fanuc','Различия, панель, перенос программ']],
+ learn:[['rank','Обучение по разрядам','3-й, 4-й, 5–6-й: что должен уметь и знать'],
+        ['instr','Инструкция по программированию','Сжато: с чего начать и в каком порядке'],
+        ['corr','Коррекции и масштабирование','G43, G41/G42, износ, G51, зеркало, поворот'],
+        ['prog','Примеры программ','Разбор готовых программ построчно'],
+        ['err','Типовые ошибки','На чём чаще всего влетают']]};
+const FOLDERS=new Proxy({},{get:(o,k)=>{
+  if(k==='codes'||k==='learn') return FOLDERS_BASE[k];
+  if(k==='calc') return mach==='turn'
+   ? [['geo','Контур наружный','Конусы, галтели, фаски: координаты точек'],
+      ['id','Расточка','Внутренние контуры отверстий'],
+      ['thr','Резьба','Шаги, ⌀ под резьбу, генератор G76'],
+      ['tools','Инструменты','Точка дуги, вершина резца, резьбовая программа'],
+      ['rez','Режимы резания','Обороты, подача, скорость, шероховатость'],
+      ['fit','Допуски и посадки','Поля, предельные размеры, зазор и натяг']]
+   : [['mill','Фрезерные расчёты','Гребешок, эффективный ⌀, подача по дуге, врезание'],
+      ['tools','Инструменты','Точка дуги и другие вспомогательные расчёты'],
+      ['rez','Режимы резания','Обороты, подача, скорость, шероховатость'],
+      ['fit','Допуски и посадки','Поля, предельные размеры, зазор и натяг']];
+  return [];}});
+const FTITLE=id=>{for(const k in FOLDERS){const f=FOLDERS[k].find(x=>x[0]===id); if(f) return f;} return null;};
+
+function drawNav(){
+  $('#nav').innerHTML=TABS.map(t=>`<div class="nb ${t.id===tab?'on':''}" data-tab="${t.id}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${t.i}</svg>${t.n}</div>`).join('');
+  $('#nav').querySelectorAll('.nb').forEach(b=>b.onclick=()=>{
+    if(b.dataset.tab===tab&&!folder&&!geoCase) return;
+    tab=b.dataset.tab; folder=null; geoCase=null; rank=null; filter='Все'; $('#q').value=''; deeper(); render();});
+}
+function deeper(){ try{ history.pushState({},''); }catch(e){} }
+window.addEventListener('popstate',()=>{
+  if($('#sheet').classList.contains('open')){ hideSheet(); return; }
+  if(geoCase){ geoCase=null; render(); return; }
+  if(rank){ rank=null; render(); return; }
+  if(folder){ folder=null; render(); return; }
+  render();
+});
+
+function render(){
+  const T=TABS.find(t=>t.id===tab);
+  const F=folder?FTITLE(folder):null;
+  $('#ttl').textContent=F?F[1]:(tab==='more'?'О программе':T.n);
+  $('#sub').textContent=F?F[2]:(tab==='more'?'Разработчик, версия, дисклеймер':'Выберите раздел');
+  $('#searchbox').style.display=(folder==='g'||folder==='m')?'flex':'none';
+  $('#mseg').innerHTML=(tab==='more')?'':
+    `<div class="${mach==='turn'?'on':''}" data-mach="turn">Токарный</div>
+     <div class="${mach==='mill'?'on':''}" data-mach="mill">Фрезерный</div>`;
+  $('#mseg').style.display=(tab==='more')?'none':'grid';
+  drawNav(); drawChips();
+  const s=$('#screen'); let h='';
+  if(tab==='more') h=viewMore();
+  else if(!folder) h=`<div class="wrap">`+FOLDERS[tab].map(([k,n,d])=>
+      `<div class="card" data-folder="${k}"><div class="glow"></div>
+        <div style="font-family:Oswald;font-size:17px">${esc(n)}</div>
+        <div class="ct" style="font-size:12.5px;margin-top:3px">${esc(d)}</div></div>`).join('')+CREDIT+`</div>`;
+  else if(folder==='g') h=viewCodes(G,'g');
+  else if(folder==='m') h=viewCodes(M,'m');
+  else if(folder==='c') h=viewCycles();
+  else if(folder==='d') h=viewDiff();
+  else if(folder==='geo'||folder==='id'||folder==='tools') h=viewGeo();
+  else if(['rank','instr','corr','prog','err'].includes(folder)) h=learnContent(folder);
+  else h=calcContent(folder);
+  s.innerHTML=h;
+  if(folder) s.insertAdjacentHTML('afterbegin',
+    `<div class="wrap" style="padding-bottom:0"><div class="card" id="upBtn" style="display:flex;align-items:center;gap:10px;padding:11px 13px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+      <span style="font-family:Oswald;letter-spacing:.08em;text-transform:uppercase;font-size:12px">${geoCase?'К списку контуров':rank?'К списку разрядов':'Все разделы'}</span></div></div>`);
+  bind(); s.scrollTop=0;
+}
+function drawChips(){
+  const c=$('#chips');
+  if(folder!=='g'&&folder!=='m'){c.style.display='none';return;}
+  c.style.display='flex';
+  const list=folder==='g'?['Все','Только отличия','Движение','Циклы','Коррекции','Системы координат','Режимы','Токарные','Плоскости']
+                         :['Все','Только отличия'];
+  c.innerHTML=list.map(g=>`<div class="chip ${g===filter?'on':''}" data-g="${esc(g)}">${esc(g)}</div>`).join('');
+  c.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{filter=ch.dataset.g;render();});
+}
+function viewMore(){
+  return `<div class="wrap">
+    <div class="card"><div class="glow"></div><div class="tag">Пособие оператора ЧПУ</div>
+      <div style="font-size:13.5px;line-height:1.6;margin-top:9px;color:#CFCCC6">
+        Справочник для работы у станка: G- и M-коды с разбором различий Haas и Fanuc, постоянные циклы,
+        расчёт координат контуров и расточки, режимы резания, резьба, допуски и посадки.
+        Всё считается на телефоне, без интернета.
+      </div>
+      <div class="res" style="margin-top:12px">
+        <div><div class="f">Версия</div><div class="v">0.930</div></div>
+        <div><div class="f">Разработал</div><div class="v" style="font-size:13px">Онянов Д.С.</div></div>
+        <div><div class="f">Контуров</div><div class="v">${GC.length+GI.length}</div></div>
+        <div><div class="f">Кодов в справочнике</div><div class="v">${G.length+M.length}</div></div>
+      </div>
+    </div>
+    <div class="card"><div class="tag">Дисклеймер</div>
+      <div class="note warn" style="margin-top:9px">
+        <b>Всё в приложении носит рекомендательный характер.</b> Это не нормативный документ и не истина в последней инстанции.
+        Приложение сделано прежде всего для начинающих операторов — чтобы быстрее разобраться в кодах, циклах и геометрии контура.
+      </div>
+      <div class="note" style="margin-top:9px">
+        Перед запуском программы сверяйтесь с чертежом, руководством на вашу стойку и утверждённым техпроцессом.
+        Первый прогон — Single Block, корректоры на минимум, рука на FEED HOLD.
+        Направления G02/G03 даны для задней револьверной головки; на передней они зеркальные.
+      </div>
+      <div class="note" style="margin-top:9px">
+        M-коды сверх базовых на Fanuc задаёт изготовитель станка — проверяйте по паспорту.
+        Таблица допусков — система отверстия, до ⌀500 мм, по ГОСТ 25347.
+      </div>
+    </div>
+    <div class="card"><div class="tag">Что менялось по версиям</div>
+      <div class="hint" style="margin-bottom:2px">Шаг версии — пять тысячных. Номер 1.0 зарезервирован за готовым релизом: до него доработка продолжается.</div>
+      <div style="margin-top:4px">${CHANGES.map((c,i)=>`<div style="padding:11px 0;border-bottom:${i<CHANGES.length-1?'1px solid #202027':'0'}">
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span style="font-family:IBM Plex Mono;font-size:13px;color:var(--ember);min-width:38px">${c[0]}</span>
+          <span style="font-family:Oswald;font-size:14.5px">${esc(c[1])}</span></div>
+        <div class="ct" style="font-size:12.5px;margin-top:5px;line-height:1.5">${esc(c[2])}</div></div>`).join('')}</div>
+    </div>
+    <div class="card"><div class="tag">О нумерации версий</div>
+      <div class="ct" style="margin-top:8px;line-height:1.55">Каждое обновление добавляет пять тысячных: 0.930 → 0.935 → 0.940. <b>До версии 1.0 в приложении могут быть ошибки</b> — оно в работе, разделы дописываются, расчёты перепроверяются. Версия 1.0 будет означать готовый продукт: проверенный на станках, с полным набором разделов и без известных ошибок. Пока номер меньше единицы — сверяйтесь с чертежом и руководством на свою стойку.</div>
+    </div>
+    ${bkCard()}
+    <div class="card"><div class="tag">Нашли ошибку — напишите</div>
+      <div class="ct" style="margin-top:7px">Запишите пример с цифрами: что вводили, что выдало, как должно быть. Поправлю и выпущу обновление.</div>
+      <a class="lnk" href="https://vk.ru/dmitriylsv" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12.8 17c-5 0-8.2-3.5-8.3-9.4h2.6c.1 4.4 2.1 6.2 3.6 6.6V7.6h2.4v3.7c1.4-.2 2.9-1.8 3.4-3.7h2.4c-.4 2.3-1.9 3.9-3 4.6 1.1.5 2.8 2 3.5 4.8h-2.6c-.5-1.8-1.9-3.2-3.7-3.4V17z"/></svg>
+        <span>ВКонтакте · dmitriylsv</span></a>
+      <a class="lnk" href="https://telegram.me/SergeyPanteleevi4Mavr0di" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21.9 4.3 18.9 19c-.2 1-.8 1.2-1.7.8l-4.6-3.4-2.2 2.1c-.2.2-.5.5-1 .5l.3-4.7 8.5-7.7c.4-.3-.1-.5-.6-.2L6.9 13.1 2.4 11.7c-1-.3-1-1 .2-1.5L20.6 3.2c.8-.3 1.5.2 1.3 1.1z"/></svg>
+        <span>Telegram · SergeyPanteleevi4Mavr0di</span></a>
+    </div>`+CREDIT+`</div>`;
+}
+function viewCodes(SRC,kind){
+  const q=$('#q').value.trim().toLowerCase();
+  const list=SRC.filter(x=>{
+    const okM=!x.mc||x.mc==='b'||x.mc===(mach==='turn'?'t':'f');
+    if(!okM) return false;
+    const okF=filter==='Все'||(filter==='Только отличия'?x.d>0:x.g===filter);
+    const okQ=!q||(x.c+' '+x.t+' '+(x.h||'')+' '+(x.f||'')).toLowerCase().includes(q);
+    return okF&&okQ;});
+  if(!list.length) return `<div class="empty">Ничего не нашлось.<br>Попробуйте другой запрос или снимите фильтр.</div>`+CREDIT;
+  return `<div class="wrap">`+list.map(x=>{
+    const id=kind+':'+x.c, n=(NOTES[id]||[]).length;
+    return `<div class="card" data-open="${esc(id)}">
+      <div class="glow ${x.d>0?'d':''}"></div>
+      <div class="row"><div class="code">${esc(x.c)}</div>${dbadge(x.d)}</div>
+      <div class="ct">${esc(x.t)}</div>
+      ${n?`<div style="margin-top:8px"><span class="nbadge">${n} зам.</span></div>`:''}
+    </div>`;}).join('')+`</div>`+CREDIT;
+}
+
+function viewCycles(){
+  return `<div class="wrap">`+CYC.filter(c=>!c.mc||c.mc==='b'||c.mc===(mach==='turn'?'t':'f')).map(c=>{
+    const n=(NOTES['c:'+c.id]||[]).length;
+    return `<div class="card" data-open="c:${c.id}"><div class="glow"></div>
+      <div class="tag">${esc(c.sub)}</div>
+      <div style="font-family:Oswald;font-size:18px;margin-top:7px;line-height:1.2">${esc(c.ttl)}</div>
+      ${n?`<div style="margin-top:8px"><span class="nbadge">${n} зам.</span></div>`:''}
+    </div>`;}).join('')+`</div>`+CREDIT;
+}
+
+function viewDiff(){
+  return `<div class="wrap">
+    <div class="note"><b>Как читать:</b> оранжевая рамка — Haas, синяя — Fanuc. Коды, отмеченные красным в списках, при переносе программы между станками правятся вручную.</div>
+    `+DIFF.map(d=>`<div class="card" data-open="d:${d.id}"><div class="glow d"></div>
+      <div class="tag">Различие</div>
+      <div style="font-family:Oswald;font-size:18px;margin-top:7px;line-height:1.2">${esc(d.ttl)}</div>
+    </div>`).join('')+`</div>`+CREDIT;
+}
+
+
+
+const RANKS=[['3','3-й разряд','Работа по готовой программе'],
+             ['4','4-й разряд','Наладка детали и правка программы'],
+             ['5','5-й разряд','Наладчик: программа с нуля и оснастка'],
+             ['6','6-й разряд','Сложные детали, оптимизация, участок']];
+const RD={
+ turn:{
+  st:'Haas ST-30',
+  '3':{c:'Оператор третьего разряда работает по уже налаженной программе. Его дело — поставить заготовку, запустить цикл, замерить деталь и удержать размер в допуске.',
+   know:['Устройство токарного станка с ЧПУ: шпиндель, револьверная головка, задняя бабка, транспортёр стружки.',
+    'Панель Haas: где ПУСК ЦИКЛА, где СТОП ПОДАЧИ, где аварийный грибок. Три корректора — быстрый ход, подача, обороты.',
+    'Штангенциркуль и микрометр: как замерить и как не помять деталь измерителем.',
+    'Что такое допуск на чертеже и почему ⌀40h7 — это не «сорок».',
+    'Правила безопасности: очки, закрытая дверь, стружку — крючком, не рукой, замер только на остановленном шпинделе.'],
+   can:['Включить станок и вывести оси в исходное положение.',
+    'Выбрать нужную программу из памяти и убедиться, что это именно она.',
+    'Установить заготовку в кулачки, проверить вылет и биение, зажать с нужным усилием.',
+    'Прогнать первую деталь в покадровом режиме с заниженными корректорами.',
+    'Замерить деталь и внести поправку в колонку износа.',
+    'Заменить затупившуюся пластину и проверить размер после замены.'],
+   how:`ПОРЯДОК ЗАПУСКА (Haas ST-30)
+1. Включить питание, отпустить аварийный грибок, нажать POWER UP — оси выйдут в исходное.
+2. LIST PROGRAM → выбрать программу → SELECT PROGRAM. Убедиться, что имя и номер совпадают с заданием.
+3. Установить и зажать заготовку. Проверить, что кулачки не заденут резец на первом проходе.
+4. MEM. Включить SINGLE BLOCK. Быстрый ход 5 %, подача 10 %.
+5. CYCLE START, палец на FEED HOLD. Пройти всю программу глядя на инструмент, а не на экран.
+6. Убедившись, что траектория верна, снять SINGLE BLOCK и поднять корректоры до 100 %.`,
+   fix:`ПОПРАВКА НА РАЗМЕР
+Деталь вышла ⌀40,08, нужно ⌀40,00 — лишние 0,08 по диаметру.
+OFFSET → вкладка Tool Offsets → строка нужного инструмента → колонка износа по X.
+Набрать -0.08 и нажать ENTER — значение прибавится к текущему.
+Клавиша F1 не прибавляет, а ЗАМЕНЯЕТ значение. Перепутали — потеряли всю поправку.
+Знак «минус» уменьшает деталь, «плюс» — увеличивает. По X всегда на диаметр.`,
+   no:['Править колонку геометрии — это привязка инструмента, её трогает наладчик.',
+    'Менять параметры станка и настройки Setting.',
+    'Запускать программу, которую видишь впервые, без прогона по кадрам.',
+    'Открывать дверь при вращающемся шпинделе и убирать стружку руками.']},
+  '4':{c:'Четвёртый разряд налаживает деталь сам: привязывает инструмент, задаёт нулевую точку, правит программу под фактическую заготовку.',
+   know:['Система координат станка и детали, что такое G54 и чем машинные координаты отличаются от рабочих.',
+    'Как устроена таблица коррекций: геометрия, износ, радиус пластины, номер вершины.',
+    'Основные G-коды и токарные циклы G71, G70, G76, G75 — что делает каждый адрес.',
+    'Режимы резания: скорость, подача, глубина; когда нужен G96, а когда G97, зачем ограничение G50.',
+    'Чтение чертежа целиком: базы, допуски формы, шероховатость, резьбы.'],
+   can:['Привязать резец по X и по Z, внести радиус пластины и номер вершины.',
+    'Задать нулевую точку детали по торцу.',
+    'Изменить кадр в программе и понимать последствия правки.',
+    'Подобрать режимы под материал и вылет, если заданные не идут.',
+    'Отладить программу на воздухе и найти ошибку по номеру кадра.'],
+   how:`ПРИВЯЗКА РЕЗЦА (Haas ST-30)
+По X: в толчковом режиме проточить поясок на заготовке, отвести только по Z, не трогая X.
+Замерить проточенный диаметр. OFFSET → Tool Offsets → нужная строка →
+ввести замеренное значение и нажать X DIAMETER MEASURE.
+По Z: подвести вершину к чистовому торцу до касания, нажать Z FACE MEASURE.
+Радиус пластины вносится в колонку Radius, номер вершины — в колонку Tip:
+для наружного правого резца обычно 3, для расточного 2.
+
+НУЛЕВАЯ ТОЧКА ДЕТАЛИ
+Торец детали — это Z0. Если инструмент привязан по чистовому торцу,
+рабочее смещение G54 по Z остаётся нулевым, а весь припуск учитывается в программе.`,
+   fix:`ОТЛАДКА ПРОГРАММЫ
+G103 P1 в начале программы — стойка читает один кадр вперёд, на экране виден
+реально исполняемый кадр. Так ловят место, где траектория уходит не туда.
+Прогон на воздухе: поднять рабочее смещение по Z на 50 мм, включить DRY RUN.
+Проверять именно траекторию: подход, отвод, точки смены инструмента.`,
+   no:['Резать на глаз, не проверив первый проход.','Менять чужую отлаженную программу без отметки в паспорте детали.']},
+  '5':{c:'Пятый разряд — наладчик. Отвечает за деталь целиком: оснастку, программу, режимы и за то, чтобы после него смена работала без вопросов.',
+   know:['Написание программы с нуля, подпрограммы M97 и M98, макросы G65 и переменные.',
+    'Оснастка: сырые кулачки и их растачивание, цанги, люнет, задняя бабка, поводковые устройства.',
+    'Настройки Haas, влияющие на работу: 9 — дюймы или миллиметры, 33 — режим координат FANUC/HAAS, 22 — отход в циклах, 56 — сброс кодов по M30, 103 — просмотр кадров.',
+    'Диагностика: чтение тревог, история тревог, признаки износа направляющих и биения шпинделя.',
+    'Экономика операции: стойкость пластины против времени цикла, когда выгоднее снизить подачу.'],
+   can:['Разработать техпроцесс на деталь и написать под него программу.',
+    'Расточить сырые кулачки под конкретную деталь и добиться биения в сотых.',
+    'Оптимизировать цикл: убрать холостые ходы, свести смены инструмента, поднять режимы без потери стойкости.',
+    'Найти причину брака: инструмент, программа, оснастка или станок.',
+    'Принять первую деталь и объяснить оператору, что и как держать.'],
+   how:`РАСТОЧКА СЫРЫХ КУЛАЧКОВ
+Кулачки зажимают на кольцо того же диаметра, что и деталь, с тем же усилием.
+Растачивают на рабочий диаметр минус 0,05 мм и на глубину зажима.
+После расточки биение проверяется индикатором: норма для чистовых операций
+не более 0,02 мм. Растачивать без кольца бессмысленно — при зажиме
+кулачки разойдутся и биение вернётся.
+
+ПОДПРОГРАММЫ
+Повторяющиеся участки выносят: M98 P1000 вызывает программу O1000,
+M99 возвращает обратно. У Haas есть и локальный вызов M97 P1000 —
+переход на кадр N1000 внутри той же программы.`,
+   fix:`РАЗБОР БРАКА ПО ПРИЗНАКУ
+Размер «гуляет» от детали к детали — зажим, биение, износ пластины.
+Размер стабильно не тот — коррекция или ошибка в программе.
+Конус по длине — увод от задней бабки или изношены направляющие.
+Дробление — вылет инструмента, малая подача, слабый зажим.
+Рваная поверхность — затупилась пластина или мала скорость резания.`,
+   no:['Оставлять смену без записи о том, что менялось в наладке.','Гнать режимы «на рекорд» в ущерб стойкости и точности.']},
+  '6':{c:'Шестой разряд — высшая рабочая квалификация. Ведёт особо сложные и ответственные детали, отвечает за точность участка и за тех, кто рядом.',
+   know:['Обработка деталей по 6–7 квалитету и точнее: что даёт станок, что оснастка, что температура цеха.',
+    'Геометрическая точность станка: как проверить биение шпинделя, перпендикулярность осей, люфт винта.',
+    'Профильные и сложнопрофильные поверхности, работа по CAM-выводу и правка постпроцессора под свой станок.',
+    'Материалы: чем отличается обработка нержавеющей, титана, закалённой стали и жаропрочных сплавов.',
+    'Метрология: аттестация приспособления, работа с координатной машиной, поверка средств измерения.',
+    'Экономика операции целиком: стойкость, время цикла, стоимость инструмента на деталь.'],
+   can:['Довести деталь до 6-го квалитета и удержать размер на партии, а не на одной штуке.',
+    'Диагностировать станок по характеру брака и обосновать ремонт или юстировку.',
+    'Отработать деталь, от которой отказались другие: тонкостенную, длинную, из вязкой нержавейки.',
+    'Ставить и вести обработку с четвёртой осью и на подвижном инструменте.',
+    'Разрабатывать оснастку под партию и считать её окупаемость.',
+    'Обучать операторов и наладчиков, принимать у них наладку.'],
+   how:`ТОЧНОСТЬ ВЫШЕ 7-ГО КВАЛИТЕТА
+Тепловой уход: после часа работы станок «растёт» на сотые. Ответственный размер
+берут после прогрева, а первую деталь смены проверяют отдельно.
+Разделение проходов: черновой снимает всё, получистовой оставляет 0,3 мм,
+чистовой идёт одним проходом свежей кромкой — иначе размер поведёт по длине.
+Один инструмент — один размер: не пытайтесь держать два допуска одной пластиной.
+
+ТОНКОСТЕННЫЕ И ДЛИННЫЕ ДЕТАЛИ
+Зажим — минимально достаточный, лучше через оправку или разжимную втулку.
+Режимы снижают не по подаче, а по глубине: тонкая стенка боится усилия, а не скорости.
+Длинный вал — люнет или центр; проверка на конус после каждого прохода.`,
+   fix:`КОГДА ВИНОВАТ СТАНОК, А НЕ НАЛАДКА
+Биение шпинделя: индикатор по оправке, норма для чистовых работ до 0,01 мм.
+Люфт: подвести ось в одну сторону, обнулить индикатор, подойти с другой —
+разница больше 0,02 мм говорит об износе винта или гайки.
+Перпендикулярность: проточить торец и проверить лекальной линейкой на просвет.
+Если станок в норме, а брак остался — причина в оснастке, инструменте или программе.`,
+   no:['Брать ответственную деталь, не проверив станок на биение и люфт.',
+    'Молча переделывать чужую наладку — сначала разобраться, почему сделано именно так.']}},
+ mill:{
+  st:'Haas VF-20',
+  '3':{c:'Третий разряд работает по готовой программе на вертикальном обрабатывающем центре: ставит заготовку, запускает, меряет, держит размер.',
+   know:['Устройство центра: шпиндель, магазин инструмента, стол, тиски и прижимы.',
+    'Панель Haas: пуск цикла, стоп подачи, аварийный грибок, три корректора.',
+    'Измерительный инструмент: штангенциркуль, микрометр, глубиномер, калибр-пробка.',
+    'Допуски на чертеже и что такое база.',
+    'Безопасность: очки, закрытая дверь, стружку убирать только при остановленном шпинделе.'],
+   can:['Включить станок, вывести оси в ноль.',
+    'Загрузить нужную программу и сверить её с заданием.',
+    'Закрепить заготовку в тисках, выставить по угольнику, проверить вылет над губками.',
+    'Прогнать первую деталь покадрово с заниженными корректорами.',
+    'Замерить и внести поправку в износ инструмента.',
+    'Заменить пластину или фрезу и проверить размер.'],
+   how:`ПОРЯДОК ЗАПУСКА (Haas VF-20)
+1. Питание, отпустить грибок, POWER UP — оси в исходное.
+2. LIST PROGRAM → выбрать → SELECT PROGRAM.
+3. Закрепить заготовку. Проверить, что фреза на всех проходах не встретит прижим.
+4. MEM, SINGLE BLOCK, быстрый ход 5 %, подача 10 %.
+5. CYCLE START, палец на FEED HOLD. Особое внимание — первый подвод по Z.
+6. Убедились в траектории — снимаем покадровый режим.`,
+   fix:`ПОПРАВКА НА РАЗМЕР
+Контур вышел на 0,1 мм больше — уменьшить радиус фрезы в коррекции на 0,05.
+OFFSET → Tool Offsets → колонка износа радиуса нужного инструмента.
+По Z глубина мала на 0,05 — в колонку износа длины ввести -0.05.
+ENTER прибавляет к текущему, F1 заменяет. Всегда смотрите, что было до правки.`,
+   no:['Править колонки геометрии длины и радиуса.','Запускать незнакомую программу без покадрового прогона.','Работать без коррекции длины G43.']},
+  '4':{c:'Четвёртый разряд налаживает деталь сам: привязывает инструмент по длине, задаёт нулевую точку детали, правит программу.',
+   know:['Система координат станка и детали, G54, машинные координаты G53.',
+    'Таблица коррекций: длина H, радиус D, износ по каждому.',
+    'Основные G-коды, постоянные циклы сверления и нарезания резьбы.',
+    'Коррекция на радиус фрезы: правила ввода и вывода, попутное и встречное фрезерование.',
+    'Режимы: скорость резания, подача на зуб, глубина и ширина фрезерования.'],
+   can:['Привязать длину каждого инструмента и внести радиус фрезы.',
+    'Задать нулевую точку детали по углу или по центру.',
+    'Править программу и понимать последствия.',
+    'Подобрать режимы под материал, вылет и жёсткость крепления.',
+    'Отладить программу на воздухе, найти ошибку по кадру.'],
+   how:`ПРИВЯЗКА ИНСТРУМЕНТА (Haas VF-20)
+Длина: в толчковом режиме подвести торец инструмента к верхней плоскости детали
+через щуп или бумагу, затем OFFSET → Tool Offsets → строка инструмента →
+TOOL OFFSET MEASURE. Значение запишется в длину.
+Радиус фрезы вносится вручную в колонку Radius: для фрезы ⌀12 это 6,0.
+
+НУЛЕВАЯ ТОЧКА ДЕТАЛИ
+Коснуться кромок детали в толчковом режиме, на каждой оси нажать
+PART ZERO SET во вкладке Work Offsets — координата запишется в G54.
+Не забыть про радиус касающегося инструмента: при касании боком
+вычитается его радиус.`,
+   fix:`ОТЛАДКА
+G103 P1 — просмотр одного кадра вперёд, на экране реально исполняемый кадр.
+Графика: режим GRAPHICS прогоняет траекторию без движения осей.
+Проверка по Z: поднять G54 по Z на 50 мм и прогнать вхолостую.`,
+   no:['Включать коррекцию радиуса на дуге или коротком кадре.','Работать без проверки, что H совпадает с номером инструмента.']},
+  '5':{c:'Пятый разряд — наладчик. Отвечает за оснастку, программу, режимы и результат смены.',
+   know:['Программирование с нуля, подпрограммы, макросы, работа с CAM-выводом.',
+    'Оснастка: тиски, прижимы, приспособления, поворотный стол, четвёртая ось.',
+    'Настройки Haas: 9, 33, 22, 56, 103; коррекция G187 для точности контура.',
+    'Диагностика: тревоги, их история, биение шпинделя, состояние тяги и захватов магазина.',
+    'Экономика: стойкость инструмента против времени цикла.'],
+   can:['Разработать техпроцесс и написать программу на деталь.',
+    'Спроектировать или подобрать приспособление под партию.',
+    'Оптимизировать цикл, убрать холостые ходы, поднять режимы без потери стойкости.',
+    'Найти причину брака: инструмент, программа, оснастка, станок.',
+    'Принять первую деталь и передать наладку смене.'],
+   how:`ЧЕТВЁРТАЯ ОСЬ И ПОВОРОТНЫЙ СТОЛ
+Ось A задаётся в градусах, подача при повороте — в градусах в минуту.
+Нулевое положение стола привязывается так же, как ось: через рабочее смещение.
+При обработке с поворотом обязательно проверять вылет инструмента
+относительно стола во всех положениях.
+
+ВЫСОКОСКОРОСТНАЯ ОБРАБОТКА
+G187 P1 — максимальная точность, медленно; P3 — быстро, углы скругляются.
+Для чистовой 3D-обработки ставят P1, для черновой выборки P3.`,
+   fix:`РАЗБОР БРАКА
+Размер плавает — зажим, вылет фрезы, износ.
+Контур волной — слишком большая подача при малой жёсткости.
+Уступ на стыке проходов — разная коррекция радиуса или биение фрезы.
+Прижоги — затупился инструмент или мала подача при высокой скорости.`,
+   no:['Оставлять смену без записи об изменениях в наладке.','Ставить режимы из каталога без поправки на жёсткость крепления.']},
+  '6':{c:'Шестой разряд — высшая рабочая квалификация. Ведёт особо сложные и ответственные детали, отвечает за точность участка и за тех, кто рядом.',
+   know:['Обработка деталей по 6–7 квалитету и точнее: что даёт станок, что оснастка, что температура цеха.',
+    'Геометрическая точность станка: как проверить биение шпинделя, перпендикулярность осей, люфт винта.',
+    'Профильные и сложнопрофильные поверхности, работа по CAM-выводу и правка постпроцессора под свой станок.',
+    'Материалы: чем отличается обработка нержавеющей, титана, закалённой стали и жаропрочных сплавов.',
+    'Метрология: аттестация приспособления, работа с координатной машиной, поверка средств измерения.',
+    'Экономика операции целиком: стойкость, время цикла, стоимость инструмента на деталь.'],
+   can:['Довести деталь до 6-го квалитета и удержать размер на партии, а не на одной штуке.',
+    'Диагностировать станок по характеру брака и обосновать ремонт или юстировку.',
+    'Отработать деталь, от которой отказались другие: тонкостенную, длинную, из вязкой нержавейки.',
+    'Ставить и вести обработку с четвёртой осью и на подвижном инструменте.',
+    'Разрабатывать оснастку под партию и считать её окупаемость.',
+    'Обучать операторов и наладчиков, принимать у них наладку.'],
+   how:`ТОЧНОСТЬ ВЫШЕ 7-ГО КВАЛИТЕТА
+Тепловой уход: после часа работы станок «растёт» на сотые. Ответственный размер
+берут после прогрева, а первую деталь смены проверяют отдельно.
+Разделение проходов: черновой снимает всё, получистовой оставляет 0,3 мм,
+чистовой идёт одним проходом свежей кромкой — иначе размер поведёт по длине.
+Один инструмент — один размер: не пытайтесь держать два допуска одной пластиной.
+
+ТОНКОСТЕННЫЕ И ДЛИННЫЕ ДЕТАЛИ
+Зажим — минимально достаточный, лучше через оправку или разжимную втулку.
+Режимы снижают не по подаче, а по глубине: тонкая стенка боится усилия, а не скорости.
+Длинный вал — люнет или центр; проверка на конус после каждого прохода.`,
+   fix:`КОГДА ВИНОВАТ СТАНОК, А НЕ НАЛАДКА
+Биение шпинделя: индикатор по оправке, норма для чистовых работ до 0,01 мм.
+Люфт: подвести ось в одну сторону, обнулить индикатор, подойти с другой —
+разница больше 0,02 мм говорит об износе винта или гайки.
+Перпендикулярность: проточить торец и проверить лекальной линейкой на просвет.
+Если станок в норме, а брак остался — причина в оснастке, инструменте или программе.`,
+   no:['Брать ответственную деталь, не проверив станок на биение и люфт.',
+    'Молча переделывать чужую наладку — сначала разобраться, почему сделано именно так.']}}
+};
+
+
+/* ============ сохранение и восстановление записей ============ */
+function bkFile(name,text){
+  try{
+    if(window.Razryad&&window.Razryad.saveText){ window.Razryad.saveText(name,text); toast('Файл сохранён в «Загрузки»'); return; }
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+    a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+    toast('Файл сохранён');
+  }catch(e){ toast('Не удалось сохранить файл'); }
+}
+async function bkCopy(text){
+  try{ await navigator.clipboard.writeText(text); toast('Скопировано в буфер'); return; }catch(e){}
+  try{ const t=document.createElement('textarea'); t.value=text; t.style.position='fixed'; t.style.opacity='0';
+    document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); toast('Скопировано в буфер');
+  }catch(e){ toast('Буфер недоступен'); }
+}
+function bkStamp(){ const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes()); }
+function bkCard(){
+  return `<div class="card"><div class="tag">Мои записи: сохранить и восстановить</div>
+    <div class="ct" style="margin-top:7px">Записи хранятся в памяти телефона. Очистка данных, переустановка или новый телефон — и они пропадут.
+      Сохраните файл, и его можно будет вернуть в любой момент или перенести на другой аппарат.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px">
+      <button class="btn" id="bkSave">Сохранить в файл</button>
+      <button class="btn ghost" id="bkCopy">Скопировать</button>
+    </div>
+    <div class="f" style="margin:14px 0 6px">Восстановить</div>
+    <textarea id="bkIn" placeholder="Откройте сохранённый файл любым текстовым редактором, скопируйте всё содержимое и вставьте сюда"></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px">
+      <button class="btn ghost" id="bkAdd">Добавить к моим</button>
+      <button class="btn ghost" id="bkRep">Заменить всё</button>
+    </div>
+    <div class="hint">«Добавить» подмешает записи из файла к текущим, «Заменить» сотрёт нынешние и поставит из файла.</div>
+  </div>`;
+}
+
+/* ============ учебный раздел ============ */
+
+const CHANGES=[
+ ['0.930','Правка расчётов и сохранение записей','ИСПРАВЛЕНО: подача на дуге считалась наоборот — на наружном радиусе программа снижала подачу вместо повышения, на внутреннем поднимала. ИСПРАВЛЕНО: в расчёте шероховатости выводилась высота гребешка Rz, подписанная как Ra, — завышение примерно вчетверо. Добавлено сохранение и восстановление записей файлом, копирование любого блока кода по нажатию, уточнения по G04, G53, G54.1 и G76.'],
+ ['0.925','Шестой разряд и посадки','Пятый и шестой разряды разделены: у шестого своя программа — точность выше 7-го квалитета, тонкостенные и длинные детали, проверка станка на биение и люфт. Посадок стало 34 вместо 15, добавлены квалитеты 5 и 10, в таблицу IT добавлен столбец IT5.'],
+ ['0.920','Правка текста о версиях','ИСПРАВЛЕНО: в пояснении о нумерации стояло, что готовым продуктом будет 0.915. Готовым считается 1.0. Ошибка появилась из-за автозамены номера версии, которая задела обычный текст.'],
+ ['0.915','Обучение по разрядам','Название и логотип: приложение стало «Разряд». Новый раздел обучения с делением на 3-й, 4-й и 5–6-й разряды, отдельно для токарного ST-30 и фрезерного VF-20: что знать, что уметь, как привязать инструмент, как внести поправку, чего делать нельзя. Добавлен список изменений по версиям.'],
+ ['0.910','Разделение токарь / фрезер','Переключатель типа станка в шапке: коды, циклы и расчёты показываются только свои. Новая вкладка «Учёба»: инструкция по программированию, коррекции и масштабирование, восемь примеров программ, типовые ошибки. Фрезерные расчёты: гребешок, эффективный ⌀, подача на дуге, врезание по спирали. ИСПРАВЛЕНО: в примере G76 конечный диаметр не соответствовал шагу резьбы.'],
+ ['0.905','Системные отступы','Меню больше не уезжает под кнопки навигации на телефонах с тремя кнопками. Кнопка «назад» выходит на уровень вверх, на верхнем уровне спрашивает подтверждение выхода.'],
+ ['0.900','Коррекция на радиус','ИСПРАВЛЕНО: у переключателя коррекции отсутствовали стили — он был невидим и не нажимался. Проверена работа коррекции на всех 23 контурах.'],
+ ['0.895','Эскизы с переменными','На чертежах подписаны D, d, L, R1, R2, углы A и B — теми же буквами, что в полях ввода. Ссылки на связь с разработчиком.'],
+ ['0.890','Три вкладки и папки','Разделы собраны в «Коды» и «Расчёты», внутри — папки. Добавлен раздел «Ещё» с описанием и дисклеймером.'],
+ ['0.885','Допуски и посадки','Пятнадцать посадок с расчётом предельных размеров, зазора и натяга, таблица IT. ИСПРАВЛЕНО: у полей r и s диапазоны ГОСТ дробятся мельче — на ⌀100 s6 ошибка достигала 0,014 мм.'],
+ ['0.880','Расточка','Шесть внутренних контуров со своими эскизами. Компенсация вершины считается по стороне металла. ИСПРАВЛЕНО: радиус дуги в кадре не переворачивался для расточного резца.'],
+ ['0.875','Каталог контуров','Восемнадцать наружных контуров с расчётом координат всех точек и генерацией кадров. Углы приведены к общепринятым обозначениям. ИСПРАВЛЕНО: знак при поиске центра выпуклой галтели и точка касания на зеркальной стороне дуги.'],
+ ['0.870','Коррекция вершины','Переключатель поправки на радиус при вершине: эквидистантное смещение контура, выпуклые дуги R+r, вогнутые R−r.'],
+ ['0.865','Конус и радиус','Первый вариант расчёта контуров: конусы, фаски, галтели, точка на дуге, поправка на вершину.'],
+ ['0.860','Первая сборка','G-коды, M-коды, циклы, различия Haas и Fanuc, режимы резания.']
+];
+
+const CARD=(tag,body)=>`<div class="card"><div class="tag">${tag}</div>${body}</div>`;
+const STEP=(n,t,b)=>`<div class="card"><div class="glow"></div>
+  <div style="display:flex;gap:12px;align-items:flex-start">
+    <div style="font-family:Oswald;font-size:26px;color:var(--orange);line-height:1;min-width:26px">${n}</div>
+    <div><div style="font-family:Oswald;font-size:16px;letter-spacing:.02em">${t}</div>
+      <div class="ct" style="margin-top:6px;line-height:1.5">${b}</div></div></div></div>`;
+
+function learnContent(f){
+  const T=mach==='turn';
+  if(f==='rank'){
+    const R=RD[mach];
+    if(!rank) return `<div class="wrap">
+      <div class="note">Разделено по разрядам: что нужно знать, что уметь и чего делать нельзя. Описано под ${R.st} — станок, на котором вы работаете.</div>
+      ${RANKS.map(([k,n,d])=>`<div class="card" data-rank="${k}"><div class="glow"></div>
+        <div style="display:flex;align-items:center;gap:13px">
+          <div style="font-family:Oswald;font-size:30px;color:var(--orange);line-height:1">${k}</div>
+          <div><div style="font-family:Oswald;font-size:17px">${esc(n)}</div>
+            <div class="ct" style="font-size:12.5px;margin-top:2px">${esc(d)}</div></div></div></div>`).join('')}
+      `+CREDIT+`</div>`;
+    const r=R[rank], nm=RANKS.find(x=>x[0]===rank);
+    const list=(t,a,cls)=>`<div class="card"><div class="tag">${t}</div>
+      <div style="margin-top:9px">${a.map(x=>`<div class="ct" style="display:flex;gap:9px;margin-bottom:8px;line-height:1.5">
+        <span style="color:var(--orange)">•</span><span>${x}</span></div>`).join('')}</div></div>`;
+    return `<div class="wrap">
+      <div class="card"><div class="glow"></div><div class="tag">${esc(nm[1])} · ${esc(R.st)}</div>
+        <div class="ct" style="margin-top:8px;line-height:1.55">${esc(r.c)}</div></div>
+      ${list('Что нужно знать',r.know)}
+      ${list('Что должен уметь',r.can)}
+      <div class="card"><div class="tag">Как это делается</div><pre class="blk" style="margin-top:9px">${esc(r.how)}</pre></div>
+      <div class="card"><div class="tag">${rank==='3'?'Поправка на размер':rank==='4'?'Отладка':rank==='5'?'Разбор брака':'Проверка станка'}</div>
+        <pre class="blk" style="margin-top:9px">${esc(r.fix)}</pre></div>
+      <div class="card"><div class="glow d"></div><div class="tag">Чего делать нельзя</div>
+        <div style="margin-top:9px">${r.no.map(x=>`<div class="ct" style="display:flex;gap:9px;margin-bottom:8px;line-height:1.5">
+          <span style="color:var(--red)">✕</span><span>${esc(x)}</span></div>`).join('')}</div></div>
+      `+CREDIT+`</div>`;
+  }
+  if(f==='instr') return `<div class="wrap">
+    <div class="note">Порядок, в котором пишут и запускают программу на ${T?'токарном':'фрезерном'} станке. Коротко, по шагам — то, что должно быть в голове до того, как нажать CYCLE START.</div>
+    ${STEP(1,'Разобрать чертёж','Что базовое, где нулевая точка по Z, какие размеры с допуском, какая шероховатость. Размеры с допуском обрабатываются отдельным чистовым проходом, свободные — черновым.')}
+    ${STEP(2,'Выбрать базы и закрепление',T
+      ?'Что зажимаем в кулачки, нужен ли центр и люнет. Вылет из кулачков больше 3–4 диаметров — уже нужен центр, иначе деталь уведёт конусом.'
+      :'Тиски, прижимы или приспособление. Проверьте, что фреза на всех проходах не встретит прижим — это самая частая авария на фрезере.')}
+    ${STEP(3,'Составить план обработки',T
+      ?'Торцевать → черновой контур G71 → чистовой G70 → канавки → резьба → отрезка. Каждый инструмент отрабатывает всё своё за один заход, лишние смены — потеря времени и точности.'
+      :'Торцевать → черновая выборка → сверление → чистовой контур → фаски → резьба. От большего инструмента к меньшему.')}
+    ${STEP(4,'Назначить нулевую точку','G54 по торцу детали. ' + (T
+      ?'X — всегда ось вращения, её задаёт привязка резца по диаметру; Z — чистовой торец.'
+      :'X и Y — угол или центр детали по чертежу; Z — верхняя плоскость либо стол, как принято в цехе.'))}
+    ${STEP(5,'Привязать инструмент',T
+      ?'Каждый резец привязывается по X (проточить и замерить) и по Z (коснуться торца). Радиус пластины и номер вершины вносят в таблицу — без них G41/G42 работать не будет.'
+      :'Длина каждого инструмента вносится в таблицу как H, радиус фрезы — как D. Номер H всегда совпадает с номером инструмента, иначе поедет по Z.')}
+    ${STEP(6,'Написать программу','Безопасный стартовый кадр, затем инструмент за инструментом. Каждый блок начинается с вызова инструмента и коррекции, заканчивается отводом в безопасную точку.')}
+    ${STEP(7,'Проверить на воздухе','Нулевую по Z поднять на 50 мм, прогнать Single Block с корректорами на минимуме. Смотреть не на экран, а на инструмент. Только после этого — на металл.')}
+    ${STEP(8,'Первая деталь','Черновой проход, замер, поправка через износ, чистовой проход. Не правьте геометрию инструмента — только износ, иначе потеряете привязку.')}
+    ${CARD('Безопасный стартовый кадр', `<pre class="blk" style="margin-top:9px">`+(T
+      ?`%\nO0001 (VAL 40X120)\nG21 G40 G99 G97\nG28 U0. W0.\nT0101 (RESEC CHERNOVOY)\nG50 S2500\nG96 S180 M03\nG00 X42. Z2. M08\n...\nG00 X200. Z200. M09\nM01`
+      :`%\nO0001 (KRYSHKA)\nG00 G17 G21 G40 G49 G80 G90 G94\nT1 M06\nG00 G90 G54 X0. Y0. S1200 M03\nG43 H01 Z50. M08\n...\nG00 G53 Z0. M09\nM01`)+`</pre>`)}
+  </div>`;
+
+  if(f==='corr') return `<div class="wrap">
+    <div class="note">Тема, на которой чаще всего теряют размер и ломают инструмент. Разбираем по порядку: что такое коррекция, где она лежит и как её менять.</div>
+    ${T?`
+    ${CARD('Коррекция инструмента: T0101',`<div class="ct" style="margin-top:7px">Первые две цифры — номер револьверной позиции, вторые — номер строки в таблице коррекций. Обычно их делают одинаковыми, но это не обязательно: T0102 возьмёт тот же резец с другой коррекцией — так делают чистовой и черновой проход одним инструментом.</div>
+      <pre class="blk" style="margin-top:9px">T0101   (резец 1, коррекция 1)\nT0100   (снять коррекцию перед сменой)</pre>`)}
+    ${CARD('Геометрия и износ',`<div class="ct" style="margin-top:7px">В таблице две колонки. Геометрия — где инструмент стоит относительно нуля, вносится один раз при привязке. Износ — поправка на замер детали, в неё и вносят все правки.</div>
+      <div class="note warn" style="margin-top:9px">Деталь вышла ⌀40,08 вместо ⌀40,00 — в износ по X вносим <b>−0,08</b>. Именно на диаметр, не на радиус. Знак «минус» уменьшает деталь.</div>`)}
+    ${CARD('Радиус при вершине: G41 / G42',`<div class="ct" style="margin-top:7px">Пока точите цилиндр и торец, радиус пластины не мешает. Как только пошёл конус или дуга — размер уходит. Либо включаем коррекцию, либо считаем смещённый контур во вкладке «Расчёты».</div>
+      <pre class="blk" style="margin-top:9px">G00 X20. Z2.\nG42 G01 Z0. F0.2      (включили на подходе)\nX30. Z-20.            (конус — здесь она и работает)\nG40 G00 X100. Z100.   (сняли на отводе)</pre>
+      <div class="hint">G42 — для наружного точения к патрону при задней револьверной головке, G41 — для расточки. На передней головке наоборот. В таблице обязательно заполнить радиус R и номер вершины T (для наружного правого резца обычно 3, для расточного 2).</div>`)}
+    ${CARD('Масштабирование на токарном',`<div class="ct" style="margin-top:7px">Отдельного масштаба нет: то, что на фрезере делают через G51, на токарном делают припуском U и W в цикле G71. U — припуск по диаметру, W — по торцу.</div>
+      <pre class="blk" style="margin-top:9px">G71 U2. R0.5\nG71 P10 Q20 U0.4 W0.1 F0.3\n(U0.4 = по 0,2 мм на сторону под чистовую)</pre>`)}
+    `:`
+    ${CARD('Коррекция длины: G43 H',`<div class="ct" style="margin-top:7px">Каждый инструмент имеет свою длину. G43 H01 говорит стойке: «работай с длиной из строки 1». Номер H держите равным номеру инструмента — тогда не перепутаете.</div>
+      <pre class="blk" style="margin-top:9px">T1 M06\nG00 G90 G54 X0. Y0. S1200 M03\nG43 H01 Z50. M08   (подвод с коррекцией)\n...\nG49 G00 Z200.      (снять перед сменой)</pre>
+      <div class="note warn" style="margin-top:9px">Забытый G43 — фреза едет в деталь на всю длину вылета. Проверяйте, что в кадре подвода по Z стоит G43 и правильный H.</div>`)}
+    ${CARD('Коррекция радиуса: G41 / G42 D',`<div class="ct" style="margin-top:7px">Программа пишется по контуру детали, а фреза идёт на радиус в сторону. G41 — коррекция слева по ходу движения (попутное фрезерование наружного контура), G42 — справа.</div>
+      <pre class="blk" style="margin-top:9px">G00 X-15. Y-15.        (точка подхода вне контура)\nG41 D01 G01 X0. Y-10. F400   (ввод — на прямой)\nY50.\nX60.\n...\nG40 G01 X-15. Y-15.    (вывод — тоже на прямой)</pre>
+      <div class="hint">Ввод и вывод только на линейном перемещении длиной не меньше радиуса фрезы. Внутренний угол радиусом меньше радиуса фрезы стойка выполнить не сможет — выдаст тревогу либо зарежет.</div>`)}
+    ${CARD('Зачем менять D, а не программу',`<div class="ct" style="margin-top:7px">Замерили контур — он на 0,1 мм больше. Не трогая программу, уменьшаете D на 0,05 (радиус!) — и контур сходится. Так же оставляют припуск: пишете D больше фактического радиуса на величину припуска и снимаете его вторым проходом той же программой.</div>
+      <div class="note" style="margin-top:9px">Фреза ⌀12, D = 6,0. Нужен припуск 0,3 на сторону — ставим D = 6,3, гоняем черновой. Потом D = 6,0 — и тот же кадр отрабатывает начисто.</div>`)}
+    ${CARD('Масштабирование: G51 / G50',`<div class="ct" style="margin-top:7px">Увеличивает или уменьшает всю геометрию относительно заданного центра. P — коэффициент: 2000 = ×2,0; 500 = ×0,5. Полезно для литейных усадок и для отработки на пробной заготовке.</div>
+      <pre class="blk" style="margin-top:9px">G51 X0. Y0. Z0. P2000   (всё вдвое больше)\nM98 P1000               (тот же контур подпрограммой)\nG50                     (отмена)</pre>
+      <div class="note warn" style="margin-top:9px">Дуги масштабируются вместе с радиусом. Если по осям задать разные коэффициенты, окружность превратится в эллипс, а стойка выдаст тревогу — на дугах разномасштабность не работает.</div>`)}
+    ${CARD('Зеркало и поворот',`<div class="ct" style="margin-top:7px">Зеркало: Haas — G101 X0. (отмена G100), Fanuc — G51.1 X0. (отмена G50.1). При зеркале меняется сторона коррекции радиуса: попутное фрезерование становится встречным, G41 работает как G42.</div>
+      <pre class="blk" style="margin-top:9px">(правая половина)\nM98 P1000\n(левая половина зеркалом)\nG101 X0.      (Fanuc: G51.1 X0.)\nM98 P1000\nG100          (Fanuc: G50.1)</pre>
+      <div class="hint">Поворот системы координат G68 X__ Y__ R__ (угол), отмена G69 — одинаково на обеих стойках. Удобно для отверстий по окружности и наклонных пазов.</div>`)}
+    `}
+  </div>`;
+
+  if(f==='prog') return `<div class="wrap">
+    <div class="note">Программы с разбором. Цифры согласованы: можно подставить свои размеры и пересчитать в «Расчётах».</div>
+    ${T?PROG_T.map(x=>progCard(x)).join(''):PROG_F.map(x=>progCard(x)).join('')}
+  </div>`;
+
+  return `<div class="wrap">
+    ${(T?ERR_T:ERR_F).map(e=>`<div class="card"><div class="glow d"></div>
+      <div style="font-family:Oswald;font-size:16px">${esc(e[0])}</div>
+      <div class="ct" style="margin-top:6px">${e[1]}</div></div>`).join('')}
+  </div>`;
+}
+function progCard(x){
+  return `<div class="card"><div class="glow"></div><div class="tag">${esc(x.tag)}</div>
+    <div style="font-family:Oswald;font-size:17px;margin-top:6px">${esc(x.n)}</div>
+    <div class="ct" style="margin-top:5px">${esc(x.d)}</div>
+    <pre class="blk" style="margin-top:10px">${esc(x.code)}</pre>
+    ${x.note?`<div class="note" style="margin-top:9px">${x.note}</div>`:''}</div>`;
+}
+
+const PROG_T=[
+ {tag:'Токарная · черновая и чистовая',n:'Вал ⌀40 с конусом и фаской',
+  d:'Заготовка ⌀45. Цикл G71 снимает контур начерно с припуском, G70 проходит начисто по тем же кадрам.',
+  code:`%
+O0001 (VAL 40)
+G21 G40 G99 G97
+G28 U0. W0.
+T0101 (CHERNOVOY 80 GRAD)
+G50 S2500
+G96 S200 M03
+G00 X47. Z0. M08
+G01 X-1.6 F0.2        (торцевать)
+G00 X47. Z2.
+G71 U2. R0.5          (глубина 2 мм, отход 0,5)
+G71 P10 Q20 U0.4 W0.1 F0.3
+N10 G00 X24.
+G01 Z0. F0.15
+X30. Z-3.             (фаска 3x45)
+Z-25.
+X40. Z-45.            (конус)
+Z-70.
+N20 X47.
+G70 P10 Q20           (чистовой по тем же кадрам)
+G00 X200. Z200. M09
+M01`,
+  note:'<b>U0.4</b> — припуск по диаметру, то есть 0,2 мм на сторону. <b>W0.1</b> — по торцу. В первом кадре U — это глубина резания, во втором тот же адрес означает припуск: у Fanuc так и есть, путать нельзя.'},
+ {tag:'Токарная · резьба',n:'Резьба М30×2 длиной 30 мм',
+  d:'Перед резьбой вал точится на ⌀29,8 — на 0,1 шага меньше номинала. Высота профиля 0,613×2 = 1,227 мм, конечный ⌀ = 30 − 2×1,227 = 27,546.',
+  code:`T0303 (REZBOVOY)
+G97 S700 M03
+G00 X33. Z5. M08
+G76 P011060 Q100 R0.05
+G76 X27.546 Z-30. P1227 Q430 F2.0
+G00 X200. Z200. M09
+M01`,
+  note:'Первый блок: <b>01</b> чистовой проход, <b>10</b> сбег в один шаг, <b>60</b> угол профиля. Второй: P — высота профиля в микронах, Q — первый проход в микронах, F — шаг. У Haas тот же цикл одной строкой: <b>G76 X27.546 Z-30. K1.227 D0.43 F2.0 A60 P1</b>.'},
+ {tag:'Токарная · канавка',n:'Канавка 4 мм под стопорное кольцо',
+  d:'Резец шириной 4 мм, врезание с дроблением стружки циклом G75.',
+  code:`T0505 (KANAVKA 4MM)
+G97 S600 M03
+G00 X42. Z-20. M08
+G75 R0.5
+G75 X34. Z-20. P2000 Q0 F0.08
+G00 X200. Z200. M09
+M01`,
+  note:'<b>P2000</b> — шаг врезания 2 мм в микронах, без десятичной точки. Ширина канавки задаётся шириной резца: если нужна шире, добавляют смещение по Z и второй проход.'},
+ {tag:'Токарная · расточка',n:'Расточить отверстие ⌀25 на глубину 40',
+  d:'Отверстие просверлено ⌀20. Расточной оправкой снимаем на ⌀25 с фаской на входе.',
+  code:`T0707 (RASTOCHNOY 16MM)
+G96 S140 M03
+G00 X26.5 Z2. M08     (заход больше ⌀ отверстия)
+G01 Z-40. F0.12
+G00 X24. 
+Z2.
+X25. 
+G01 X23. Z0. F0.1     (фаска 1x45 на входе)
+G00 Z2.
+G00 X200. Z200. M09
+M01`,
+  note:'Для расточки отвод делают <b>к оси</b>, а не от неё: сначала уменьшаем X, потом выходим по Z. Иначе оправка царапает готовую стенку.'}
+];
+
+const PROG_F=[
+ {tag:'Фрезерная · контур',n:'Контур 60×40 с коррекцией на радиус',
+  d:'Фреза ⌀12, коррекция D01 = 6,0. Нулевая точка в левом нижнем углу детали, Z0 — верхняя плоскость.',
+  code:`%
+O0002 (KONTUR 60X40)
+G00 G17 G21 G40 G49 G80 G90 G94
+T1 M06 (FREZA 12)
+G00 G90 G54 X-20. Y-20. S1800 M03
+G43 H01 Z50. M08
+Z2.
+G01 Z-5. F200
+G41 D01 X0. Y-10. F400   (ввод коррекции на прямой)
+Y40.
+X60.
+Y0.
+X-10.
+G40 G01 X-20. Y-20.      (вывод коррекции)
+G00 Z50. M09
+G53 Z0.
+M01`,
+  note:'Ввод коррекции — на линейном кадре длиной не меньше радиуса фрезы. Подход снаружи контура, чтобы фреза не врезалась в стенку при включении G41.'},
+ {tag:'Фрезерная · сверление',n:'Сетка отверстий ⌀8 с циклом G81',
+  d:'Девять отверстий с шагом 20 мм. Цикл срабатывает на каждый следующий кадр с координатами.',
+  code:`T2 M06 (SVERLO 8)
+G00 G90 G54 X20. Y20. S2200 M03
+G43 H02 Z50. M08
+G99 G81 Z-22. R2. F180
+X40.
+X60.
+Y40.
+X40.
+X20.
+Y60.
+X40.
+X60.
+G80 G00 Z50. M09
+M01`,
+  note:'<b>G99</b> — возврат на плоскость R между отверстиями, быстрее. Если между отверстиями стоит прижим, ставьте <b>G98</b> — возврат в исходную плоскость. Глубина Z-22 для сквозного отверстия в детали 20 мм: сверло должно выйти конусом.'},
+ {tag:'Фрезерная · резьба',n:'Нарезание М10 в четырёх отверстиях',
+  d:'Отверстия просверлены ⌀8,5. Метчик М10×1,5, обороты 500.',
+  code:`T3 M06 (METCHIK M10)
+G00 G90 G54 X20. Y20. S500 M03
+G43 H03 Z50. M08
+(FANUC: M29 S500 pered ciklom)
+G99 G84 Z-20. R5. F750.
+X60.
+Y60.
+X20.
+G80 G00 Z50. M09
+M01`,
+  note:'Подача F = обороты × шаг = 500 × 1,5 = <b>750 мм/мин</b>. На Fanuc перед циклом обязателен <b>M29 S500</b>, у Haas жёсткое нарезание встроено. Сверло под М10 = 10 − 1,5 = 8,5 мм.'},
+ {tag:'Фрезерная · масштаб и зеркало',n:'Четыре одинаковых кармана зеркалом',
+  d:'Контур написан один раз подпрограммой, три остальных получаются зеркалом относительно нуля.',
+  code:`T4 M06 (FREZA 10)
+G00 G90 G54 X0. Y0. S2000 M03
+G43 H04 Z50. M08
+M98 P1000              (первая четверть)
+G101 X0.               (зеркало по X)
+M98 P1000
+G101 X0. Y0.           (зеркало по X и Y)
+M98 P1000
+G100 G101 Y0.          (только по Y)
+M98 P1000
+G100                   (снять зеркало)
+G00 Z50. M09
+M01
+%
+O1000 (PODPROGRAMMA KARMANA)
+G00 X15. Y15.
+G01 Z-4. F150
+X35. F400
+Y35.
+X15.
+Y15.
+G00 Z2.
+M99`,
+  note:'На Fanuc зеркало включается <b>G51.1 X0.</b> и снимается <b>G50.1</b>. При зеркале сторона коррекции радиуса переворачивается: попутное фрезерование становится встречным — проверяйте направление обхода.'}
+];
+
+const ERR_T=[
+ ['Забыли G50 перед G96','В режиме постоянной скорости резания обороты при подходе к центру уходят в максимум. На торцовке кулачки могут вырвать деталь. Всегда ставьте ограничение G50 S____ до G96.'],
+ ['Правят геометрию вместо износа','Замерили деталь, полезли в геометрию — привязка потеряна, следующий инструмент поедет мимо. Все поправки по замеру вносятся только в колонку износа.'],
+ ['Забыт номер вершины в таблице','Радиус R внесли, а номер вершины T оставили 0 — коррекция G41/G42 считает неправильно, конус и дуги уходят на 2r по диаметру.'],
+ ['Резьба без сбега','Если канавка под выход резца короче одного шага, резец врежется в буртик. Сбег закладывается в цикл первым блоком, но место под него должно быть на детали.'],
+ ['Путают U в цикле G71','В первом кадре U — глубина резания, во втором — припуск на чистовую. Одна и та же буква, разный смысл. Перепутали — либо сняли всё за один проход, либо оставили 2 мм припуска.']
+];
+const ERR_F=[
+ ['Забыт G43 или неверный H','Инструмент едет по Z без коррекции длины — врезается в деталь на весь вылет. Проверяйте: номер H равен номеру инструмента, и G43 стоит в кадре подвода.'],
+ ['Ввод G41 на дуге или коротком кадре','Коррекция включается только на прямой длиной не меньше радиуса фрезы. Иначе стойка либо выдаст тревогу, либо зарежет угол.'],
+ ['Забыт G80 перед перемещением','Постоянный цикл остаётся активным, и следующая же координата отрабатывается как сверление. Отверстие появляется там, где его не ждали.'],
+ ['G99 при наличии прижимов','Возврат на плоскость R экономит время, но между отверстиями фреза идёт низко. Один прижим на пути — и инструмент срезает его на быстром ходу.'],
+ ['Разный масштаб по осям на дугах','G51 с разными коэффициентами по X и Y превращает окружность в эллипс — стойка выдаёт тревогу на первой же дуге.']
+];
+
+function calcContent(calcF){
+  if(calcF==='rez') return `<div class="wrap">
+    <div class="calc">
+      <div class="tag">Обороты и минутная подача</div>
+      <div class="two" style="margin-top:11px">
+        <label class="fld"><span>Диаметр D, мм</span><input type="number" id="kD" value="12" step="0.1"></label>
+        <label class="fld"><span>Скорость Vc, м/мин</span><input type="number" id="kV" value="150" step="1"></label>
+      </div>
+      <div class="two">
+        <label class="fld"><span>Число зубьев z</span><input type="number" id="kZ" value="4" step="1"></label>
+        <label class="fld"><span>Подача на зуб fz, мм</span><input type="number" id="kF" value="0.08" step="0.01"></label>
+      </div>
+      <div class="out" id="kOutN">—</div>
+      <div class="out" id="kOutF" style="font-size:24px">—</div>
+      <div class="hint">n = 1000·Vc / (π·D) · F = n · z · fz. Обороты округляйте вниз до целых сотен и сверяйте с максимумом шпинделя.</div>
+    </div>
+    <div class="calc">
+      <div class="tag">Проверка: скорость по оборотам</div>
+      <div class="two" style="margin-top:11px">
+        <label class="fld"><span>Диаметр D, мм</span><input type="number" id="vD" value="50" step="0.1"></label>
+        <label class="fld"><span>Обороты n, об/мин</span><input type="number" id="vN" value="800" step="10"></label>
+      </div>
+      <div class="out" id="vOut">—</div>
+      <div class="hint">На токарном D — текущий диаметр обработки, поэтому в G96 обороты меняются непрерывно.</div>
+    </div>
+    <div class="calc">
+      <div class="tag">Шероховатость при точении</div>
+      <div class="two" style="margin-top:11px">
+        <label class="fld"><span>Подача f, мм/об</span><input type="number" id="rF" value="0.15" step="0.01"></label>
+        <label class="fld"><span>Радиус пластины rε, мм</span><input type="number" id="rR" value="0.4" step="0.1"></label>
+      </div>
+      <div class="out" id="rOut">—</div>
+      <div class="hint">Высота гребешка Rz = f² / (8·rε). Шероховатость Ra примерно вчетверо меньше гребешка. Реальная выше расчёта на 20–50 % из-за износа пластины и вибраций, поэтому под чистовой размер берут запас.</div>
+    </div>
+    <div class="card"><div class="tag">Ориентировочные режимы</div>
+      <div class="tscroll" style="margin-top:9px"><table><thead><tr>
+        <th>Материал</th><th>Инструмент</th><th>Vc, м/мин</th><th>fz, мм/зуб</th></tr></thead><tbody>
+        ${VC.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="num">${esc(r[2])}</td><td class="num">${esc(r[3])}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="hint">Для ориентира. Рабочие режимы — из каталога производителя пластины, с поправкой на жёсткость станка и вылет.</div>
+    </div>`+CREDIT+`</div>`;
+
+
+  if(calcF==='mill') return `<div class="wrap">
+    <div class="calc">
+      <div class="tag">Гребешок и шаг строчки (сферическая фреза)</div>
+      <div class="two" style="margin-top:11px">
+        <label class="fld"><span>⌀ фрезы, мм</span><input type="number" id="mD" value="10" step="0.1"></label>
+        <label class="fld"><span>Допустимый гребешок Rz, мм</span><input type="number" id="mRz" value="0.01" step="0.005"></label>
+      </div>
+      <div class="out" id="mOut1">—</div>
+      <div class="hint">ae = 2·√(2·R·Rz − Rz²). Уменьшили гребешок вдвое — шаг строчки упал примерно в 1,4 раза, а время выросло во столько же.</div>
+    </div>
+    <div class="calc">
+      <div class="tag">Эффективный ⌀ сферической фрезы</div>
+      <div class="two" style="margin-top:11px">
+        <label class="fld"><span>⌀ фрезы, мм</span><input type="number" id="eD" value="10" step="0.1"></label>
+        <label class="fld"><span>Глубина ap, мм</span><input type="number" id="eA" value="0.5" step="0.1"></label>
+      </div>
+      <div class="out" id="mOut2">—</div>
+      <div class="hint">При малой глубине в работе только кончик фрезы: реальная скорость резания намного ниже расчётной. Обороты считайте по эффективному диаметру, иначе фреза «мылит» и горит.</div>
+    </div>
+    <div class="calc">
+      <div class="tag">Подача на дуге: поправка по контуру</div>
+      <div class="two" style="margin-top:11px">
+        <label class="fld"><span>⌀ фрезы, мм</span><input type="number" id="aD" value="12" step="0.1"></label>
+        <label class="fld"><span>Радиус контура, мм</span><input type="number" id="aR" value="20" step="0.1"></label>
+      </div>
+      <div class="two">
+        <label class="fld"><span>Нужная подача на кромке</span><input type="number" id="aF" value="800" step="10"></label>
+        <label class="fld"><span>Угол</span><select id="aT">
+          <option value="out">Наружный (выпуклый)</option>
+          <option value="in">Внутренний (вогнутый)</option></select></label>
+      </div>
+      <div class="out" id="mOut3">—</div>
+      <div class="hint">Стойка ведёт с заданной подачей <b>центр</b> фрезы, а режет <b>кромка</b>. На наружном радиусе центр описывает дугу длиннее кромки — чтобы кромка резала с нужной подачей, в кадре задают больше. На внутреннем наоборот: центр идёт по короткой дуге, и подачу в кадре снижают, иначе стружка на зуб вырастет и фреза сядет.</div>
+    </div>
+    <div class="calc">
+      <div class="tag">Врезание по спирали</div>
+      <div class="two" style="margin-top:11px">
+        <label class="fld"><span>⌀ спирали, мм</span><input type="number" id="sD" value="20" step="0.1"></label>
+        <label class="fld"><span>Глубина за оборот, мм</span><input type="number" id="sH" value="0.5" step="0.1"></label>
+      </div>
+      <div class="two">
+        <label class="fld"><span>Общая глубина, мм</span><input type="number" id="sT" value="5" step="0.1"></label>
+        <label class="fld"><span>Подача, мм/мин</span><input type="number" id="sF" value="400" step="10"></label>
+      </div>
+      <div class="out" id="mOut4">—</div>
+      <pre class="blk" id="mCode" style="margin-top:10px"></pre>
+      <div class="hint">Угол врезания для твёрдого сплава по стали держат в пределах 2–5°, для алюминия допустимо до 10°. Прямое врезание по Z концевой фрезой без центрового зуба ломает инструмент.</div>
+    </div>`+CREDIT+`</div>`;
+
+  if(calcF==='thr') return `<div class="wrap">
+    <div class="card"><div class="tag">Метрическая резьба с крупным шагом</div>
+      <div class="tscroll" style="margin-top:9px"><table><thead><tr>
+        <th>Резьба</th><th>Шаг</th><th>⌀ вала под резьбу</th><th>Сверло под гайку</th><th>h профиля</th></tr></thead><tbody>
+        ${MTHR.map(r=>{const P=r[1];return `<tr><td style="font-family:Oswald;font-size:14px">М${r[0]}</td>
+          <td class="num">${nf(P,2)}</td><td class="num">${nf(r[0]-0.1*P,2)}</td>
+          <td class="num">${nf(r[0]-P,2)}</td><td class="num">${nf(0.6134*P,3)}</td></tr>`;}).join('')}
+      </tbody></table></div>
+      <div class="hint">⌀ вала под наружную резьбу берут на 0,1–0,2 шага меньше номинала — витку нужно место для выдавливания. Сверло под метчик = номинал минус шаг.</div>
+    </div>
+    <div class="card"><div class="tag">Программа нарезания</div>
+      <div class="ct" style="margin-top:7px">Проходы по √, готовые кадры G76 для Haas и Fanuc — в генераторе резьбовой программы.</div>
+      <button class="btn" id="toThread" style="margin-top:11px">Открыть генератор G76</button>
+    </div>
+    <div class="card"><div class="tag">У станка</div>
+      <div class="note" style="margin-top:8px">Обороты при резьбе ограничивайте так, чтобы сбег уместился в канавку: на выходе шпиндель не успевает затормозить. Первый прогон — с завышенным X на 2–3 мм.</div>
+    </div>`+CREDIT+`</div>`;
+
+  return `<div class="wrap">
+    <div class="calc">
+      <div class="tag">Посадка по номинальному ⌀</div>
+      <div class="two" style="margin-top:11px">
+        <label class="fld"><span>Номинальный ⌀, мм</span><input type="number" id="ftD" value="40" step="0.1"></label>
+        <label class="fld"><span>Посадка</span><select id="ftF">
+          ${FITLIST.map(([f,d])=>`<option value="${f}"${f==='H7/g6'?' selected':''}>${f} — ${d}</option>`).join('')}
+        </select></label>
+      </div>
+      <div id="ftOut"></div>
+    </div>
+    <div class="card"><div class="tag">Допуск IT по диаметру, мкм</div>
+      <div class="tscroll" style="margin-top:9px"><table><thead><tr><th>⌀, мм</th>
+        ${[5,6,7,8,9,11].map(q=>`<th>IT${q}</th>`).join('')}</tr></thead><tbody>
+        ${ITR.map((hi,i)=>`<tr><td>${i===0?'до 3':'св. '+ITR[i-1]+' до '+hi}</td>
+          ${[5,6,7,8,9,11].map(q=>`<td class="num">${IT[q][i]}</td>`).join('')}</tr>`).join('')}
+      </tbody></table></div>
+      <div class="hint">IT5–6 — подшипниковые и особо точные шейки, IT7 — обычная точность посадочных мест, IT8–9 — свободные размеры, IT11 и грубее — литьё и сварка.</div>
+    </div>
+    <div class="card"><div class="tag">Как читать</div>
+      <div class="note" style="margin-top:8px">Буква задаёт положение поля относительно номинала, цифра — ширину поля. Заглавная — отверстие, строчная — вал. H7 всегда начинается от номинала вверх, h6 — от номинала вниз.</div>
+      <div class="note warn" style="margin-top:9px">Таблица до ⌀500 мм и для основных посадок в системе отверстия. Перед сдачей ответственной детали сверяйтесь с чертежом и ГОСТ 25347.</div>
+    </div>`+CREDIT+`</div>`;
+}
+
+const MTHR=[[3,0.5],[4,0.7],[5,0.8],[6,1],[8,1.25],[10,1.5],[12,1.75],[14,2],[16,2],[18,2.5],
+ [20,2.5],[22,2.5],[24,3],[27,3],[30,3.5],[33,3.5],[36,4],[39,4],[42,4.5],[45,4.5],[48,5],[52,5]];
+
+/* ============ допуски и посадки ============ */
+const ITR=[3,6,10,18,30,50,80,120,180,250,315,400,500];
+const IT={
+ 5:[4,5,6,8,9,11,13,15,18,20,23,25,27],
+ 6:[6,8,9,11,13,16,19,22,25,29,32,36,40],
+ 7:[10,12,15,18,21,25,30,35,40,46,52,57,63],
+ 8:[14,18,22,27,33,39,46,54,63,72,81,89,97],
+ 9:[25,30,36,43,52,62,74,87,100,115,130,140,155],
+ 10:[40,48,58,70,84,100,120,140,160,185,210,230,250],
+ 11:[60,75,90,110,130,160,190,220,250,290,320,360,400],
+ 12:[100,120,150,180,210,250,300,350,400,460,520,570,630],
+ 13:[140,180,220,270,330,390,460,540,630,720,810,890,970],
+ 14:[250,300,360,430,520,620,740,870,1000,1150,1300,1400,1550]};
+const DEV_M={ /* верхнее отклонение вала, мкм (со знаком минус) */
+ d:[20,30,40,50,65,80,100,120,145,170,190,210,230],
+ e:[14,20,25,32,40,50,60,72,85,100,110,125,135],
+ f:[6,10,13,16,20,25,30,36,43,50,56,62,68],
+ g:[2,4,5,6,7,9,10,12,14,15,17,18,20],
+ h:[0,0,0,0,0,0,0,0,0,0,0,0,0]};
+const DEV_P={ /* нижнее отклонение вала, мкм (со знаком плюс) */
+ k:[0,1,1,1,2,2,2,3,3,4,4,4,5],
+ m:[2,4,6,7,8,9,11,13,15,17,20,21,23],
+ n:[4,8,10,12,15,17,20,23,27,31,34,37,40],
+ p:[6,12,15,18,22,26,32,37,43,50,56,62,68]};
+/* у полей r и s диапазоны ГОСТ дробятся мельче */
+const RSR=[3,6,10,18,30,50,65,80,100,120,140,160,180,200,225,250,280,315,355,400,450,500];
+const DEV_RS={
+ r:[10,15,19,23,28,34,41,43,51,54,63,65,68,77,80,84,94,98,108,114,126,132],
+ s:[14,19,23,28,35,43,53,59,71,79,92,100,108,122,130,140,158,170,190,208,232,252]};
+const FITLIST=[['H7/g6','подвижная, точное центрирование'],['H7/h6','скользящая, разборка без усилия'],
+ ['H7/js6','переходная, лёгкая посадка молотком'],['H7/k6','переходная, ходовая для шестерён'],
+ ['H7/m6','переходная, плотная'],['H7/n6','переходная на грани натяга'],
+ ['H7/p6','лёгкий натяг, прессовая'],['H7/r6','натяг средний'],['H7/s6','тяжёлый натяг, под нагрев'],
+ ['H7/f7','ходовая с гарантированным зазором'],['H7/e8','широкоходовая'],['H7/d9','свободная'],
+ ['H8/f7','ходовая, подшипники скольжения'],['H8/e8','широкоходовая, тихоходные валы'],
+ ['H8/d9','свободная, грубые сопряжения'],['H8/h7','посадочная под уплотнения'],
+ ['H8/h8','скользящая по одному квалитету'],['H8/js7','переходная средней точности'],
+ ['H8/k7','переходная, съём с усилием'],['H8/n7','плотная переходная'],
+ ['H9/d9','свободная, литые корпуса'],['H9/e9','широкоходовая грубая'],
+ ['H9/f9','ходовая грубая'],['H9/h9','скользящая грубая'],
+ ['H11/d11','грубая, литые и сварные'],['H11/h11','грубая скользящая, крышки и кожухи'],
+ ['H6/g5','особо точная подвижная'],['H6/h5','особо точная скользящая'],
+ ['H6/js5','особо точная переходная'],['H6/k5','особо точная плотная'],
+ ['H6/n5','особо точная на грани натяга'],['H6/p5','особо точная с натягом'],
+ ['H7/h7','скользящая по одному квалитету'],['H10/h10','грубая, некритичные сопряжения']];
+function itIdx(D){ if(D<=0) return -1; for(let i=0;i<ITR.length;i++) if(D<=ITR[i]) return i; return -1; }
+function fieldOf(sym,D){
+  const i=itIdx(D); if(i<0) return null;
+  const m=sym.match(/^([A-Za-z]+)(\d+)$/); if(!m) return null;
+  const L=m[1], q=+m[2], it=IT[q]?IT[q][i]:null; if(it==null) return null;
+  if(L==='H') return {es:it,ei:0,it};
+  if(L==='JS'||L==='Js') return {es:it/2,ei:-it/2,it};
+  if(L==='js') return {es:it/2,ei:-it/2,it};
+  if(DEV_M[L]) { const es=-DEV_M[L][i]; return {es,ei:es-it,it}; }
+  if(DEV_P[L]) { const ei=DEV_P[L][i]; return {ei,es:ei+it,it}; }
+  if(DEV_RS[L]) { let j=-1; for(let n=0;n<RSR.length;n++) if(D<=RSR[n]){j=n;break;}
+    if(j<0) return null; const ei=DEV_RS[L][j]; return {ei,es:ei+it,it}; }
+  return null;
+}
+const mm=u=>(u/1000>=0?'+':'')+nf(u/1000,3);
+function fitCalc(){
+  const D=+$('#ftD').value||0, f=$('#ftF').value;
+  const out=$('#ftOut'); if(!out) return;
+  const [hs,ss]=f.split('/');
+  const H=fieldOf(hs,D), S=fieldOf(ss,D);
+  if(!H||!S){ out.innerHTML='<div class="note warn">Диаметр вне диапазона таблицы (до 500 мм) или сочетание не поддерживается.</div>'; return; }
+  const Hmax=D+H.es/1000, Hmin=D+H.ei/1000, Smax=D+S.es/1000, Smin=D+S.ei/1000;
+  const zmax=(H.es-S.ei), zmin=(H.ei-S.es);
+  const typ = zmin>=0?'с зазором' : (zmax<=0?'с натягом':'переходная');
+  const tgtS=(Smax+Smin)/2, tgtH=(Hmax+Hmin)/2;
+  out.innerHTML=`
+   <div class="res" style="margin-top:4px">
+     <div><div class="f">Отверстие ${esc(hs)}</div><div class="v">${mm(H.ei)} … ${mm(H.es)}</div></div>
+     <div><div class="f">Вал ${esc(ss)}</div><div class="v">${mm(S.ei)} … ${mm(S.es)}</div></div>
+     <div><div class="f">⌀ отверстия</div><div class="v hot">${nf(Hmin,3)} … ${nf(Hmax,3)}</div></div>
+     <div><div class="f">⌀ вала</div><div class="v hot">${nf(Smin,3)} … ${nf(Smax,3)}</div></div>
+     <div><div class="f">Допуск отв. / вала</div><div class="v">${H.it} / ${S.it} мкм</div></div>
+     <div><div class="f">Тип посадки</div><div class="v">${typ}</div></div>
+     <div><div class="f">${zmin>=0?'Зазор мин … макс':'Натяг макс … зазор макс'}</div>
+       <div class="v">${nf(zmin/1000,3)} … ${nf(zmax/1000,3)}</div></div>
+     <div><div class="f">Настройка станка</div><div class="v hot">вал ${nf(tgtS,3)}</div></div>
+   </div>
+   <div class="note" style="margin-top:4px"><b>Куда целиться:</b> ставьте размер вала на ${nf(tgtS,3)}, отверстия на ${nf(tgtH,3)} — середина поля. Тогда износ пластины съедает половину допуска, а не весь.</div>`;
+}
+
+/* ============ контуры: конусы, радиусы, фаски ============ */
+const rd=d=>d*Math.PI/180, dg=r=>r*180/Math.PI;
+const nf=(x,n)=>(!isFinite(x)?'—':(Math.round(x*Math.pow(10,n))/Math.pow(10,n)).toFixed(n));
+let geoCase=null, geoVals={}, geoLast=null;
+
+const GC=[
+{id:'k1',n:'Конус D → d',t:'Один конус между двумя диаметрами',
+ f:[['D','D — больший ⌀',50],['d','d — меньший ⌀',30],['L','L — длина конуса',40]],
+ c(v){const P=[{n:'P1',x:v.d,z:0},{n:'P2',x:v.D,z:-v.L}];
+  const A=dg(Math.atan((v.D-v.d)/(2*v.L)));
+  return {pts:P,segs:[{a:0,b:1,lbl:'A'}],info:[['Угол уклона A',nf(A,3)+' °'],['Угол при вершине',nf(2*A,3)+' °'],
+   ['Конусность',nf((v.D-v.d)/v.L,4)],['Отношение','1 : '+nf(v.L/((v.D-v.d)||1),2)]]};}},
+
+{id:'k2',n:'Конус A + R у торца',t:'Конус переходит в радиус, касательный к торцу',
+ f:[['D','D — ⌀ цилиндра',60],['A','A — угол конуса, °',20],['L','L — от начала конуса до торца',30],['R','R — радиус у торца',8]],
+ c(v){const a=rd(v.A), t=(v.L-v.R*(1-Math.sin(a)))/Math.cos(a);
+  const P3x=v.D, P3z=-v.L, P2z=-v.L+t*Math.cos(a), P2r=v.D/2-t*Math.sin(a);
+  const Cz=-v.R, Cr=P2r-v.R*Math.cos(a);
+  const P=[{n:'P1',x:2*Cr,z:0},{n:'P2',x:2*P2r,z:P2z},{n:'P3',x:P3x,z:P3z}];
+  return {pts:P,segs:[{a:0,b:1,c:{z:Cz,xr:Cr},r:v.R,conv:1,lbl:'R'},{a:1,b:2,lbl:'A'}],
+   info:[['Длина конуса по Z',nf(t*Math.cos(a),3)],['Съём по ⌀ на конусе',nf(2*t*Math.sin(a),3)],
+    ['Центр дуги Z',nf(Cz,3)],['Центр дуги X',nf(2*Cr,3)]],
+   bad:(t<0||Cr<0)?'Радиус не помещается: уменьшите R или увеличьте L.':null};}},
+
+{id:'k3',n:'Два конуса A и B',t:'Ломаный контур из двух углов',
+ f:[['D','D — больший ⌀',60],['d','d — меньший ⌀',30],['L','L — общая длина',40],['A','A — угол от вертикали, °',60],['B','B — угол от оси Z, °',10]],
+ c(v){const ta=Math.tan(rd(90-v.A)), tb=Math.tan(rd(v.B));
+  const t1=((v.D-v.d)/2-v.L*tb)/(ta-tb), t2=v.L-t1;
+  const P=[{n:'P1',x:v.d,z:0},{n:'P2',x:v.d+2*t2*tb,z:-t2},{n:'P3',x:v.D,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,lbl:'B'},{a:1,b:2,lbl:'A'}],
+   info:[['Длина участка A',nf(t1,3)],['Длина участка B',nf(t2,3)],
+    ['⌀ в точке стыка',nf(v.d+2*t2*tb,3)],['Съём по ⌀ всего',nf(v.D-v.d,3)]],
+   bad:(t1<0||t2<0)?'Углы не сходятся с заданными диаметрами и длиной.':null};}},
+
+{id:'k4',n:'Конус A + галтель R + конус B',t:'Два конуса, сопряжённые радиусом',
+ f:[['D','D — больший ⌀',60],['d','d — меньший ⌀',30],['L','L — общая длина',40],['A','A — угол от вертикали, °',60],['B','B — угол от оси Z, °',10],['R','R — радиус сопряжения',5]],
+ c(v){const a=rd(90-v.A), bb=rd(v.B), ta=Math.tan(a), tb=Math.tan(bb);
+  const t1=((v.D-v.d)/2-v.L*tb)/(ta-tb), t2=v.L-t1;
+  const Vz=-t2, Vr=v.d/2+t2*tb, T=v.R*Math.tan((a-bb)/2);
+  const P3z=Vz-T*Math.cos(a), P3r=Vr+T*Math.sin(a);
+  const P2z=Vz+T*Math.cos(bb), P2r=Vr-T*Math.sin(bb);
+  const Cz=P3z+v.R*Math.sin(a), Cr=P3r+v.R*Math.cos(a);
+  const P=[{n:'P1',x:v.d,z:0},{n:'P2',x:2*P2r,z:P2z},{n:'P3',x:2*P3r,z:P3z},{n:'P4',x:v.D,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,lbl:'B'},{a:1,b:2,c:{z:Cz,xr:Cr},r:v.R,conv:0,lbl:'R'},{a:2,b:3,lbl:'A'}],
+   info:[['Излом контура Z',nf(Vz,3)],['Излом контура X',nf(2*Vr,3)],
+    ['Касательная T',nf(T,3)],['Угол поворота',nf(90-v.A-v.B,2)+' °']],
+   bad:((90-v.A)<=v.B)?'Угол A (от вертикали) даёт наклон меньше B — контур не сходится.':(t1<0||t2<0)?'Углы не сходятся с диаметрами и длиной.':null};}},
+
+{id:'k5',n:'Конус A + R + цилиндр d',t:'Конус плавно выходит на цилиндр',
+ f:[['D','D — больший ⌀',60],['d','d — ⌀ цилиндра',30],['L','L — общая длина',45],['A','A — угол от вертикали, °',60],['R','R — радиус перехода',5]],
+ c(v){const a=rd(90-v.A), t1=((v.D-v.d)/2)/Math.tan(a), t2=v.L-t1;
+  const Vz=-t2, Vr=v.d/2, T=v.R*Math.tan(a/2);
+  const P3z=Vz-T*Math.cos(a), P3r=Vr+T*Math.sin(a);
+  const P2z=Vz+T, P2r=Vr;
+  const Cz=P3z+v.R*Math.sin(a), Cr=P3r+v.R*Math.cos(a);
+  const P=[{n:'P1',x:v.d,z:0},{n:'P2',x:2*P2r,z:P2z},{n:'P3',x:2*P3r,z:P3z},{n:'P4',x:v.D,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1},{a:1,b:2,c:{z:Cz,xr:Cr},r:v.R,conv:0,lbl:'R'},{a:2,b:3,lbl:'A'}],
+   info:[['Длина конуса по Z',nf(t1,3)],['Длина цилиндра',nf(t2-T,3)],
+    ['Касательная T',nf(T,3)],['Центр дуги Z / X',nf(Cz,2)+' / '+nf(2*Cr,2)]],
+   bad:(t2<T)?'Цилиндр короче радиуса перехода: увеличьте L или уменьшите R.':null};}},
+
+{id:'k6',n:'Уступ + галтель R + цилиндр',t:'Ступень с галтелью в углу',
+ f:[['D','D — ⌀ буртика',60],['d','d — ⌀ шейки',30],['L','L — от торца до уступа',40],['R','R — галтель',4]],
+ c(v){const P=[{n:'P1',x:v.d,z:0},{n:'P2',x:v.d,z:-(v.L-v.R)},{n:'P3',x:v.d+2*v.R,z:-v.L},{n:'P4',x:v.D,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1},{a:1,b:2,c:{z:-v.L+v.R,xr:v.d/2+v.R},r:v.R,conv:0,lbl:'R'},{a:2,b:3}],
+   info:[['Начало дуги Z',nf(-(v.L-v.R),3)],['Конец дуги X',nf(v.d+2*v.R,3)],
+    ['Центр дуги Z / X',nf(-v.L+v.R,2)+' / '+nf(v.d+2*v.R,2)],['Высота уступа',nf((v.D-v.d)/2,3)]],
+   bad:(v.d+2*v.R>v.D)?'Галтель больше высоты уступа.':null};}},
+
+{id:'k7',n:'Скругление кромки R',t:'Радиус на переходе цилиндр — торец',
+ f:[['D','D — ⌀ цилиндра',50],['R','R — радиус кромки',5],['L','L — длина цилиндра',30]],
+ c(v){const P=[{n:'P1',x:v.D-2*v.R,z:0},{n:'P2',x:v.D,z:-v.R},{n:'P3',x:v.D,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,c:{z:-v.R,xr:v.D/2-v.R},r:v.R,conv:1,lbl:'R'},{a:1,b:2}],
+   info:[['⌀ входа на торце',nf(v.D-2*v.R,3)],['Z конца дуги',nf(-v.R,3)],
+    ['Центр дуги Z / X',nf(-v.R,2)+' / '+nf(v.D-2*v.R,2)],['Снято с кромки',nf(v.R,3)]],
+   bad:(2*v.R>v.D)?'Радиус больше половины диаметра.':null};}},
+
+{id:'k8',n:'Сфера R на шейке d',t:'Шар на конце вала',
+ f:[['R','R — радиус сферы',20],['d','d — ⌀ шейки',20]],
+ c(v){const h=Math.sqrt(Math.max(v.R*v.R-(v.d/2)*(v.d/2),0));
+  const P=[{n:'P1',x:0,z:0},{n:'P2',x:2*v.R,z:-v.R},{n:'P3',x:v.d,z:-v.R-h}];
+  return {pts:P,segs:[{a:0,b:1,c:{z:-v.R,xr:0},r:v.R,conv:1,lbl:'R'},{a:1,b:2,c:{z:-v.R,xr:0},r:v.R,conv:1,lbl:'R'}],
+   info:[['⌀ сферы',nf(2*v.R,3)],['Центр сферы Z',nf(-v.R,3)],
+    ['Z стыка с шейкой',nf(-v.R-h,3)],['Длина шара по Z',nf(v.R+h,3)]],
+   bad:(v.d>2*v.R)?'Шейка толще сферы.':null};}},
+
+{id:'k9',n:'Фаска C под углом',t:'Фаска на торце, любой угол',
+ f:[['D','D — ⌀',40],['C','C — катет по Z',2],['A','A — угол фаски, °',45],['L','L — длина цилиндра',30]],
+ c(v){const rr=v.C*Math.tan(rd(v.A));
+  const P=[{n:'P1',x:v.D-2*rr,z:0},{n:'P2',x:v.D,z:-v.C},{n:'P3',x:v.D,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,lbl:'C'},{a:1,b:2}],
+   info:[['Катет по радиусу',nf(rr,3)],['Катет по ⌀',nf(2*rr,3)],
+    ['⌀ входа на торце',nf(v.D-2*rr,3)],['Автофаска','Haas C'+nf(v.C,2)+' · Fanuc ,C'+nf(v.C,2)]]};}}
+,
+{id:'k10',n:'Уступ + конус A',t:'Ступень, затем конус к торцу',
+ f:[['D','D — ⌀ буртика',60],['d','d — ⌀ у торца',30],['A','A — угол от оси Z, °',20],['L','L — от уступа до торца',40]],
+ c(v){const x2=v.d+2*v.L*Math.tan(rd(v.A));
+  const P=[{n:'P1',x:v.d,z:0},{n:'P2',x:x2,z:-v.L},{n:'P3',x:v.D,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,lbl:'A'},{a:1,b:2}],
+   info:[['⌀ в начале конуса',nf(x2,3)],['Высота уступа',nf((v.D-x2)/2,3)],
+    ['Съём по ⌀ на конусе',nf(x2-v.d,3)],['Угол при вершине',nf(2*v.A,2)+' °']],
+   bad:(x2>v.D)?'Конус выше буртика: уменьшите A или L.':null};}},
+
+{id:'k11',n:'Конус A + цилиндр d',t:'Конус переходит в цилиндр без радиуса',
+ f:[['D','D — больший ⌀',60],['d','d — ⌀ цилиндра',30],['A','A — угол от вертикали, °',60],['L','L — общая длина',45]],
+ c(v){const t=((v.D-v.d)/2)/Math.tan(rd(90-v.A));
+  const P=[{n:'P1',x:v.d,z:0},{n:'P2',x:v.d,z:-(v.L-t)},{n:'P3',x:v.D,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1},{a:1,b:2,lbl:'A'}],
+   info:[['Длина конуса по Z',nf(t,3)],['Длина цилиндра',nf(v.L-t,3)],
+    ['Угол от оси Z',nf(90-v.A,2)+' °'],['Конусность',nf((v.D-v.d)/t,4)]],
+   bad:(t>v.L)?'Конус длиннее заданной длины L.':null};}},
+
+{id:'k13',n:'Уступ + галтель R + конус A',t:'Ступень с галтелью, затем конус',
+ f:[['D','D — ⌀ буртика',60],['d','d — ⌀ у торца',30],['R','R — галтель',5],['A','A — угол от оси Z, °',20],['L','L — от уступа до торца',25]],
+ c(v){const a=rd(v.A), Zc=-v.L+v.R, Xc=v.d/2+(v.R+Math.sin(a)*(v.L-v.R))/Math.cos(a);
+  const P=[{n:'P1',x:v.d,z:0},{n:'P2',x:2*(Xc-v.R*Math.cos(a)),z:Zc-v.R*Math.sin(a)},
+           {n:'P3',x:2*Xc,z:-v.L},{n:'P4',x:v.D,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,lbl:'A'},{a:1,b:2,c:{z:Zc,xr:Xc},r:v.R,conv:0,lbl:'R'},{a:2,b:3}],
+   info:[['⌀ конца галтели',nf(2*Xc,3)],['Центр дуги Z / X',nf(Zc,2)+' / '+nf(2*Xc,2)],
+    ['⌀ начала конуса',nf(2*(Xc-v.R*Math.cos(a)),3)],['Высота уступа',nf((v.D-2*Xc)/2,3)]],
+   bad:(2*Xc>v.D)?'Галтель не помещается в уступ: уменьшите R или A.':null};}},
+
+{id:'k16',n:'R2 + конус A + R1 у торца',t:'Конус с радиусами сверху и снизу',
+ f:[['D','D — ⌀ цилиндра',60],['A','A — угол от оси Z, °',25],['L','L — от излома до торца',30],['R1','R1 — радиус у торца',6],['R2','R2 — радиус вверху',5]],
+ c(v){const a=rd(v.A), t1=(v.L-v.R1*(1-Math.sin(a)))/Math.cos(a);
+  const P2r=v.D/2-t1*Math.sin(a), P2z=-v.L+t1*Math.cos(a);
+  const C1={z:-v.R1,xr:P2r-v.R1*Math.cos(a)};
+  const T2=v.R2*Math.tan(a/2);
+  const P3z=-v.L+T2*Math.cos(a), P3r=v.D/2-T2*Math.sin(a);
+  const C2={z:-v.L-T2,xr:v.D/2-v.R2};
+  const P=[{n:'P1',x:2*C1.xr,z:0},{n:'P2',x:2*P2r,z:P2z},{n:'P3',x:2*P3r,z:P3z},{n:'P4',x:v.D,z:-v.L-T2}];
+  return {pts:P,segs:[{a:0,b:1,c:C1,r:v.R1,conv:1,lbl:'R1'},{a:1,b:2,lbl:'A'},{a:2,b:3,c:C2,r:v.R2,conv:1,lbl:'R2'}],
+   info:[['⌀ у торца',nf(2*C1.xr,3)],['Длина прямого участка',nf(t1-T2,3)],
+    ['Касательная R2',nf(T2,3)],['Центр R1 Z / X',nf(C1.z,2)+' / '+nf(2*C1.xr,2)]],
+   bad:(t1<T2||C1.xr<0)?'Радиусы не помещаются: уменьшите R1 или R2.':null};}},
+
+{id:'k17',n:'R + конус A к ⌀ d',t:'Радиус на изломе, конус до малого ⌀',
+ f:[['D','D — ⌀ цилиндра',60],['d','d — ⌀ у торца',30],['R','R — радиус на изломе',5],['A','A — угол от оси Z, °',30]],
+ c(v){const a=rd(v.A), Xc=v.D/2-v.R;
+  const Zc=(-v.R-Math.cos(a)*(Xc-v.d/2))/Math.sin(a);
+  const P=[{n:'P1',x:v.d,z:0},{n:'P2',x:2*(Xc+v.R*Math.cos(a)),z:Zc+v.R*Math.sin(a)},{n:'P3',x:v.D,z:Zc}];
+  return {pts:P,segs:[{a:0,b:1,lbl:'A'},{a:1,b:2,c:{z:Zc,xr:Xc},r:v.R,conv:1,lbl:'R'}],
+   info:[['Длина контура по Z',nf(-Zc,3)],['⌀ начала конуса',nf(2*(Xc+v.R*Math.cos(a)),3)],
+    ['Центр дуги Z / X',nf(Zc,2)+' / '+nf(2*Xc,2)],['Съём по ⌀',nf(v.D-v.d,3)]],
+   bad:(Zc>0)?'При таком угле контур не сходится: увеличьте A или уменьшите R.':null};}},
+
+{id:'k18',n:'Вогнутый радиус ⌀D → ⌀d',t:'Один радиус между двумя диаметрами',
+ f:[['D','D — больший ⌀',60],['d','d — ⌀ у торца',30],['R','R — радиус',20]],
+ c(v){const e=v.R-(v.D-v.d)/2, k=v.R*v.R-e*e;
+  const Zc=-Math.sqrt(Math.max(k,0));
+  const P=[{n:'P1',x:v.d,z:0},{n:'P2',x:v.D,z:Zc}];
+  return {pts:P,segs:[{a:0,b:1,c:{z:Zc,xr:v.D/2-v.R},r:v.R,conv:1,lbl:'R'}],
+   info:[['Длина по Z',nf(-Zc,3)],['Центр дуги Z',nf(Zc,3)],
+    ['Центр дуги X',nf(v.D-2*v.R,3)],['Перепад по ⌀',nf(v.D-v.d,3)]],
+   bad:(k<0)?'Радиус мал для такого перепада диаметров: R должен быть не меньше (D−d)/4.':null};}},
+
+{id:'k19',n:'Полный радиус на торце',t:'Скруглённый конец вала',
+ f:[['D','D — ⌀ вала',50],['R','R — радиус торца',25]],
+ c(v){const h=Math.sqrt(Math.max(v.R*v.R-(v.D/2)*(v.D/2),0));
+  const P=[{n:'P1',x:0,z:0},{n:'P2',x:v.D,z:-v.R-h}];
+  return {pts:P,segs:[{a:0,b:1,c:{z:-v.R,xr:0},r:v.R,conv:1,lbl:'R'}],
+   info:[['Центр дуги Z',nf(-v.R,3)],['Длина скругления',nf(v.R+h,3)],
+    ['Смещение стыка',nf(h,3)],['Тип',(Math.abs(v.R-v.D/2)<0.01?'полусфера':'частичный радиус')]],
+   bad:(2*v.R<v.D)?'Радиус меньше половины диаметра — торец так не скруглить.':null};}},
+
+{id:'k20',n:'Шар R1 + галтель R2 на шейке',t:'Сферическая головка с переходом',
+ f:[['D','D — ⌀ шейки',20],['R1','R1 — радиус шара',25],['R2','R2 — галтель у шейки',5]],
+ c(v){const s1=v.R1+v.R2, s2=v.D/2+v.R2, k=s1*s1-s2*s2;
+  const h=Math.sqrt(Math.max(k,0)), Zs=-v.R1, Zc2=Zs-h;
+  const P2z=Zs+v.R1*(-h)/s1, P2r=v.R1*s2/s1;
+  const P=[{n:'P1',x:0,z:0},{n:'P2',x:2*P2r,z:P2z},{n:'P3',x:v.D,z:Zc2}];
+  return {pts:P,segs:[{a:0,b:1,c:{z:Zs,xr:0},r:v.R1,conv:1,lbl:'R1'},{a:1,b:2,c:{z:Zc2,xr:v.D/2+v.R2},r:v.R2,conv:0,lbl:'R2'}],
+   info:[['⌀ шара',nf(2*v.R1,3)],['Центр шара Z',nf(Zs,3)],
+    ['Стык шар/галтель ⌀',nf(2*P2r,3)],['Центр галтели Z',nf(Zc2,3)]],
+   bad:(k<0||v.D>2*v.R1)?'Шейка слишком толстая для такого шара и галтели.':null};}}
+
+];
+
+const GT=[
+{id:'t1',n:'Точка на дуге по углу',t:'Координаты точки радиуса',
+ f:[['Xc','Xц — ⌀ центра',40],['Zc','Zц — координата центра',-20],['R','R — радиус',10],['A','θ — угол от оси Z, °',30]],
+ c(v){const X=v.Xc+2*v.R*Math.sin(rd(v.A)), Z=v.Zc+v.R*Math.cos(rd(v.A));
+  return {info:[['Точка X (⌀)',nf(X,3)],['Точка Z',nf(Z,3)],
+   ['Смещение по радиусу',nf(v.R*Math.sin(rd(v.A)),3)],['Смещение по Z',nf(v.R*Math.cos(rd(v.A)),3)],
+   ['Хорда от 0°',nf(2*v.R*Math.sin(rd(v.A/2)),3)],['Стрелка сегмента',nf(v.R*(1-Math.cos(rd(v.A))),3)]],
+   code:`(ТОЧКА НА ДУГЕ R${nf(v.R,2)} ПРИ ${nf(v.A,1)} ГРАД)\nX${nf(X,3)} Z${nf(Z,3)}\n(центр X${nf(v.Xc,3)} Z${nf(v.Zc,3)})`};}},
+{id:'t2',n:'Радиус при вершине резца',t:'Поправка без G41/G42',
+ f:[['r','r — радиус при вершине',0.8],['A','α — угол конуса от оси Z, °',45]],
+ c(v){const dD=2*v.r*(1-Math.cos(rd(v.A))), dZ=v.r*(1-Math.sin(rd(v.A)));
+  return {info:[['Поправка по ⌀',nf(dD,3)+' мм'],['Поправка по Z',nf(dZ,3)+' мм'],
+   ['На радиус',nf(dD/2,3)+' мм'],['Торец 90°',nf(2*v.r,3)+' мм ⌀'],['Цилиндр 0°',nf(v.r,3)+' мм Z'],['Формула','2r(1−cos α) · r(1−sin α)']],
+   code:`(БЕЗ G41/G42 РАЗМЕР УЙДЁТ НА ${nf(dD,3)} ПО ДИАМЕТРУ)\nG42 G01 X.. Z.. F0.15   (наружное точение)\n...\nG40 G00 X100. Z50.\n(в таблице коррекций задать R${nf(v.r,2)} и номер вершины T)`};}},
+{id:'t3',n:'Резьбовая программа',t:'Метрическая резьба: проходы и кадры G76',
+ f:[['t','Тип резьбы',0,['Наружная','Внутренняя']],['D','D — номинальный ⌀',24],['P','P — шаг',1.5],
+    ['L','L — длина резьбы',25],['n','n — число проходов',7]],
+ c(v){
+  const inner=+v.t===1, P=v.P, D=v.D, n=Math.max(1,Math.round(v.n));
+  const h=(inner?0.5413:0.6134)*P;              // глубина по радиусу
+  const Xend=inner? D : D-2*h;                  // конечный ⌀ в цикле
+  const Xstart=inner? D-2*h : D;                // ⌀, с которого начинает цикл
+  const blank=inner? nf(D-P,3)+' (отверстие)' : nf(D-0.1*P,3)+' (вал)';
+  let rows='', prev=0;
+  for(let i=1;i<=n;i++){ const di=h*Math.sqrt(i/n);
+    rows+=`(проход ${String(i).padStart(2)}: глубина ${nf(di,3)}  съём ${nf(di-prev,3)}  X${nf(inner?D-2*h+2*di:D-2*di,3)})\n`;
+    prev=di; }
+  const d1=h/Math.sqrt(n);
+  const sbeg=Math.round(P*10)/10;
+  const code=
+`(МЕТРИЧЕСКАЯ М${nf(D,2)}x${nf(P,2)} ${inner?'ВНУТРЕННЯЯ':'НАРУЖНАЯ'})
+(высота профиля ${nf(h,3)} на радиус, ${n} проходов)
+${rows}
+(FANUC)
+G97 S${inner?600:800} M03
+G00 X${nf(Xstart+(inner?-2:2),3)} Z${nf(2*P,3)}
+G76 P0110${'60'} Q${Math.round(Math.max(0.05,d1/4)*1000)} R0.05
+G76 X${nf(Xend,3)} Z-${nf(v.L,3)} P${Math.round(h*1000)} Q${Math.round(d1*1000)} F${nf(P,3)}
+G00 X200. Z200.
+
+(HAAS)
+G97 S${inner?600:800} M03
+G00 X${nf(Xstart+(inner?-2:2),3)} Z${nf(2*P,3)}
+G76 X${nf(Xend,3)} Z-${nf(v.L,3)} K${nf(h,3)} D${nf(d1,3)} F${nf(P,3)} A60 P1
+G00 X200. Z200.`;
+  return {info:[['Высота профиля h',nf(h,3)+' мм'],['Конечный ⌀ в цикле',nf(Xend,3)],
+   ['Первый проход',nf(d1,3)+' мм'],['Последний проход',nf(h-h*Math.sqrt((n-1)/n),3)+' мм'],
+   ['⌀ под резьбу',blank],['Сбег / выход',nf(sbeg,2)+' мм (≈1 шаг)']],
+   code};}}
+
+];
+
+const GI=[
+{id:'i1',n:'Расточка: конус ⌀D → ⌀d',t:'Внутренний конус от входа вглубь',inner:1,
+ f:[['D','D — ⌀ у входа',60],['d','d — ⌀ в глубине',40],['L','L — длина конуса',40]],
+ c(v){const A=dg(Math.atan((v.D-v.d)/(2*v.L)));
+  const P=[{n:'P1',x:v.D,z:0},{n:'P2',x:v.d,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,lbl:'A'}],
+   info:[['Угол уклона',nf(A,3)+' °'],['Угол при вершине',nf(2*A,3)+' °'],
+    ['Конусность',nf((v.D-v.d)/v.L,4)],['Отношение','1 : '+nf(v.L/((v.D-v.d)||1),2)]]};}},
+
+{id:'i2',n:'Расточка: конус A + цилиндр',t:'Конус от входа, дальше прямое отверстие',inner:1,
+ f:[['D','D — ⌀ у входа',60],['d','d — ⌀ отверстия',40],['A','A — угол от вертикали, °',60],['L','L — общая глубина',45]],
+ c(v){const t=((v.D-v.d)/2)/Math.tan(rd(90-v.A));
+  const P=[{n:'P1',x:v.D,z:0},{n:'P2',x:v.d,z:-t},{n:'P3',x:v.d,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,lbl:'A'},{a:1,b:2}],
+   info:[['Длина конуса по Z',nf(t,3)],['Длина цилиндра',nf(v.L-t,3)],
+    ['Угол от оси Z',nf(90-v.A,2)+' °'],['Съём по ⌀',nf(v.D-v.d,3)]],
+   bad:(t>v.L)?'Конус глубже заданной длины L.':null};}},
+
+{id:'i3',n:'Расточка: уступ + галтель R',t:'Ступень в отверстии с галтелью в углу',inner:1,
+ f:[['D','D — ⌀ у входа',60],['d','d — ⌀ в глубине',40],['R','R — галтель в углу',4],['L','L — до уступа',35]],
+ c(v){const P=[{n:'P1',x:v.D,z:0},{n:'P2',x:v.D,z:-(v.L-v.R)},
+              {n:'P3',x:v.D-2*v.R,z:-v.L},{n:'P4',x:v.d,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1},{a:1,b:2,c:{z:-v.L+v.R,xr:v.D/2-v.R},r:v.R,conv:0,lbl:'R'},{a:2,b:3}],
+   info:[['Начало дуги Z',nf(-(v.L-v.R),3)],['Конец дуги ⌀',nf(v.D-2*v.R,3)],
+    ['Центр дуги Z / X',nf(-v.L+v.R,2)+' / '+nf(v.D-2*v.R,2)],['Высота уступа',nf((v.D-v.d)/2,3)]],
+   bad:(v.D-2*v.R<v.d)?'Галтель больше высоты уступа.':null};}},
+
+{id:'i4',n:'Расточка: фаска на входе',t:'Заходная фаска отверстия',inner:1,
+ f:[['d','d — ⌀ отверстия',40],['C','C — катет по Z',2],['A','A — угол фаски, °',45],['L','L — глубина отверстия',30]],
+ c(v){const rr=v.C*Math.tan(rd(v.A));
+  const P=[{n:'P1',x:v.d+2*rr,z:0},{n:'P2',x:v.d,z:-v.C},{n:'P3',x:v.d,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,lbl:'C'},{a:1,b:2}],
+   info:[['⌀ на торце',nf(v.d+2*rr,3)],['Катет по радиусу',nf(rr,3)],
+    ['Катет по ⌀',nf(2*rr,3)],['Автофаска','Haas C'+nf(v.C,2)+' · Fanuc ,C'+nf(v.C,2)]]};}},
+
+{id:'i5',n:'Расточка: радиус на входе',t:'Скруглённая кромка отверстия',inner:1,
+ f:[['d','d — ⌀ отверстия',40],['R','R — радиус кромки',4],['L','L — глубина отверстия',30]],
+ c(v){const P=[{n:'P1',x:v.d+2*v.R,z:0},{n:'P2',x:v.d,z:-v.R},{n:'P3',x:v.d,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,c:{z:-v.R,xr:v.d/2+v.R},r:v.R,conv:1,lbl:'R'},{a:1,b:2}],
+   info:[['⌀ на торце',nf(v.d+2*v.R,3)],['Z конца дуги',nf(-v.R,3)],
+    ['Центр дуги Z / X',nf(-v.R,2)+' / '+nf(v.d+2*v.R,2)],['Снято с кромки',nf(v.R,3)]]};}},
+
+{id:'i6',n:'Расточка: конус A + галтель R',t:'Конус переходит в отверстие через галтель',inner:1,
+ f:[['D','D — ⌀ у входа',60],['d','d — ⌀ отверстия',40],['A','A — угол от вертикали, °',60],['R','R — галтель',4],['L','L — общая глубина',45]],
+ c(v){const a=rd(90-v.A), t1=((v.D-v.d)/2)/Math.tan(a), T=v.R*Math.tan(a/2);
+  const P=[{n:'P1',x:v.D,z:0},{n:'P2',x:v.d+2*T*Math.sin(a),z:-t1+T*Math.cos(a)},
+           {n:'P3',x:v.d,z:-t1-T},{n:'P4',x:v.d,z:-v.L}];
+  return {pts:P,segs:[{a:0,b:1,lbl:'A'},{a:1,b:2,c:{z:-t1-T,xr:v.d/2+v.R},r:v.R,conv:1,lbl:'R'},{a:2,b:3}],
+   info:[['Длина конуса по Z',nf(t1,3)],['Касательная T',nf(T,3)],
+    ['⌀ начала галтели',nf(v.d+2*T*Math.sin(a),3)],['Центр дуги Z / X',nf(-t1-T,2)+' / '+nf(v.d+2*v.R,2)]],
+   bad:(t1+T>v.L)?'Не хватает глубины L для конуса и галтели.':null};}}
+];
+const GALL=GC.concat(GI).concat(GT);
+
+
+function gv(id){ const c=GALL.find(x=>x.id===id); const o=geoVals[id]||(geoVals[id]={});
+  c.f.forEach(([k,l,d])=>{ if(o[k]===undefined) o[k]=d; }); return o; }
+
+/* --- отрисовка профиля по рассчитанным точкам --- */
+function arcSamples(seg,A,B){
+  const a0=Math.atan2(A.xr-seg.c.xr,A.z-seg.c.z), a1=Math.atan2(B.xr-seg.c.xr,B.z-seg.c.z);
+  let d=a1-a0; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+  const out=[]; for(let i=1;i<=16;i++){const a=a0+d*i/16;
+    out.push({z:seg.c.z+seg.r*Math.cos(a),xr:seg.c.xr+seg.r*Math.sin(a)});}
+  return {pts:out,ccw:d>0};
+}
+function geoDraw(r,W,H,small,inner,c,v){
+  const P=r.pts.map(p=>({z:p.z,xr:p.x/2,n:p.n}));
+  let zs=[],xs=[];
+  P.forEach(p=>{zs.push(p.z);xs.push(p.xr);});
+  r.segs.forEach(s=>{if(s.c){zs.push(s.c.z-s.r,s.c.z+s.r);xs.push(Math.max(0,s.c.xr-s.r),s.c.xr+s.r);}});
+  const zmin=Math.min(...zs), zmax=Math.max(...zs,0), xmax=Math.max(...xs,1)*(inner?1.25:1);
+  const padL=small?10:46, padR=small?10:46, bot=H-(small?12:26), topM=small?10:24;
+  const k=Math.min((W-padL-padR)/Math.max(zmax-zmin,0.001),(bot-topM)/xmax);
+  const X=z=>padL+(z-zmin)*k, Y=x=>bot-x*k;
+  let d=`M ${X(P[0].z)} ${Y(P[0].xr)}`, labels='', dims='';
+  r.segs.forEach(s=>{const A=P[s.a],B=P[s.b];
+    if(s.c) arcSamples(s,A,B).pts.forEach(q=>{d+=` L ${X(q.z)} ${Y(q.xr)}`;});
+    else d+=` L ${X(B.z)} ${Y(B.xr)}`;});
+  const last=P[P.length-1], ext=small?8:14, top=small?4:6;
+  d+=inner
+    ? ` L ${X(last.z)-ext} ${Y(last.xr)} L ${X(last.z)-ext} ${top} L ${X(P[0].z)} ${top} Z`
+    : ` L ${X(last.z)-ext} ${Y(last.xr)} L ${X(last.z)-ext} ${bot} L ${X(P[0].z)} ${bot} Z`;
+
+  if(!small){
+    const fmt=x=>Number.isInteger(+nf(x,1))?String(Math.round(x)):nf(x,1);
+    const has=n=>!!(c&&c.f&&c.f.some(f=>f[0]===n));
+    const val=n=>(v&&v[n]!=null)?v[n]:null;
+    const used=[];
+    const put=(x,y,t,cls)=>{ let px=x,py=y;
+      for(const [dx,dy] of [[0,0],[0,12],[0,-12],[-24,0],[24,0],[0,22],[-24,-12],[24,12]]){
+        px=x+dx; py=y+dy;
+        if(!used.some(u=>Math.abs(u.x-px)<26&&Math.abs(u.y-py)<10)) break; }
+      used.push({x:px,y:py});
+      return `<text ${cls||''} x="${px}" y="${py}">${t}</text>`; };
+    P.forEach(p=>{ const cx=X(p.z), cy=Y(p.xr);
+      labels+=`<circle cx="${cx}" cy="${cy}" r="3" fill="#FF6B00"/>`+put(cx+6,cy-7,p.n); });
+
+    const cap=(x,y,h)=>h?`<line class="dim" x1="${x}" y1="${y-4}" x2="${x}" y2="${y+4}"/>`
+                        :`<line class="dim" x1="${x-4}" y1="${y}" x2="${x+4}" y2="${y}"/>`;
+    // D — наибольший ⌀, вынесен слева от детали
+    const iMax=P.reduce((a,p,i)=>p.xr>P[a].xr?i:a,0);
+    if(has('D')){ const xD=X(zmin)-14;
+      dims+=`<line class="dim" x1="${xD}" y1="${Y(0)}" x2="${xD}" y2="${Y(P[iMax].xr)}"/>${cap(xD,Y(0))}${cap(xD,Y(P[iMax].xr))}
+        <line class="dim" x1="${xD}" y1="${Y(P[iMax].xr)}" x2="${X(P[iMax].z)}" y2="${Y(P[iMax].xr)}" stroke-dasharray="2 3"/>
+        <text class="dm" x="4" y="${(Y(0)+Y(P[iMax].xr))/2+4}">D ${fmt(val('D'))}</text>`; }
+    if(has('d')&&P[0].xr>0.01){ const xd=X(0)+13;
+      dims+=`<line class="dim" x1="${xd}" y1="${Y(0)}" x2="${xd}" y2="${Y(P[0].xr)}"/>${cap(xd,Y(0))}${cap(xd,Y(P[0].xr))}
+        <text class="dm" x="${xd+5}" y="${(Y(0)+Y(P[0].xr))/2+4}">d ${fmt(val('d'))}</text>`; }
+    if(has('L')){ const yL=bot-8;
+      dims+=`<line class="dim" x1="${X(zmin)}" y1="${yL}" x2="${X(0)}" y2="${yL}"/>${cap(X(zmin),yL,1)}${cap(X(0),yL,1)}
+        <text class="dm" x="${(X(zmin)+X(0))/2-14}" y="${yL-4}">L ${fmt(val('L'))}</text>`; }
+    // R и углы
+    r.segs.forEach(s=>{const A=P[s.a],B=P[s.b];
+      if(s.c){ const m=arcSamples(s,A,B).pts[7]||B;
+        const ux=(m.z-s.c.z)/s.r, uy=(m.xr-s.c.xr)/s.r;
+        dims+=`<line class="dim" x1="${X(s.c.z)}" y1="${Y(s.c.xr)}" x2="${X(m.z)}" y2="${Y(m.xr)}" stroke-dasharray="3 3"/>`
+          +put(X(m.z)+ux*16-7, Y(m.xr)-uy*16+4, (s.lbl||'R')+' '+fmt(s.r), 'class="dm"');
+      } else { const dz=B.z-A.z, dx=B.xr-A.xr;
+        if(s.lbl==='C'){
+          dims+=`<line class="dim" x1="${X(A.z)}" y1="${Y(A.xr)+13}" x2="${X(B.z)}" y2="${Y(A.xr)+13}"/>
+            ${cap(X(A.z),Y(A.xr)+13,1)}${cap(X(B.z),Y(A.xr)+13,1)}`
+            +put((X(A.z)+X(B.z))/2-8, Y(A.xr)+27, 'C '+fmt(Math.abs(B.z-A.z)), 'class="dm"'); }
+        if(Math.abs(dz)>0.01&&Math.abs(dx)>0.01){
+          const ang=Math.abs(dg(Math.atan2(dx,dz))), a2=ang>90?180-ang:ang;
+          const nm=(s.lbl&&s.lbl!=='C')?s.lbl:'A';
+          const arcR=17, mz=(A.z+B.z)/2, mx=(A.xr+B.xr)/2;
+          dims+=`<path class="dim" d="M ${X(mz)+arcR} ${Y(mx)} A ${arcR} ${arcR} 0 0 0 ${X(mz)+arcR*Math.cos(rd(a2))} ${Y(mx)+arcR*Math.sin(rd(a2))}" fill="none"/>`
+            +put(X(mz)+arcR+4,Y(mx)+9,nm+' '+fmt(a2)+'°','class="dm"'); }
+      }});
+  }
+  return `<svg class="dia" viewBox="0 0 ${W} ${H}">
+    <line class="ax" x1="6" y1="${bot}" x2="${W-6}" y2="${bot}"/>
+    <path class="part" d="${d}"/>${dims}${labels}
+    ${small?'':`<text class="d" x="${W-34}" y="${bot-4}">Z+</text>`}
+    ${small||!inner?'':`<text class="d" x="10" y="14">металл</text>`}</svg>`;
+}
+
+
+/* --- компенсация радиуса при вершине: смещение контура для программирования без G41/G42 --- */
+let geoNose={on:false,r:0.4,inner:false};
+function segNorm(S,P,s,pt){
+  if(!s.c){const A=P[s.a],B=P[s.b],uz=B.z-A.z,ux=B.xr-A.xr,L=Math.hypot(uz,ux);return [ux/L,-uz/L];}
+  const dz=pt.z-s.c.z, dx=pt.xr-s.c.xr, L=Math.hypot(dz,dx)||1;
+  return s.conv?[dz/L,dx/L]:[-dz/L,-dx/L];
+}
+function xLL(a,b,near){
+  const det=a.uz*(-b.ux)-a.ux*(-b.uz);
+  if(Math.abs(det)<1e-9) return near;
+  const rz=b.pz-a.pz, rx=b.px-a.px;
+  const t=(rz*(-b.ux)-rx*(-b.uz))/det;
+  return {z:a.pz+t*a.uz, xr:a.px+t*a.ux};
+}
+function xLA(l,c,near){
+  const fz=l.pz-c.cz, fx=l.px-c.cx;
+  const B=2*(fz*l.uz+fx*l.ux), C=fz*fz+fx*fx-c.R*c.R, D=B*B-4*C;
+  if(D<0) return near;
+  const s1=(-B+Math.sqrt(D))/2, s2=(-B-Math.sqrt(D))/2;
+  const p1={z:l.pz+s1*l.uz,xr:l.px+s1*l.ux}, p2={z:l.pz+s2*l.uz,xr:l.px+s2*l.ux};
+  return Math.hypot(p1.z-near.z,p1.xr-near.xr)<Math.hypot(p2.z-near.z,p2.xr-near.xr)?p1:p2;
+}
+function geoComp(res,r){
+  if(!(r>0)||!res.pts) return null;
+  const sx=geoNose.inner?-1:1;
+  const P=res.pts.map(p=>({z:p.z,xr:p.x/2})), S=res.segs;
+  for(const s of S) if(s.c&&!s.conv&&s.r<=r) return {bad:`Радиус при вершине r${nf(r,2)} не меньше вогнутого радиуса R${nf(s.r,2)} — такой контур этим резцом не выйдет.`};
+  const cur=S.map(s=>{ if(s.c) return {t:'arc',cz:s.c.z-r,cx:s.c.xr-r*sx,R:(s.conv?s.r+r:s.r-r)};
+    const A=P[s.a],B=P[s.b],uz=B.z-A.z,ux=B.xr-A.xr,L=Math.hypot(uz,ux),nz=sx*ux/L,nx=-sx*uz/L;
+    return {t:'line',pz:A.z+r*nz-r,px:A.xr+r*nx-r*sx,uz:uz/L,ux:ux/L};});
+  const first={t:'line',pz:P[0].z,px:P[0].xr-r*sx,uz:0,ux:1};
+  const lp=P[P.length-1], last={t:'line',pz:lp.z-r,px:lp.xr,uz:-1,ux:0};
+  const out=[];
+  for(let i=0;i<P.length;i++){
+    const ip=S.findIndex(s=>s.b===i), inx=S.findIndex(s=>s.a===i);
+    const cp=ip>=0?cur[ip]:first, cn=inx>=0?cur[inx]:last;
+    let np=ip>=0?segNorm(S,P,S[ip],P[i]):[1,0], nn=inx>=0?segNorm(S,P,S[inx],P[i]):[0,1];
+    if(sx<0){ np=[np[0],-np[1]]; nn=[nn[0],-nn[1]]; }
+    const near={z:P[i].z+r*nn[0]-r, xr:P[i].xr+r*nn[1]-r*sx};
+    let q=near;
+    if(Math.hypot(np[0]-nn[0],np[1]-nn[1])>1e-6){
+      if(cp.t==='line'&&cn.t==='line') q=xLL(cp,cn,near);
+      else if(cp.t==='line') q=xLA(cp,cn,near);
+      else if(cn.t==='line') q=xLA(cn,cp,near);
+    }
+    out.push({n:res.pts[i].n,x:2*q.xr,z:q.z});
+  }
+  return {pts:out,segR:S.map(s=>s.c?(s.conv?s.r+r:s.r-r):null)};
+}
+
+function viewGeo(){
+  const SET = folder==='id'?GI : folder==='tools'?GT : GC;
+  if(!geoCase){
+    return `<div class="wrap" id="geoWrap">
+      <div class="note">${folder==='tools'?'Отдельные расчёты, не привязанные к контуру.':'Выберите случай — программа посчитает координаты всех точек и соберёт кадры. Чертёж строится по вашим размерам, с обозначениями D, d, L, R и углом.'}</div>
+      ${SET.map(c=>{let r=null; try{r=c.c(gv(c.id));}catch(e){}
+        return `<div class="card" data-gcase="${c.id}"><div class="glow"></div>
+          ${r&&r.pts?geoDraw(r,300,86,true,c.inner,c,gv(c.id)):''}
+          <div style="font-family:Oswald;font-size:16px;margin-top:4px">${esc(c.n)}</div>
+          <div class="ct" style="font-size:12.5px">${esc(c.t)}</div></div>`;}).join('')}
+      <div id="geoHist"></div>
+      <div class="card"><div class="tag">Фаска и радиус одной командой</div>
+        <div class="stack" style="margin-top:9px">
+          <div class="ctrl h"><div class="ctrlname">Haas</div><div class="mono">G01 X30. C2.\nG01 Z-40. R3.</div></div>
+          <div class="ctrl f"><div class="ctrlname">Fanuc</div><div class="mono">G01 X30. ,C2.\nG01 Z-40. ,R3.\nЗапятая обязательна.</div></div>
+        </div>
+        <div class="note warn" style="margin-top:10px">Автофаска работает только между двумя линейными кадрами. Для контуров с дугами координаты считают по этим случаям.</div>
+      </div>`;
+  }
+  const c=GALL.find(x=>x.id===geoCase), v=gv(geoCase);
+  return `<div class="wrap" id="geoWrap">
+    <div class="calc">
+      <div class="tag">${esc(c.n)}</div>
+      <div id="geoPic" style="margin-top:8px"></div>
+      <div class="two" id="geoForm">
+        ${c.f.map(([k,l,d,o])=>`<label class="fld"><span>${esc(l)}</span>${o?
+          `<select data-k="${k}">${o.map((t,i)=>`<option value="${i}"${(+v[k])===i?' selected':''}>${esc(t)}</option>`).join('')}</select>`:
+          `<input type="number" step="0.1" data-k="${k}" value="${v[k]}">`}</label>`).join('')}
+      </div>
+      <div class="swrow">
+        <div class="swlab">Коррекция на радиус инструмента (напайки)
+          <small>${geoNose.on?'координаты смещены — G41/G42 не включать':'координаты профиля детали'}</small></div>
+        <div class="sw ${geoNose.on?'on':''}" id="noseSw" role="switch" aria-label="Коррекция на радиус инструмента" tabindex="0"><i></i></div>
+      </div>
+      ${geoNose.on?`<label class="fld"><span>r — радиус при вершине резца</span>
+          <input type="number" step="0.1" id="noseR" value="${geoNose.r}"></label>
+        <div class="hint" style="margin:-4px 0 10px">${c.inner?'Расточной резец, точение к патрону: контур смещается к оси, выпуклые дуги R+r, вогнутые R−r.':'Правый наружный резец, точение к патрону.'}</div>`:''}
+      <div id="geoBad"></div>
+      <div class="f" style="margin:2px 0 6px">Координаты точек</div>
+      <div class="tscroll"><table id="geoTab"></table></div>
+      <div class="f" style="margin:12px 0 6px">Расчёт</div>
+      <div class="res" id="gres"></div>
+      <div class="f" style="margin:6px 0 6px">Кадры</div>
+      <pre class="blk" id="gcode"></pre>
+      <button class="btn ghost" id="gsave" style="margin-top:10px">Сохранить в историю</button>
+    </div>
+    <div id="geoHist"></div>`;
+}
+
+function geoCalc(){
+  const c=GALL.find(x=>x.id===geoCase); if(!c) return;
+  const v=gv(geoCase);
+  document.querySelectorAll('#geoForm input,#geoForm select').forEach(e=>{v[e.dataset.k]=+e.value;});
+  geoNose.inner=!!c.inner;
+  let r; try{ r=c.c(v); }catch(e){ r={info:[],bad:'Проверьте размеры.'}; }
+  $('#geoBad').innerHTML=r.bad?`<div class="note warn" style="margin-bottom:11px"><b>${esc(r.bad)}</b></div>`:'';
+  $('#geoPic').innerHTML=r.pts?geoDraw(r,300,150,false,c.inner,c,v):'';
+  let K=null;
+  if(geoNose.on&&r.pts){ K=geoComp(r,geoNose.r);
+    if(K&&K.bad){ $('#geoBad').innerHTML=`<div class="note warn" style="margin-bottom:11px"><b>${esc(K.bad)}</b></div>`; K=null; } }
+  const tb=$('#geoTab');
+  if(r.pts){ tb.innerHTML=`<thead><tr><th>Точка</th><th>X (⌀)</th><th>Z</th>${K?'<th>X с комп.</th><th>Z с комп.</th>':''}</tr></thead><tbody>`+
+    r.pts.map((p,i)=>`<tr><td style="font-family:Oswald;font-size:14px;color:var(--ember)">${p.n}</td>
+      <td class="num">${nf(p.x,3)}</td><td class="num">${nf(p.z,3)}</td>
+      ${K?`<td class="num" style="color:#5FA8FF">${nf(K.pts[i].x,3)}</td><td class="num" style="color:#5FA8FF">${nf(K.pts[i].z,3)}</td>`:''}</tr>`).join('')+`</tbody>`; }
+  else tb.innerHTML='';
+  $('#gres').innerHTML=(r.info||[]).map(x=>`<div><div class="f">${esc(x[0])}</div><div class="v">${esc(x[1])}</div></div>`).join('');
+  let code=r.code;
+  if(r.pts){
+    const P=r.pts, Q=K?K.pts:P;
+    code=`(${c.n.toUpperCase()}${K?' · С КОМПЕНСАЦИЕЙ r'+nf(geoNose.r,2):''})\n`
+      +(K?`(координаты уже смещены — G41/G42 не включать)\n`:`(профиль детали — работать с G41/G42)\n`)
+      +`G00 X${nf(Q[0].x,3)} Z2.\nG01 Z${nf(Q[0].z,3)} F0.15\n`;
+    r.segs.forEach((s,i)=>{const A={z:P[s.a].z,xr:P[s.a].x/2}, B={z:P[s.b].z,xr:P[s.b].x/2};
+      if(s.c){const sm=arcSamples(s,A,B), rr=K?K.segR[i]:s.r;
+        code+=`${sm.ccw?'G03':'G02'} X${nf(Q[s.b].x,3)} Z${nf(Q[s.b].z,3)} R${nf(rr,3)}\n`;}
+      else code+=`G01 X${nf(Q[s.b].x,3)} Z${nf(Q[s.b].z,3)}\n`;});
+    code+=`(далее по контуру)`;
+    if(K) code+=`\n\n(${geoNose.inner?'расточной резец':'правый наружный резец'}, точение к патрону)`;
+  }
+  $('#gcode').textContent=code||'';
+  geoLast={t:c.n,v:c.f.map(([k,l])=>l.split(' —')[0]+' '+nf(v[k],2)).join(' · '),c:code||''};
+  geoHist();
+}
+
+function geoHist(){
+  const el=$('#geoHist'); if(!el) return;
+  const L=NOTES['__geo']||[];
+  el.innerHTML=L.length?`<div class="card"><div class="tag">История расчётов · ${L.length}</div></div>`
+    +L.map(r=>`<div class="card"><div class="row"><div style="font-family:Oswald;font-size:15px">${esc(r.t)}</div>
+      <span data-gd="${r.id}" style="color:var(--red);font-family:Oswald;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Удалить</span></div>
+      <div class="ct" style="font-family:IBM Plex Mono;font-size:11.5px">${esc(r.v)}</div>
+      <pre class="blk" style="margin-top:9px">${esc(r.c)}</pre>
+      <div style="margin-top:8px;font-family:IBM Plex Mono;font-size:10.5px;color:#6E6E78">${esc(r.ts)}</div></div>`).join('')
+    :'';
+  el.querySelectorAll('[data-gd]').forEach(b=>b.onclick=()=>{
+    NOTES['__geo']=(NOTES['__geo']||[]).filter(x=>x.id!==b.dataset.gd); saveNotes(); geoHist(); toast('Удалено');});
+}
+
+/* ============ карточка ============ */
+function openSheet(id){
+  const [kind,key]=id.split(':');
+  let html='',ttl='',sub='';
+  if(kind==='g'||kind==='m'){
+    const x=(kind==='g'?G:M).find(o=>o.c===key); if(!x) return;
+    ttl=x.c; sub=x.t;
+    html=`<div class="sec">Назначение</div><div class="note">${esc(x.t)}${x.g?` · группа: ${esc(x.g)}`:''} ${dbadge(x.d)}</div>
+      <div class="sec">Стойки</div>
+      <div class="stack">
+        <div class="ctrl h"><div class="ctrlname">Haas</div><div class="mono">${esc(x.h)}</div></div>
+        <div class="ctrl f"><div class="ctrlname">Fanuc</div><div class="mono">${esc(x.f)}</div></div>
+      </div>
+      ${x.ex?`<div class="sec">Пример кадра</div><pre class="blk">${esc(x.ex)}</pre>`:''}
+      ${x.n?`<div class="sec">У станка</div><div class="note ${x.d>0?'warn':''}">${esc(x.n)}</div>`:''}`;
+  }
+  if(kind==='c'){
+    const c=CYC.find(o=>o.id===key); if(!c) return;
+    ttl=c.ttl; sub=c.sub;
+    html=`<div class="sec">Параметры</div>
+      <div class="tscroll"><table><tbody>${c.body.map(b=>`<tr><td style="width:38%;font-family:IBM Plex Mono;color:var(--ember);white-space:nowrap">${esc(b.k)}</td><td>${esc(b.v)}</td></tr>`).join('')}</tbody></table></div>
+      <div class="sec">Haas</div><pre class="blk">${esc(c.haas)}</pre>
+      <div class="sec">Fanuc</div><pre class="blk">${esc(c.fanuc)}</pre>
+      <div class="sec">Осторожно</div><div class="note warn">${esc(c.warn)}</div>
+      <div class="sec">Практика</div>${c.tips.map(t=>`<div class="note" style="margin-bottom:8px">${esc(t)}</div>`).join('')}`;
+  }
+  if(kind==='d'){
+    const d=DIFF.find(o=>o.id===key); if(!d) return;
+    ttl=d.ttl; sub='Haas против Fanuc';
+    html=`<div class="stack">
+        <div class="ctrl h"><div class="ctrlname">Haas</div><div class="mono">${esc(d.h)}</div></div>
+        <div class="ctrl f"><div class="ctrlname">Fanuc</div><div class="mono">${esc(d.f)}</div></div>
+      </div>
+      <div class="sec">Вывод</div><div class="note warn">${esc(d.n)}</div>`;
+  }
+  $('#sheetTitle').textContent=ttl; $('#sheetSub').textContent=sub;
+  $('#sheetBody').innerHTML=html+notesHTML(id)+`<div class="credit" style="padding-top:22px">Версия 0.930 · Разработал Онянов Дмитрий Сергеевич</div>`;
+  wireNotes(id);
+  $('#sheet').classList.add('open'); deeper();
+}
+function notesHTML(id){
+  const n=NOTES[id]||[];
+  return `<div class="sec">Мои заметки</div>
+    <textarea id="ntxt" placeholder="Что запомнить по этому коду: номер станка, поправка, случай из смены…"></textarea>
+    <button class="btn" id="nadd" style="margin:9px 0 14px">Добавить заметку</button>
+    ${n.length?n.map(x=>`<div class="usernote"><div class="nmeta">${esc(x.ts)}<span data-ndel="${x.id}">Удалить</span></div>${esc(x.txt)}</div>`).join('')
+      :`<div class="hint">Пока пусто. Записывайте свои поправки — по вашим станкам они точнее любого руководства.</div>`}`;
+}
+function wireNotes(id){
+  const add=$('#nadd'); if(!add) return;
+  add.onclick=()=>{const t=$('#ntxt').value.trim(); if(!t){toast('Напишите текст заметки');return;}
+    NOTES[id]=NOTES[id]||[];
+    NOTES[id].unshift({id:uid(),ts:new Date().toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}),txt:t});
+    saveNotes(); openSheet(id); render(); toast('Заметка сохранена');};
+  document.querySelectorAll('[data-ndel]').forEach(el=>el.onclick=()=>{
+    NOTES[id]=(NOTES[id]||[]).filter(x=>x.id!==el.dataset.ndel);
+    saveNotes(); openSheet(id); render(); toast('Заметка удалена');});
+}
+function hideSheet(){$('#sheet').classList.remove('open');}
+function closeSheet(){ history.back(); }
+$('#close').onclick=closeSheet;
+
+function bind(){
+  document.querySelectorAll('[data-open]').forEach(el=>el.onclick=()=>openSheet(el.dataset.open));
+  const gw=$('#geoWrap');
+  if(gw){
+    document.querySelectorAll('[data-gcase]').forEach(e=>e.onclick=()=>{geoCase=e.dataset.gcase;deeper();render();});
+    document.querySelectorAll('#geoForm input,#geoForm select').forEach(e=>{e.oninput=geoCalc;e.onchange=geoCalc;});
+    const sw=$('#noseSw'); if(sw) sw.onclick=()=>{geoNose.on=!geoNose.on;render();};
+    const nr=$('#noseR'); if(nr) nr.oninput=()=>{geoNose.r=+nr.value||0;geoCalc();};
+
+    const sv=$('#gsave'); if(sv) sv.onclick=()=>{ if(!geoLast) return;
+      NOTES['__geo']=NOTES['__geo']||[];
+      NOTES['__geo'].unshift({id:uid(),t:geoLast.t,v:geoLast.v,c:geoLast.c,
+        ts:new Date().toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})});
+      saveNotes(); geoHist(); toast('Сохранено в историю');};
+    if(geoCase) geoCalc(); else geoHist(); }
+  document.querySelectorAll('#mseg div').forEach(e=>e.onclick=()=>{
+    if(e.dataset.mach===mach) return;
+    mach=e.dataset.mach; folder=null; geoCase=null; rank=null; filter='Все'; render();});
+  document.querySelectorAll('[data-folder]').forEach(e=>e.onclick=()=>{folder=e.dataset.folder;rank=null;deeper();render();});
+  document.querySelectorAll('[data-rank]').forEach(e=>e.onclick=()=>{rank=e.dataset.rank;deeper();render();});
+  const up=$('#upBtn'); if(up) up.onclick=()=>history.back();
+  const bs=$('#bkSave');
+  if(bs){
+    const dump=()=>JSON.stringify({app:'razryad-chpu',ver:'0.930',date:new Date().toISOString(),notes:NOTES},null,1);
+    bs.onclick=()=>bkFile('razryad-chpu-zapisi-'+bkStamp()+'.json',dump());
+    $('#bkCopy').onclick=()=>bkCopy(dump());
+    const load=(mode)=>{ let o;
+      try{ o=JSON.parse($('#bkIn').value.trim()); }catch(e){ toast('Не похоже на сохранённый файл'); return; }
+      const src=o&&o.notes?o.notes:o;
+      if(!src||typeof src!=='object'){ toast('В файле нет записей'); return; }
+      if(mode==='rep') NOTES=src;
+      else Object.keys(src).forEach(k=>{
+        const a=NOTES[k]||[], b=src[k]||[];
+        const ids=new Set(a.map(x=>x.id));
+        NOTES[k]=a.concat(b.filter(x=>!ids.has(x.id)));});
+      saveNotes(); $('#bkIn').value=''; render();
+      toast(mode==='rep'?'Записи заменены':'Записи добавлены');};
+    $('#bkAdd').onclick=()=>load('add');
+    $('#bkRep').onclick=()=>load('rep');
+  }
+  document.querySelectorAll('pre.blk').forEach(pre=>{
+    if(pre.dataset.cp) return; pre.dataset.cp='1'; pre.title='Нажмите, чтобы скопировать';
+    pre.style.cursor='pointer';
+    pre.onclick=()=>bkCopy(pre.textContent);});
+  const tt=$('#toThread'); if(tt) tt.onclick=()=>{folder='tools';geoCase='t3';deeper();render();};
+  const ftD=$('#ftD');
+  if(ftD){ ['ftD','ftF'].forEach(i=>{const e=$('#'+i); if(e){e.oninput=fitCalc;e.onchange=fitCalc;}}); fitCalc(); }
+
+  const mD=$('#mD');
+  if(mD){ const c=()=>{const D=+mD.value||1,R=D/2,rz=+$('#mRz').value||0.001;
+    const ae=2*Math.sqrt(Math.max(2*R*rz-rz*rz,0));
+    $('#mOut1').innerHTML=nf(ae,3)+'<small>мм шаг строчки</small>';};
+    ['mD','mRz'].forEach(i=>$('#'+i).oninput=c); c(); }
+  const eD=$('#eD');
+  if(eD){ const c=()=>{const D=+eD.value||1,ap=+$('#eA').value||0;
+    const de=2*Math.sqrt(Math.max(ap*(D-ap),0));
+    $('#mOut2').innerHTML=nf(de,2)+'<small>мм эффективный ⌀ ('+nf(de/D*100,0)+' % от номинала)</small>';};
+    ['eD','eA'].forEach(i=>$('#'+i).oninput=c); c(); }
+  const aD=$('#aD');
+  if(aD){ const c=()=>{const D=+aD.value||1,R=+$('#aR').value||1,F=+$('#aF').value||0,t=$('#aT').value;
+    if(t==='in'&&R<=D/2){ $('#mOut3').innerHTML='—<small style="font-size:13px">радиус контура меньше радиуса фрезы: угол не выйдет</small>'; return; }
+    const k=t==='out'?(R+D/2)/R:(R-D/2)/R;
+    const Fk=F*k;
+    $('#mOut3').innerHTML=nf(Fk,0)+'<small>мм/мин задать в кадре ('+(k>1?'+':'')+nf((k-1)*100,0)+' %)</small>';};
+    ['aD','aR','aF','aT'].forEach(i=>{$('#'+i).oninput=c;$('#'+i).onchange=c;}); c(); }
+  const sD=$('#sD');
+  if(sD){ const c=()=>{const D=+sD.value||1,h=+$('#sH').value||0.1,T=+$('#sT').value||1,F=+$('#sF').value||1;
+    const ang=Math.atan2(h,Math.PI*D)*180/Math.PI;
+    const turns=T/h, len=turns*Math.sqrt(Math.pow(Math.PI*D,2)+h*h), tmin=len/F;
+    $('#mOut4').innerHTML=nf(ang,2)+'<small>° угол врезания · '+nf(turns,1)+' витков · '+nf(tmin*60,0)+' с</small>';
+    $('#mCode').textContent='(VREZANIE PO SPIRALI '+nf(D,1)+' MM)\nG00 X'+nf(D/2,3)+' Y0.\nG01 Z0. F'+nf(F,0)+
+      '\nG91 G03 I-'+nf(D/2,3)+' Z-'+nf(h,3)+' F'+nf(F,0)+' L'+Math.ceil(turns)+'   (Fanuc: K'+Math.ceil(turns)+')\nG90 G01 Z-'+nf(T,3);};
+    ['sD','sH','sT','sF'].forEach(i=>$('#'+i).oninput=c); c(); }
+  const kD=$('#kD');
+  if(kD){const c=()=>{const D=+kD.value||1,V=+$('#kV').value||0,Z=+$('#kZ').value||1,F=+$('#kF').value||0;
+    const n=1000*V/(Math.PI*D); $('#kOutN').innerHTML=Math.round(n)+'<small>об/мин</small>';
+    $('#kOutF').innerHTML=Math.round(n*Z*F)+'<small>мм/мин</small>';};
+    ['kD','kV','kZ','kF'].forEach(i=>$('#'+i).oninput=c); c();}
+  const vD=$('#vD');
+  if(vD){const c=()=>{const D=+vD.value||0,n=+$('#vN').value||0;
+    $('#vOut').innerHTML=(Math.PI*D*n/1000).toFixed(0)+'<small>м/мин</small>';};
+    ['vD','vN'].forEach(i=>$('#'+i).oninput=c); c();}
+  const rF=$('#rF');
+  if(rF){const c=()=>{const f=+rF.value||0,r=+$('#rR').value||0.1;
+    const rz=f*f/(8*r)*1000;
+    $('#rOut').innerHTML=nf(rz,1)+'<small>мкм гребешок Rz · Ra ≈ '+nf(rz/4,2)+'</small>';};
+    ['rF','rR'].forEach(i=>$('#'+i).oninput=c); c();}
+}
+$('#q').oninput=()=>{ if(folder==='g'||folder==='m'){ $('#screen').innerHTML=viewCodes(folder==='g'?G:M,folder); bind(); } };
+
+(function clock(){const d=new Date();
+  $('#clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  setTimeout(clock,20000);})();
+
+(async()=>{ NOTES=await loadNotes(); render(); })();
+</script>
+</body>
+</html>
