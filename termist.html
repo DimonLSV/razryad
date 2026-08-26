@@ -244,7 +244,7 @@ pre.blk{font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.7;bac
     <header>
       <div class="brand">
         <svg class="mark" viewBox="0 0 120 120"><use href="#logo"/></svg>
-        <div class="brandtxt"><b>РАЗРЯД</b><span>Термист · v0.330</span></div>
+        <div class="brandtxt"><b>РАЗРЯД</b><span>Термист · v0.335</span></div>
       </div>
       <h1 class="htitle" id="ttl">Марочник</h1>
       <p class="hsub" id="sub">Режимы закалки и отпуска</p>
@@ -519,6 +519,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const uid=()=>'x'+Math.random().toString(36).slice(2,9);
 
 const CHANGES=[
+ ['0.335','Меню на весь экран','ИСПРАВЛЕНО: нижнее меню в браузере частично уходило под адресную строку. Размер теперь берётся по видимой области и подстраивается сам.'],
  ['0.330','Ввод чисел и нижнее меню','ИСПРАВЛЕНО: в браузере подписи разделов обрезались нижним краем экрана. Поле с числом очищается при нажатии и вызывает цифровую клавиатуру.'],
  ['0.325','Сохранение записей','Заметки к маркам и журнал отпуска теперь можно сохранить файлом и вернуть на другом телефоне — «Добавить к моим» или «Заменить всё». Любой блок с режимом копируется нажатием.'],
  ['0.320','Твёрдость и чистка данных','Новый учебный раздел: шкалы HRC, HRA, HRB, HB, HV и HSD — чем меряют, как выбрать под задачу, таблица приблизительного перевода и правила замера. Из технокарты убраны фамилии составителей: теперь это обезличенный пример, который каждый заполняет своими режимами.'],
@@ -1551,11 +1552,33 @@ function numFix(){
   });
 }
 
-function fitH(){ try{ const d=document.querySelector('.device');
-  if(d && window.innerWidth<=760) d.style.height=window.innerHeight+'px'; }catch(e){} }
-window.addEventListener('resize',fitH);
-window.addEventListener('orientationchange',()=>setTimeout(fitH,150));
+/* высота экрана: берём реально видимую область, а не «теоретическую» */
+var _baseH=0, _fitT=null;
+function fitH(){
+  try{
+    var d=document.querySelector('.device');
+    if(!d) return;
+    if(window.innerWidth>760){ d.style.height=''; return; }
+    var vv=window.visualViewport;
+    var h=vv?vv.height:window.innerHeight;
+    if(!h) return;
+    if(h>_baseH) _baseH=h;
+    if(_baseH && h < _baseH*0.72) return;   /* вылезла клавиатура — не трогаем */
+    d.style.height=Math.round(h)+'px';
+  }catch(e){}
+}
+function fitSoon(){ clearTimeout(_fitT); _fitT=setTimeout(fitH,60); }
+window.addEventListener('resize',fitSoon);
+window.addEventListener('orientationchange',function(){setTimeout(function(){_baseH=0;fitH();},250);});
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',fitSoon);
+  window.visualViewport.addEventListener('scroll',fitSoon);
+}
+window.addEventListener('scroll',fitSoon,{passive:true});
+document.addEventListener('DOMContentLoaded',fitH);
+window.addEventListener('load',function(){fitH();setTimeout(fitH,300);setTimeout(fitH,900);});
 fitH();
+
 
 /* старт */
 (async()=>{ DB=await load(); if(!DB||!DB.steels){DB=seed();} if(!DB.temperLog) DB.temperLog=[]; await save(); render(); })();

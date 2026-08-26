@@ -205,7 +205,7 @@ nav{position:absolute;left:0;right:0;bottom:0;height:calc(58px + env(safe-area-i
     <header>
       <div class="brand">
         <svg class="mark" viewBox="0 0 120 120"><use href="#logo"/></svg>
-        <div class="brandtxt"><b>РАЗРЯД</b><span>Оператор ЧПУ · v0.935</span></div>
+        <div class="brandtxt"><b>РАЗРЯД</b><span>Оператор ЧПУ · v0.940</span></div>
       </div>
       <h1 class="htitle" id="ttl">G-коды</h1>
       <p class="hsub" id="sub">Haas и Fanuc: что совпадает, а что нет</p>
@@ -615,7 +615,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>'x'+Math.random().toString(36).slice(2,9);
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._i);t._i=setTimeout(()=>t.classList.remove('on'),1900);}
-const CREDIT=`<div class="credit">Версия 0.935 · Разработал Онянов Дмитрий Сергеевич</div>`;
+const CREDIT=`<div class="credit">Версия 0.940 · Разработал Онянов Дмитрий Сергеевич</div>`;
 function dbadge(d){return d===0?'<span class="badge b-same">одинаково</span>'
   :d===1?'<span class="badge b-diff">есть отличия</span>'
   :'<span class="badge b-diff">только у одной стойки</span>';}
@@ -718,7 +718,7 @@ function viewMore(){
         Всё считается на телефоне, без интернета.
       </div>
       <div class="res" style="margin-top:12px">
-        <div><div class="f">Версия</div><div class="v">0.935</div></div>
+        <div><div class="f">Версия</div><div class="v">0.940</div></div>
         <div><div class="f">Разработал</div><div class="v" style="font-size:13px">Онянов Д.С.</div></div>
         <div><div class="f">Контуров</div><div class="v">${GC.length+GI.length}</div></div>
         <div><div class="f">Кодов в справочнике</div><div class="v">${G.length+M.length}</div></div>
@@ -748,7 +748,7 @@ function viewMore(){
         <div class="ct" style="font-size:12.5px;margin-top:5px;line-height:1.5">${esc(c[2])}</div></div>`).join('')}</div>
     </div>
     <div class="card"><div class="tag">О нумерации версий</div>
-      <div class="ct" style="margin-top:8px;line-height:1.55">Каждое обновление добавляет пять тысячных: 0.935 → 0.940 → 0.945. <b>До версии 1.0 в приложении могут быть ошибки</b> — оно в работе, разделы дописываются, расчёты перепроверяются. Версия 1.0 будет означать готовый продукт: проверенный на станках, с полным набором разделов и без известных ошибок. Пока номер меньше единицы — сверяйтесь с чертежом и руководством на свою стойку.</div>
+      <div class="ct" style="margin-top:8px;line-height:1.55">Каждое обновление добавляет пять тысячных: 0.940 → 0.945 → 0.950. <b>До версии 1.0 в приложении могут быть ошибки</b> — оно в работе, разделы дописываются, расчёты перепроверяются. Версия 1.0 будет означать готовый продукт: проверенный на станках, с полным набором разделов и без известных ошибок. Пока номер меньше единицы — сверяйтесь с чертежом и руководством на свою стойку.</div>
     </div>
     ${bkCard()}
     <div class="card"><div class="tag">Нашли ошибку — напишите</div>
@@ -1081,6 +1081,7 @@ function bkCard(){
 /* ============ учебный раздел ============ */
 
 const CHANGES=[
+ ['0.940','Меню на весь экран','ИСПРАВЛЕНО: при первом открытии в браузере нижнее меню частично уходило под адресную строку и подписи разделов срезались — приходилось прокручивать страницу, чтобы увидеть их. Теперь размер берётся по реально видимой области и подстраивается сам: при появлении адресной строки, повороте телефона и открытии клавиатуры.'],
  ['0.935','Ввод чисел и нижнее меню','ИСПРАВЛЕНО: в браузере подписи разделов под иконками обрезались нижним краем экрана — высота теперь считается по реально видимой области. Поле с числом очищается при нажатии, стирать вручную больше не нужно, и вызывается цифровая клавиатура. Ушли не введя ничего — прежнее значение возвращается.'],
  ['0.930','Правка расчётов и сохранение записей','ИСПРАВЛЕНО: подача на дуге считалась наоборот — на наружном радиусе программа снижала подачу вместо повышения, на внутреннем поднимала. ИСПРАВЛЕНО: в расчёте шероховатости выводилась высота гребешка Rz, подписанная как Ra, — завышение примерно вчетверо. Добавлено сохранение и восстановление записей файлом, копирование любого блока кода по нажатию, уточнения по G04, G53, G54.1 и G76.'],
  ['0.925','Шестой разряд и посадки','Пятый и шестой разряды разделены: у шестого своя программа — точность выше 7-го квалитета, тонкостенные и длинные детали, проверка станка на биение и люфт. Посадок стало 34 вместо 15, добавлены квалитеты 5 и 10, в таблицу IT добавлен столбец IT5.'],
@@ -2140,7 +2141,7 @@ function openSheet(id){
       <div class="sec">Вывод</div><div class="note warn">${esc(d.n)}</div>`;
   }
   $('#sheetTitle').textContent=ttl; $('#sheetSub').textContent=sub;
-  $('#sheetBody').innerHTML=html+notesHTML(id)+`<div class="credit" style="padding-top:22px">Версия 0.935 · Разработал Онянов Дмитрий Сергеевич</div>`;
+  $('#sheetBody').innerHTML=html+notesHTML(id)+`<div class="credit" style="padding-top:22px">Версия 0.940 · Разработал Онянов Дмитрий Сергеевич</div>`;
   wireNotes(id); numFix();
   $('#sheet').classList.add('open'); deeper();
 }
@@ -2273,11 +2274,33 @@ function numFix(){
   });
 }
 
-function fitH(){ try{ const d=document.querySelector('.device');
-  if(d && window.innerWidth<=760) d.style.height=window.innerHeight+'px'; }catch(e){} }
-window.addEventListener('resize',fitH);
-window.addEventListener('orientationchange',()=>setTimeout(fitH,150));
+/* высота экрана: берём реально видимую область, а не «теоретическую» */
+var _baseH=0, _fitT=null;
+function fitH(){
+  try{
+    var d=document.querySelector('.device');
+    if(!d) return;
+    if(window.innerWidth>760){ d.style.height=''; return; }
+    var vv=window.visualViewport;
+    var h=vv?vv.height:window.innerHeight;
+    if(!h) return;
+    if(h>_baseH) _baseH=h;
+    if(_baseH && h < _baseH*0.72) return;   /* вылезла клавиатура — не трогаем */
+    d.style.height=Math.round(h)+'px';
+  }catch(e){}
+}
+function fitSoon(){ clearTimeout(_fitT); _fitT=setTimeout(fitH,60); }
+window.addEventListener('resize',fitSoon);
+window.addEventListener('orientationchange',function(){setTimeout(function(){_baseH=0;fitH();},250);});
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',fitSoon);
+  window.visualViewport.addEventListener('scroll',fitSoon);
+}
+window.addEventListener('scroll',fitSoon,{passive:true});
+document.addEventListener('DOMContentLoaded',fitH);
+window.addEventListener('load',function(){fitH();setTimeout(fitH,300);setTimeout(fitH,900);});
 fitH();
+
 
 (async()=>{ NOTES=await loadNotes(); render(); })();
 </script>
