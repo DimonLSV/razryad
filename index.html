@@ -6,7 +6,14 @@
 <meta name="theme-color" content="#0B0B0D">
 <title>РАЗРЯД — справочники для рабочих специальностей</title>
 <meta name="description" content="Пособия для оператора ЧПУ и термиста. Коды, циклы, расчёт контуров, режимы термообработки. Работают без интернета.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Разряд - справочники для рабочих специальностей">
+<meta property="og:description" content="Оператор ЧПУ и Термист. Коды, циклы, расчёт контуров, режимы термообработки. Работают без интернета.">
+<meta property="og:image" content="https://dimonlsv.github.io/razryad/icon-chpu-512.png">
+<meta property="og:url" content="https://dimonlsv.github.io/razryad/">
+<meta name="twitter:card" content="summary">
 <link rel="icon" href="./icon-chpu-192.png">
+<link rel="apple-touch-icon" href="./icon-chpu-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#0B0B0D;--panel:#141417;--panel2:#1B1B20;--line:#2C2C34;--orange:#FF6B00;
@@ -57,6 +64,8 @@ footer{margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
  font-size:12px;color:#5E5E68;text-align:center;letter-spacing:.1em;
  font-family:"Oswald",sans-serif;text-transform:uppercase}
 </style>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){var had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("./sw.js").then(function(r){if(r.waiting){r.waiting.postMessage("skip");}r.addEventListener("updatefound",function(){var n=r.installing;if(!n)return;n.addEventListener("statechange",function(){if(n.state==="installed"&&navigator.serviceWorker.controller){n.postMessage("skip");}});});}).catch(function(){});var reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(!had||reloading)return;reloading=true;location.reload();});});}</script>
+<script data-goatcounter="https://razryad.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -72,7 +81,7 @@ footer{margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
 <div class="app">
   <div class="top">
     <img src="./icon-chpu-192.png" alt="">
-    <div><div class="nm">Оператор ЧПУ</div><div class="ver">версия 0.940</div></div>
+    <div><div class="nm">Оператор ЧПУ</div><div class="ver">версия 0.945</div></div>
   </div>
   <div class="desc">Токарный и фрезерный — переключаются в шапке, и всё содержимое меняется под выбранный станок.</div>
   <ul>
@@ -84,14 +93,14 @@ footer{margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
   </ul>
   <div class="btns">
     <a class="btn go" href="./chpu.html">Открыть</a>
-    <a class="btn dl" href="./razryad-chpu-v0.940.apk">Скачать APK</a>
+    <a class="btn dl" href="./razryad-chpu-v0.945.apk">Скачать APK</a>
   </div>
 </div>
 
 <div class="app t">
   <div class="top">
     <img src="./icon-termist-192.png" alt="">
-    <div><div class="nm">Термист</div><div class="ver">версия 0.335</div></div>
+    <div><div class="nm">Термист</div><div class="ver">версия 0.340</div></div>
   </div>
   <div class="desc">Режимы термообработки и теория — от загрузки садки до разбора брака.</div>
   <ul>
@@ -103,7 +112,7 @@ footer{margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
   </ul>
   <div class="btns">
     <a class="btn go" href="./termist.html">Открыть</a>
-    <a class="btn dl" href="./razryad-termist-v0.335.apk">Скачать APK</a>
+    <a class="btn dl" href="./razryad-termist-v0.340.apk">Скачать APK</a>
   </div>
 </div>
 
@@ -123,7 +132,7 @@ footer{margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
 
 <h2>Если версия не обновилась</h2>
 <p style="font-size:14px;color:#CFCCC6;margin:0 0 10px">Номер версии виден в шапке каждого пособия.
-Открылась старая — потяните страницу вниз, чтобы обновить, и подождите пару секунд: приложение перезапустится само на свежую.
+Открылась старая - потяните страницу вниз, чтобы обновить: приложение перезапустится само на свежую.
 Если не помогло, закройте вкладку и откройте ссылку заново.</p>
 
 <h2>Нашли ошибку</h2>

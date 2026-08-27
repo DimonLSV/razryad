@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0B0D">
 <link rel="manifest" href="./manifest-chpu.webmanifest">
-<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").then(function(r){if(r.waiting){r.waiting.postMessage("skip");}r.addEventListener("updatefound",function(){var n=r.installing;if(!n)return;n.addEventListener("statechange",function(){if(n.state==="installed"&&navigator.serviceWorker.controller){n.postMessage("skip");}});});}).catch(function(){});var reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(reloading)return;reloading=true;location.reload();});});}</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){var had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("./sw.js").then(function(r){if(r.waiting){r.waiting.postMessage("skip");}r.addEventListener("updatefound",function(){var n=r.installing;if(!n)return;n.addEventListener("statechange",function(){if(n.state==="installed"&&navigator.serviceWorker.controller){n.postMessage("skip");}});});}).catch(function(){});var reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(!had||reloading)return;reloading=true;location.reload();});});}</script>
+<script data-goatcounter="https://razryad.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -27,7 +28,7 @@
   --r:14px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;height:100%;-webkit-text-size-adjust:100%;overscroll-behavior:none;touch-action:manipulation;background:#050506;color:var(--paper);
+html,body{margin:0;padding:0;height:100%;-webkit-text-size-adjust:100%;touch-action:manipulation;background:#050506;color:var(--paper);
   font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 body{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .stage{width:100%;display:flex;justify-content:center;align-items:center;padding:24px 12px}
@@ -190,6 +191,7 @@ nav{position:absolute;left:0;right:0;bottom:0;height:calc(58px + env(safe-area-i
 
 /* на телефоне меню прибито к низу видимой области силами браузера */
 @media (max-width:760px){
+  .statusbar{display:none}
   nav{position:fixed !important;left:0;right:0;bottom:0;
     height:auto !important;min-height:56px;
     padding:7px 0 calc(7px + env(safe-area-inset-bottom,0px)) !important}
@@ -218,7 +220,7 @@ nav{position:absolute;left:0;right:0;bottom:0;height:calc(58px + env(safe-area-i
     <header>
       <div class="brand">
         <svg class="mark" viewBox="0 0 120 120"><use href="#logo"/></svg>
-        <div class="brandtxt"><b>РАЗРЯД</b><span>Оператор ЧПУ · v0.940</span></div>
+        <div class="brandtxt"><b>РАЗРЯД</b><span id="vhead">Оператор ЧПУ</span></div>
       </div>
       <h1 class="htitle" id="ttl">G-коды</h1>
       <p class="hsub" id="sub">Haas и Fanuc: что совпадает, а что нет</p>
@@ -418,10 +420,10 @@ const G=[
   ex:'G150 P1000 X0. Y0. Z-10. Q3. R2. I1. J0.5 K0.2 F500',
   n:'Экономит массу времени на простых карманах, но полностью привязан к Haas.'},
  {c:'G187',g:'Режимы',mc:'b',t:'Настройка точности и сглаживания (Haas)',d:2,
-  h:'G187 P1 — точно (медленно), P2 — средне, P3 — быстро; E — допуск сглаживания.',
+  h:'G187 P1 — черново (быстро), P2 — средне, P3 — чисто (точно, медленнее); E — максимальное скругление угла. Без P берётся Setting 191.',
   f:'Аналог по смыслу — G05.1 Q1 (AICC) вместе с G64 и параметрами допуска.',
-  ex:'Haas:  G187 P2 E0.05\nFanuc: G05.1 Q1',
-  n:'Это компромисс точность/время цикла. Для чистовой 3D-обработки — P1, для черновой — P3.'},
+  ex:'(черновая)  G187 P1 E0.05\n(чистовая)  G187 P3 E0.002\n(вернуть)   G187 P2\n\nFanuc: G05.1 Q1 — предпросмотр контура',
+  n:'Компромисс точность против времени цикла. Для чистовой 3D-обработки — P3, для черновой выборки — P1. Сбрасывается по M30, M02, RESET и аварийному стопу — на следующей детали режим уже не тот, если не задать заново.'},
  {c:'G70 / G71 / G72',g:'Токарные',mc:'t',t:'Чистовой / черновой продольный / черновой поперечный циклы',d:2,
   h:'Однокадровый формат: G71 P__ Q__ U__ W__ D__ F__ (D — глубина прохода в тысячных или с точкой).',
   f:'Двухкадровый формат: G71 U(глубина) R(отход); G71 P Q U W F.',
@@ -578,9 +580,9 @@ const DIFF=[
   f:'Перед циклом обязателен M29 S__. Подача обычно в мм/мин: F = обороты × шаг.',
   n:'Отличие № 1 по числу поломанных метчиков при переносе программ между станками цеха.'},
  {id:'d5',ttl:'Точность контура и скорость',
-  h:'G187 P1/P2/P3 и допуск E. Настройка действует до конца программы или до следующего G187.',
+  h:'G187 P1 черново, P2 средне, P3 чисто, плюс допуск E. Сбрасывается по M30, M02 и RESET.',
   f:'G61 точный останов, G64 обычное резание, G05.1 Q1 — предпросмотр контура AICC (опция).',
-  n:'При переносе 3D-обработки чистовой G187 P1 меняют на G05.1 Q1 либо на G64 с ужатыми параметрами.'},
+  n:'При переносе 3D-обработки чистовой G187 P3 меняют на G05.1 Q1 либо на G64 с ужатыми параметрами.'},
  {id:'d6',ttl:'Зеркало, масштаб, поворот',
   h:'Зеркало G101/G100, масштаб G51/G50, поворот G68/G69.',
   f:'Зеркало G51.1/G50.1, масштаб G51/G50 (фрезерный), поворот G68/G69.',
@@ -628,7 +630,8 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>'x'+Math.random().toString(36).slice(2,9);
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._i);t._i=setTimeout(()=>t.classList.remove('on'),1900);}
-const CREDIT=`<div class="credit">Версия 0.940 · Разработал Онянов Дмитрий Сергеевич</div>`;
+let VER='—';
+let CREDIT='';
 function dbadge(d){return d===0?'<span class="badge b-same">одинаково</span>'
   :d===1?'<span class="badge b-diff">есть отличия</span>'
   :'<span class="badge b-diff">только у одной стойки</span>';}
@@ -664,7 +667,13 @@ const FOLDERS=new Proxy({},{get:(o,k)=>{
       ['rez','Режимы резания','Обороты, подача, скорость, шероховатость'],
       ['fit','Допуски и посадки','Поля, предельные размеры, зазор и натяг']];
   return [];}});
-const FTITLE=id=>{for(const k in FOLDERS){const f=FOLDERS[k].find(x=>x[0]===id); if(f) return f;} return null;};
+const FTITLE=id=>{
+  for(const k of TABS.map(t=>t.id)){
+    const list=FOLDERS[k]||[];
+    const f=list.find&&list.find(x=>x[0]===id);
+    if(f) return f;
+  }
+  return null;};
 
 function drawNav(){
   $('#nav').innerHTML=TABS.map(t=>`<div class="nb ${t.id===tab?'on':''}" data-tab="${t.id}">
@@ -731,7 +740,7 @@ function viewMore(){
         Всё считается на телефоне, без интернета.
       </div>
       <div class="res" style="margin-top:12px">
-        <div><div class="f">Версия</div><div class="v">0.940</div></div>
+        <div><div class="f">Версия</div><div class="v">${VER}</div></div>
         <div><div class="f">Разработал</div><div class="v" style="font-size:13px">Онянов Д.С.</div></div>
         <div><div class="f">Контуров</div><div class="v">${GC.length+GI.length}</div></div>
         <div><div class="f">Кодов в справочнике</div><div class="v">${G.length+M.length}</div></div>
@@ -761,7 +770,7 @@ function viewMore(){
         <div class="ct" style="font-size:12.5px;margin-top:5px;line-height:1.5">${esc(c[2])}</div></div>`).join('')}</div>
     </div>
     <div class="card"><div class="tag">О нумерации версий</div>
-      <div class="ct" style="margin-top:8px;line-height:1.55">Каждое обновление добавляет пять тысячных: 0.940 → 0.945 → 0.950. <b>До версии 1.0 в приложении могут быть ошибки</b> — оно в работе, разделы дописываются, расчёты перепроверяются. Версия 1.0 будет означать готовый продукт: проверенный на станках, с полным набором разделов и без известных ошибок. Пока номер меньше единицы — сверяйтесь с чертежом и руководством на свою стойку.</div>
+      <div class="ct" style="margin-top:8px;line-height:1.55">Каждое обновление добавляет пять тысячных: 0.945 → 0.950 → 0.955. <b>До версии 1.0 в приложении могут быть ошибки</b> — оно в работе, разделы дописываются, расчёты перепроверяются. Версия 1.0 будет означать готовый продукт: проверенный на станках, с полным набором разделов и без известных ошибок. Пока номер меньше единицы — сверяйтесь с чертежом и руководством на свою стойку.</div>
     </div>
     ${bkCard()}
     <div class="card"><div class="tag">Нашли ошибку — напишите</div>
@@ -1057,7 +1066,8 @@ G187 P1 — максимальная точность, медленно; P3 — 
 /* ============ сохранение и восстановление записей ============ */
 function bkFile(name,text){
   try{
-    if(window.Razryad&&window.Razryad.saveText){ window.Razryad.saveText(name,text); toast('Файл сохранён в «Загрузки»'); return; }
+    if(window.Razryad&&window.Razryad.saveText){ const where=window.Razryad.saveText(name,text);
+      toast(where&&where.length>3?('Сохранено: '+where):'Не удалось сохранить файл'); return; }
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));
     a.download=name; document.body.appendChild(a); a.click();
@@ -1094,6 +1104,7 @@ function bkCard(){
 /* ============ учебный раздел ============ */
 
 const CHANGES=[
+ ['0.945','Разбор от сторонней проверки','ИСПРАВЛЕНО: у G187 были перепутаны местами P1 и P3 — приложение советовало на чистовую грубый режим. ИСПРАВЛЕНО: заголовок раздела в шапке никогда не менялся. ИСПРАВЛЕНО: коррекция на радиус в расточке считала нормали не в ту сторону — резец врубался в торец уступа на радиус пластины. ИСПРАВЛЕНО: врезание по спирали уходило глубже заданного из-за округления витков. Добавлены проверки: перепутанные диаметры, вывернутый контур, галтель не помещается в конус, участок короче радиуса пластины. Версия теперь берётся из одного места.'],
  ['0.940','Меню на весь экран','ИСПРАВЛЕНО: при первом открытии в браузере нижнее меню частично уходило под адресную строку и подписи разделов срезались — приходилось прокручивать страницу, чтобы увидеть их. Теперь размер берётся по реально видимой области и подстраивается сам: при появлении адресной строки, повороте телефона и открытии клавиатуры.'],
  ['0.935','Ввод чисел и нижнее меню','ИСПРАВЛЕНО: в браузере подписи разделов под иконками обрезались нижним краем экрана — высота теперь считается по реально видимой области. Поле с числом очищается при нажатии, стирать вручную больше не нужно, и вызывается цифровая клавиатура. Ушли не введя ничего — прежнее значение возвращается.'],
  ['0.930','Правка расчётов и сохранение записей','ИСПРАВЛЕНО: подача на дуге считалась наоборот — на наружном радиусе программа снижала подачу вместо повышения, на внутреннем поднимала. ИСПРАВЛЕНО: в расчёте шероховатости выводилась высота гребешка Rz, подписанная как Ra, — завышение примерно вчетверо. Добавлено сохранение и восстановление записей файлом, копирование любого блока кода по нажатию, уточнения по G04, G53, G54.1 и G76.'],
@@ -1112,6 +1123,9 @@ const CHANGES=[
  ['0.865','Конус и радиус','Первый вариант расчёта контуров: конусы, фаски, галтели, точка на дуге, поправка на вершину.'],
  ['0.860','Первая сборка','G-коды, M-коды, циклы, различия Haas и Fanuc, режимы резания.']
 ];
+VER=CHANGES[0][0];
+CREDIT='<div class="credit">Версия '+VER+' · Разработал Онянов Дмитрий Сергеевич</div>';
+
 
 const CARD=(tag,body)=>`<div class="card"><div class="tag">${tag}</div>${body}</div>`;
 const STEP=(n,t,b)=>`<div class="card"><div class="glow"></div>
@@ -1458,7 +1472,7 @@ function calcContent(calcF){
       <div class="tag">Врезание по спирали</div>
       <div class="two" style="margin-top:11px">
         <label class="fld"><span>⌀ спирали, мм</span><input type="number" id="sD" value="20" step="0.1"></label>
-        <label class="fld"><span>Глубина за оборот, мм</span><input type="number" id="sH" value="0.5" step="0.1"></label>
+        <label class="fld"><span>Глубина за оборот, не более</span><input type="number" id="sH" value="0.5" step="0.1"></label>
       </div>
       <div class="two">
         <label class="fld"><span>Общая глубина, мм</span><input type="number" id="sT" value="5" step="0.1"></label>
@@ -1466,7 +1480,7 @@ function calcContent(calcF){
       </div>
       <div class="out" id="mOut4">—</div>
       <pre class="blk" id="mCode" style="margin-top:10px"></pre>
-      <div class="hint">Угол врезания для твёрдого сплава по стали держат в пределах 2–5°, для алюминия допустимо до 10°. Прямое врезание по Z концевой фрезой без центрового зуба ломает инструмент.</div>
+      <div class="hint">Число витков округляется вверх, а шаг подгоняется так, чтобы выйти ровно на заданную глубину и не пробить дно. Угол врезания для твёрдого сплава по стали держат в пределах 2–5°, для алюминия допустимо до 10°. Прямое врезание по Z концевой фрезой без центрового зуба ломает инструмент.</div>
     </div>`+CREDIT+`</div>`;
 
   if(calcF==='thr') return `<div class="wrap">
@@ -1646,7 +1660,10 @@ const GC=[
   return {pts:P,segs:[{a:0,b:1,lbl:'B'},{a:1,b:2,c:{z:Cz,xr:Cr},r:v.R,conv:0,lbl:'R'},{a:2,b:3,lbl:'A'}],
    info:[['Излом контура Z',nf(Vz,3)],['Излом контура X',nf(2*Vr,3)],
     ['Касательная T',nf(T,3)],['Угол поворота',nf(90-v.A-v.B,2)+' °']],
-   bad:((90-v.A)<=v.B)?'Угол A (от вертикали) даёт наклон меньше B — контур не сходится.':(t1<0||t2<0)?'Углы не сходятся с диаметрами и длиной.':null};}},
+   bad:((90-v.A)<=v.B)?'Угол A (от вертикали) даёт наклон меньше B — контур не сходится.'
+     :(t1<0||t2<0)?'Углы не сходятся с диаметрами и длиной.'
+     :(T>t1/Math.cos(a)||T>t2/Math.cos(bb))?'Галтель R'+nf(v.R,2)+' не помещается: касательная '+nf(T,2)+' мм длиннее участка конуса. Уменьшите R.'
+     :null};}},
 
 {id:'k5',n:'Конус A + R + цилиндр d',t:'Конус плавно выходит на цилиндр',
  f:[['D','D — больший ⌀',60],['d','d — ⌀ цилиндра',30],['L','L — общая длина',45],['A','A — угол от вертикали, °',60],['R','R — радиус перехода',5]],
@@ -1659,7 +1676,9 @@ const GC=[
   return {pts:P,segs:[{a:0,b:1},{a:1,b:2,c:{z:Cz,xr:Cr},r:v.R,conv:0,lbl:'R'},{a:2,b:3,lbl:'A'}],
    info:[['Длина конуса по Z',nf(t1,3)],['Длина цилиндра',nf(t2-T,3)],
     ['Касательная T',nf(T,3)],['Центр дуги Z / X',nf(Cz,2)+' / '+nf(2*Cr,2)]],
-   bad:(t2<T)?'Цилиндр короче радиуса перехода: увеличьте L или уменьшите R.':null};}},
+   bad:(t2<T)?'Цилиндр короче радиуса перехода: увеличьте L или уменьшите R.'
+     :(T>t1/Math.cos(a))?`Радиус R${nf(v.R,2)} не помещается: касательная ${nf(T,2)} мм длиннее конуса. Уменьшите R.`
+     :null};}},
 
 {id:'k6',n:'Уступ + галтель R + цилиндр',t:'Ступень с галтелью в углу',
  f:[['D','D — ⌀ буртика',60],['d','d — ⌀ шейки',30],['L','L — от торца до уступа',40],['R','R — галтель',4]],
@@ -1885,6 +1904,15 @@ const GI=[
 const GALL=GC.concat(GI).concat(GT);
 
 
+/* общие проверки: перепутанные диаметры и вывернутый контур */
+function geoSane(v,r){
+  if(v && v.D!==undefined && v.d!==undefined && +v.D<=+v.d)
+    return 'Больший ⌀ должен быть больше меньшего — похоже, поля перепутаны.';
+  if(r && r.pts) for(let i=1;i<r.pts.length;i++)
+    if(r.pts[i].z > r.pts[i-1].z + 1e-9)
+      return 'Контур выворачивается: точки идут обратно по Z. Проверьте размеры.';
+  return null;
+}
 function gv(id){ const c=GALL.find(x=>x.id===id); const o=geoVals[id]||(geoVals[id]={});
   c.f.forEach(([k,l,d])=>{ if(o[k]===undefined) o[k]=d; }); return o; }
 
@@ -1971,8 +1999,12 @@ function geoDraw(r,W,H,small,inner,c,v){
 
 /* --- компенсация радиуса при вершине: смещение контура для программирования без G41/G42 --- */
 let geoNose={on:false,r:0.4,inner:false};
-function segNorm(S,P,s,pt){
-  if(!s.c){const A=P[s.a],B=P[s.b],uz=B.z-A.z,ux=B.xr-A.xr,L=Math.hypot(uz,ux);return [ux/L,-uz/L];}
+function segNorm(S,P,s,pt,sx){
+  sx=sx||1;
+  /* прямая: для расточки нормаль разворачивается целиком, а не зеркалится по одной оси */
+  if(!s.c){const A=P[s.a],B=P[s.b],uz=B.z-A.z,ux=B.xr-A.xr,L=Math.hypot(uz,ux);
+    return [sx*ux/L,-sx*uz/L];}
+  /* дуга: сторону уже задаёт conv, разворачивать нельзя */
   const dz=pt.z-s.c.z, dx=pt.xr-s.c.xr, L=Math.hypot(dz,dx)||1;
   return s.conv?[dz/L,dx/L]:[-dz/L,-dx/L];
 }
@@ -1986,8 +2018,9 @@ function xLL(a,b,near){
 function xLA(l,c,near){
   const fz=l.pz-c.cz, fx=l.px-c.cx;
   const B=2*(fz*l.uz+fx*l.ux), C=fz*fz+fx*fx-c.R*c.R, D=B*B-4*C;
-  if(D<0) return near;
-  const s1=(-B+Math.sqrt(D))/2, s2=(-B-Math.sqrt(D))/2;
+  if(D<-1e-6) return near;                 /* допуск на касательный стык */
+  const Dc=Math.max(D,0);
+  const s1=(-B+Math.sqrt(Dc))/2, s2=(-B-Math.sqrt(Dc))/2;
   const p1={z:l.pz+s1*l.uz,xr:l.px+s1*l.ux}, p2={z:l.pz+s2*l.uz,xr:l.px+s2*l.ux};
   return Math.hypot(p1.z-near.z,p1.xr-near.xr)<Math.hypot(p2.z-near.z,p2.xr-near.xr)?p1:p2;
 }
@@ -1995,6 +2028,9 @@ function geoComp(res,r){
   if(!(r>0)||!res.pts) return null;
   const sx=geoNose.inner?-1:1;
   const P=res.pts.map(p=>({z:p.z,xr:p.x/2})), S=res.segs;
+  for(let i=0;i<S.length;i++){ const s=S[i];
+    if(!s.c){ const A=P[s.a],B=P[s.b], len=Math.hypot(B.z-A.z,B.xr-A.xr);
+      if(len>1e-6 && len<r) return {bad:'Участок длиной '+nf(len,2)+' мм короче радиуса пластины r'+nf(r,2)+' — этим резцом такой уступ не проработать.'}; } }
   for(const s of S) if(s.c&&!s.conv&&s.r<=r) return {bad:`Радиус при вершине r${nf(r,2)} не меньше вогнутого радиуса R${nf(s.r,2)} — такой контур этим резцом не выйдет.`};
   const cur=S.map(s=>{ if(s.c) return {t:'arc',cz:s.c.z-r,cx:s.c.xr-r*sx,R:(s.conv?s.r+r:s.r-r)};
     const A=P[s.a],B=P[s.b],uz=B.z-A.z,ux=B.xr-A.xr,L=Math.hypot(uz,ux),nz=sx*ux/L,nx=-sx*uz/L;
@@ -2005,8 +2041,7 @@ function geoComp(res,r){
   for(let i=0;i<P.length;i++){
     const ip=S.findIndex(s=>s.b===i), inx=S.findIndex(s=>s.a===i);
     const cp=ip>=0?cur[ip]:first, cn=inx>=0?cur[inx]:last;
-    let np=ip>=0?segNorm(S,P,S[ip],P[i]):[1,0], nn=inx>=0?segNorm(S,P,S[inx],P[i]):[0,1];
-    if(sx<0){ np=[np[0],-np[1]]; nn=[nn[0],-nn[1]]; }
+    const np=ip>=0?segNorm(S,P,S[ip],P[i],sx):[1,0], nn=inx>=0?segNorm(S,P,S[inx],P[i],sx):[0,sx];
     const near={z:P[i].z+r*nn[0]-r, xr:P[i].xr+r*nn[1]-r*sx};
     let q=near;
     if(Math.hypot(np[0]-nn[0],np[1]-nn[1])>1e-6){
@@ -2074,6 +2109,7 @@ function geoCalc(){
   document.querySelectorAll('#geoForm input,#geoForm select').forEach(e=>{v[e.dataset.k]=+e.value;});
   geoNose.inner=!!c.inner;
   let r; try{ r=c.c(v); }catch(e){ r={info:[],bad:'Проверьте размеры.'}; }
+  if(r&&!r.bad){ const sane=geoSane(v,r); if(sane) r={...r,bad:sane}; }
   $('#geoBad').innerHTML=r.bad?`<div class="note warn" style="margin-bottom:11px"><b>${esc(r.bad)}</b></div>`:'';
   $('#geoPic').innerHTML=r.pts?geoDraw(r,300,150,false,c.inner,c,v):'';
   let K=null;
@@ -2154,7 +2190,7 @@ function openSheet(id){
       <div class="sec">Вывод</div><div class="note warn">${esc(d.n)}</div>`;
   }
   $('#sheetTitle').textContent=ttl; $('#sheetSub').textContent=sub;
-  $('#sheetBody').innerHTML=html+notesHTML(id)+`<div class="credit" style="padding-top:22px">Версия 0.940 · Разработал Онянов Дмитрий Сергеевич</div>`;
+  $('#sheetBody').innerHTML=html+notesHTML(id)+`<div class="credit" style="padding-top:22px">Версия ${VER} · Разработал Онянов Дмитрий Сергеевич</div>`;
   wireNotes(id); numFix();
   $('#sheet').classList.add('open'); deeper();
 }
@@ -2247,11 +2283,12 @@ function bind(){
     ['aD','aR','aF','aT'].forEach(i=>{$('#'+i).oninput=c;$('#'+i).onchange=c;}); c(); }
   const sD=$('#sD');
   if(sD){ const c=()=>{const D=+sD.value||1,h=+$('#sH').value||0.1,T=+$('#sT').value||1,F=+$('#sF').value||1;
-    const ang=Math.atan2(h,Math.PI*D)*180/Math.PI;
-    const turns=T/h, len=turns*Math.sqrt(Math.pow(Math.PI*D,2)+h*h), tmin=len/F;
-    $('#mOut4').innerHTML=nf(ang,2)+'<small>° угол врезания · '+nf(turns,1)+' витков · '+nf(tmin*60,0)+' с</small>';
-    $('#mCode').textContent='(VREZANIE PO SPIRALI '+nf(D,1)+' MM)\nG00 X'+nf(D/2,3)+' Y0.\nG01 Z0. F'+nf(F,0)+
-      '\nG91 G03 I-'+nf(D/2,3)+' Z-'+nf(h,3)+' F'+nf(F,0)+' L'+Math.ceil(turns)+'   (Fanuc: K'+Math.ceil(turns)+')\nG90 G01 Z-'+nf(T,3);};
+    const N=Math.max(1,Math.ceil(T/h)), hEff=T/N;            // витков целое, глубина ровно T
+    const ang=Math.atan2(hEff,Math.PI*D)*180/Math.PI;
+    const len=N*Math.sqrt(Math.pow(Math.PI*D,2)+hEff*hEff), tmin=len/F;
+    $('#mOut4').innerHTML=nf(ang,2)+'<small>° угол врезания · '+N+' витков по '+nf(hEff,3)+' мм · '+nf(tmin*60,0)+' с</small>';
+    $('#mCode').textContent='(VREZANIE PO SPIRALI '+nf(D,1)+' MM NA '+nf(T,2)+')\nG17 G90\nG00 X'+nf(D/2,3)+' Y0.\nG01 Z0. F'+nf(F,0)+
+      '\nG91 G03 I-'+nf(D/2,3)+' Z-'+nf(hEff,3)+' F'+nf(F,0)+' L'+N+'   (Fanuc: K'+N+')\nG90';};
     ['sD','sH','sT','sF'].forEach(i=>$('#'+i).oninput=c); c(); }
   const kD=$('#kD');
   if(kD){const c=()=>{const D=+kD.value||1,V=+$('#kV').value||0,Z=+$('#kZ').value||1,F=+$('#kF').value||0;
@@ -2315,6 +2352,7 @@ window.addEventListener('load',function(){fitH();setTimeout(fitH,300);setTimeout
 fitH();
 
 
+try{ $('#vhead').textContent='Оператор ЧПУ · v'+VER; }catch(e){}
 (async()=>{ NOTES=await loadNotes(); render(); })();
 </script>
 </body>
