@@ -1,7 +1,17 @@
-const CACHE='razryad-0945-0340';
-const FILES=['./','./index.html','./chpu.html','./termist.html','./privacy.html',
+const CACHE='razryad-0994-0831a';
+const FILES=['./','./index.html','./chpu.html','./generator.html','./termist.html','./privacy.html',
  './manifest-chpu.webmanifest','./manifest-termist.webmanifest',
- './icon-chpu-192.png','./icon-chpu-512.png','./icon-termist-192.png','./icon-termist-512.png'];
+ './icon-chpu-192.png','./icon-chpu-512.png','./icon-termist-192.png','./icon-termist-512.png',
+ './generator-pro.js','./generator-v99.js','./backplot-bridge.js','./operator-tools.js','./chpu-v99.js','./lathe-sim-v99.js','./termist-v99.js','./v99.css','./vendor/qrcode/qrcode.js','./samples/turning-demo.nc',
+ './assets/backgrounds/work.jpg','./assets/backgrounds/codes.jpg','./assets/backgrounds/calc.jpg','./assets/backgrounds/control.jpg','./assets/backgrounds/learn.jpg',
+ './assets/backgrounds/therm-work-v99.jpg','./assets/backgrounds/therm-steels-v99.jpg','./assets/backgrounds/therm-process-v99.jpg','./assets/backgrounds/therm-learn-v99.jpg',
+ './vendor/ocr/tesseract.min.js','./vendor/ocr/worker.min.js',
+ './vendor/ocr/core/tesseract-core.wasm.js','./vendor/ocr/core/tesseract-core.wasm',
+ './vendor/ocr/core/tesseract-core-simd.wasm.js','./vendor/ocr/core/tesseract-core-simd.wasm',
+ './vendor/ocr/core/tesseract-core-lstm.wasm.js','./vendor/ocr/core/tesseract-core-lstm.wasm',
+ './vendor/ocr/core/tesseract-core-simd-lstm.wasm.js','./vendor/ocr/core/tesseract-core-simd-lstm.wasm',
+ './vendor/tessdata/rus.traineddata.gz','./vendor/tessdata/eng.traineddata.gz',
+ './vendor/pdf/pdf.min.js','./vendor/pdf/pdf.worker.min.js'];
 
 self.addEventListener('message',e=>{ if(e.data==='skip') self.skipWaiting(); });
 
@@ -28,6 +38,6 @@ self.addEventListener('fetch',e=>{
         const copy=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,copy));
       }
       return res;
-    }).catch(()=>caches.match(e.request).then(hit=>hit||caches.match('./index.html')))
+    }).catch(()=>caches.match(e.request,{ignoreSearch:true}).then(hit=>hit||caches.match('./index.html')))
   );
 });

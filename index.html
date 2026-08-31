@@ -65,7 +65,7 @@ footer{margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
  font-family:"Oswald",sans-serif;text-transform:uppercase}
 </style>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){var had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("./sw.js").then(function(r){if(r.waiting){r.waiting.postMessage("skip");}r.addEventListener("updatefound",function(){var n=r.installing;if(!n)return;n.addEventListener("statechange",function(){if(n.state==="installed"&&navigator.serviceWorker.controller){n.postMessage("skip");}});});}).catch(function(){});var reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(!had||reloading)return;reloading=true;location.reload();});});}</script>
-<script data-goatcounter="https://razryad.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script>if(location.protocol==='https:'&&navigator.onLine){var gc=document.createElement('script');gc.async=true;gc.src='https://gc.zgo.at/count.js';gc.dataset.goatcounter='https://razryad.goatcounter.com/count';document.head.appendChild(gc);}</script>
 </head>
 <body>
 <div class="wrap">
@@ -81,13 +81,20 @@ footer{margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
 <div class="app">
   <div class="top">
     <img src="./icon-chpu-192.png" alt="">
-    <div><div class="nm">Оператор ЧПУ</div><div class="ver">версия 0.945</div></div>
+    <div><div class="nm">Оператор ЧПУ</div><div class="ver">веб 0.994 · APK 0.945</div></div>
   </div>
   <div class="desc">Токарный и фрезерный — переключаются в шапке, и всё содержимое меняется под выбранный станок.</div>
   <ul>
-    <li>G- и M-коды с разбором различий Haas и Fanuc</li>
+    <li>Учебник от А до Я: 29 тем, четыре стойки, разряды и тест</li>
+    <li>Полный ряд G-кодов G00–G200 и M-коды с различиями Haas/Fanuc</li>
     <li>Постоянные циклы с готовыми кадрами</li>
     <li>Расчёт контура: 23 случая с координатами всех точек и коррекцией на радиус пластины</li>
+    <li>Фото/PDF/DXF → токарный G-код Haas/Fanuc с офлайн-OCR и 2D-симуляцией</li>
+    <li>Проверка готового G-кода и контроль первой детали с коррекцией X/Z</li>
+    <li>Карточка наладки, фото тревоги и расшифровка пластины ISO</li>
+    <li>Общий профиль станка, редактор ступеней, привязка OCR и пошаговая проверка траектории</li>
+    <li>Журнал ресурса твердосплавной пластины, учебный маршрут с прогрессом и практикой</li>
+    <li>Расточка G71/G70, резьба G76 и режимы для 40Х/40Х13/14Х17Н2 с учётом HRC</li>
     <li>Режимы резания, резьба, допуски и посадки</li>
     <li>Обучение по разрядам с 3-го по 6-й, примеры программ, типовые ошибки</li>
   </ul>
@@ -100,7 +107,7 @@ footer{margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
 <div class="app t">
   <div class="top">
     <img src="./icon-termist-192.png" alt="">
-    <div><div class="nm">Термист</div><div class="ver">версия 0.340</div></div>
+    <div><div class="nm">Термист</div><div class="ver">веб 0.990 · APK 0.340</div></div>
   </div>
   <div class="desc">Режимы термообработки и теория — от загрузки садки до разбора брака.</div>
   <ul>
@@ -109,6 +116,8 @@ footer{margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
     <li>Цементация с расчётом слоя, прерывистая закалка вода→масло</li>
     <li>Диаграмма железо-углерод и превращения при охлаждении</li>
     <li>Шкалы твёрдости, обучение по разрядам, дефекты и брак</li>
+    <li>Карта цикла, перевод HRC/HB/HV, таймер и журнал садок</li>
+    <li>Проверка печи, диагностика брака, пирометрия, атмосферы и контроль структуры</li>
   </ul>
   <div class="btns">
     <a class="btn go" href="./termist.html">Открыть</a>

@@ -1,0 +1,21 @@
+const fs=require('fs'),vm=require('vm');
+const storage=new Map(),localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)};
+let copied='',sheetOpen=true;const sheet={classList:{remove(v){if(v==='open')sheetOpen=false}}};
+const root={querySelectorAll(){return[]}},document={readyState:'complete',body:root,querySelectorAll(s){return s.includes('#sheet.open')?[sheet]:[]}};
+class MutationObserver{constructor(fn){this.fn=fn}observe(){}}
+const location={pathname:'/generator.html',href:''};
+const navigator={clipboard:{writeText(v){copied=v;return Promise.resolve()}}};
+const ctx=vm.createContext({console,document,MutationObserver,localStorage,location,navigator,Date});ctx.window=ctx;
+vm.runInContext(fs.readFileSync('backplot-bridge.js','utf8'),ctx,{filename:'backplot-bridge.js'});
+const assert=(v,m)=>{if(!v)throw new Error(m)};
+assert(ctx.RazryadBackplot.looksLikeLatheNc('G00 X50 Z2\nG01 Z-20 F.2'),'valid X/Z lathe code was not detected');
+assert(!ctx.RazryadBackplot.looksLikeLatheNc('G00 X10 Y10'),'milling-only code was incorrectly offered to 2D lathe Backplot');
+ctx.RazryadBackplot.store({code:'G00 X50 Z2',title:'test'});
+assert(ctx.RazryadBackplot.take().title==='test'&&!localStorage.getItem(ctx.RazryadBackplot.KEY),'handoff was not consumed exactly once');
+ctx.RazryadBackplot.open('G00 X50 Z2\nG01 Z-10',{title:'from generator'});
+assert(location.href==='./chpu.html?open=backplot','cross-page handoff did not navigate to Backplot');
+let received='';ctx.RazryadLatheSim={openWithCode(code){received=code;return true}};location.href='';
+ctx.RazryadBackplot.open('G00 X60 Z3\nG01 Z-20',{title:'same page'});
+assert(received.includes('X60')&&location.href==='','same-page handoff did not use the loaded simulator');
+assert(copied.includes('X60')&&!sheetOpen,'Backplot button did not copy the code or close the open sheet before navigation');
+console.log('backplot bridge smoke tests: OK');
