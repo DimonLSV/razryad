@@ -11,7 +11,7 @@ function defaults(){return{dialect:'haas',operation:'external',stock:'solid',con
 function profile(){try{return JSON.parse(localStorage.getItem(PROFILE)||'null')||{name:'Haas ST-20',maxRpm:4000}}catch(_){return{name:'Haas ST-20',maxRpm:4000}}}
 function load(){try{return{...defaults(),...(JSON.parse(localStorage.getItem(STORE)||'null')||{})}}catch(_){return defaults()}}
 function save(v){try{localStorage.setItem(STORE,JSON.stringify(v))}catch(_){}}
-function loadView(){const base={showRapid:true,showDots:true,showArcs:true,showStock:true,showTool:true,showPath:true,showCycles:true,showGrid:true,flat:true,zoom:1};try{return{...base,...(JSON.parse(localStorage.getItem(VIEW_STORE)||'null')||{})}}catch(_){return base}}
+function loadView(){const base={showRapid:true,showDots:true,showArcs:true,showStock:true,showTool:true,showPath:true,showCycles:true,showGrid:true,flat:true,zoom:1,panX:0,panY:0};try{return{...base,...(JSON.parse(localStorage.getItem(VIEW_STORE)||'null')||{})}}catch(_){return base}}
 /* единая точка отрисовки: плоский разрез либо объёмный вид */
 function paint(){const cv=$('#lsimCanvas');if(!cv)return;
  /* в плоском разрезе координаты подписаны прямо на холсте — старые подписи осей прячем */
@@ -299,8 +299,10 @@ function simulatorView(){
  <div class="card lsim-gcode-card"><div class="lsim-controls-title"><b>1. Откройте готовую программу</b><span>ЭМУЛЯТОР CNC · HAAS / FANUC</span></div><p class="lsim-help">Графика строится из кадров X/Z. <b>G0 не снимает металл</b>; циклы раскрываются в рабочие и возвратные ходы, а каждая станция T получает свою геометрию.</p><textarea id="lsimGcode" spellcheck="false" autocomplete="off" placeholder="O0100&#10;G21 G18 G40 G99&#10;G50 S2500&#10;G97 S800 M03&#10;T0101&#10;G00 X64. Z3.&#10;..."></textarea><input id="lsimGFile" type="file" accept=".nc,.txt,.tap,.cnc,.mpf,text/plain" hidden><div class="lsim-g-actions"><button class="btn ghost" id="lsimGFileBtn">Открыть NC</button><button class="btn ghost" id="lsimGDemo">Учебный пример</button><button class="btn ghost" id="lsimSampleTurn">Пример точения</button><button class="btn" id="lsimGAnalyze">Проверить и показать</button></div><div id="lsimGReport" class="lsim-g-report" aria-live="polite"><span>После проверки программа, траектория и активный кадр будут синхронизированы.</span></div></div>
  <div id="lsimToolSetup" class="card lsim-tool-setup" hidden></div>
  <div class="lsim-dialect" role="group" aria-label="Диалект стойки"><span>СТОЙКА</span><button data-lsim-dialect="haas" aria-pressed="${c.dialect!=='fanuc'}">HAAS</button><button data-lsim-dialect="fanuc" aria-pressed="${c.dialect==='fanuc'}">FANUC</button><small id="lsimDialectHint">${c.dialect==='fanuc'?'P/Q циклов — в микронах, повтор K, G71 двумя кадрами':'P/Q как задано, глубина D и I/K в мм, повтор L'}</small></div>
- <div class="lsim-sim-toolbar" aria-label="Отображение эмулятора"><div class="lsim-zoom"><button id="lsimZoomOut" title="Уменьшить">−</button><button id="lsimZoomFit" title="Показать всё">FIT</button><button id="lsimZoomIn" title="Увеличить">+</button><button data-lsim-view="flat" aria-pressed="${pressed('flat')}" title="Плоский разрез с осевой линией">2D</button></div><div class="lsim-view-buttons"><button data-lsim-view="showRapid" aria-pressed="${pressed('showRapid')}">G0</button><button data-lsim-view="showDots" aria-pressed="${pressed('showDots')}">ТОЧКИ</button><button data-lsim-view="showArcs" aria-pressed="${pressed('showArcs')}">ДУГИ</button><button data-lsim-view="showStock" aria-pressed="${pressed('showStock')}">ЗАГОТОВКА</button><button data-lsim-view="showTool" aria-pressed="${pressed('showTool')}">РЕЗЕЦ</button><button data-lsim-view="showPath" aria-pressed="${pressed('showPath')}">ПУТЬ</button><button data-lsim-view="showCycles" aria-pressed="${pressed('showCycles')}">ЦИКЛЫ</button><button data-lsim-view="showGrid" aria-pressed="${pressed('showGrid')}">СЕТКА</button></div></div>
- <div class="lsim-stage"><canvas id="lsimCanvas" width="960" height="460" role="img" aria-label="Эмулятор CNC: плоский разрез токарной программы: патрон, заготовка, снятие материала и активный инструмент">Ваш браузер не поддерживает Canvas.</canvas><div class="lsim-hud"><span>КАДР <b id="lsimPass">0 / 0</b></span><span>ПОЗИЦИЯ <b id="lsimPos">X— Z—</b></span><span>ШПИНДЕЛЬ <b id="lsimRpm">S${c.rpm}</b></span><span>ИНСТРУМЕНТ <b id="lsimActiveTool">T—</b></span></div><div class="lsim-axis"><span>−Z · ПАТРОН / ЗАЖИМ</span><span>Z0 · ТОРЕЦ</span></div></div>
+ <div class="lsim-sim-toolbar" aria-label="Отображение эмулятора"><div class="lsim-zoom"><button id="lsimZoomOut" title="Уменьшить">−</button><button id="lsimZoomFit" title="Показать всё">FIT</button><button id="lsimZoomIn" title="Увеличить">+</button><button id="lsimFull" title="Во весь экран" aria-pressed="false">⛶</button><button data-lsim-view="flat" aria-pressed="${pressed('flat')}" title="Плоский разрез с осевой линией">2D</button></div><div class="lsim-view-buttons"><button data-lsim-view="showRapid" aria-pressed="${pressed('showRapid')}">G0</button><button data-lsim-view="showDots" aria-pressed="${pressed('showDots')}">ТОЧКИ</button><button data-lsim-view="showArcs" aria-pressed="${pressed('showArcs')}">ДУГИ</button><button data-lsim-view="showStock" aria-pressed="${pressed('showStock')}">ЗАГОТОВКА</button><button data-lsim-view="showTool" aria-pressed="${pressed('showTool')}">РЕЗЕЦ</button><button data-lsim-view="showPath" aria-pressed="${pressed('showPath')}">ПУТЬ</button><button data-lsim-view="showCycles" aria-pressed="${pressed('showCycles')}">ЦИКЛЫ</button><button data-lsim-view="showGrid" aria-pressed="${pressed('showGrid')}">СЕТКА</button></div></div>
+ <div class="lsim-stage"><canvas id="lsimCanvas" width="960" height="460" role="img" aria-label="Эмулятор CNC: плоский разрез токарной программы: патрон, заготовка, снятие материала и активный инструмент">Ваш браузер не поддерживает Canvas.</canvas><div class="lsim-hud"><span>КАДР <b id="lsimPass">0 / 0</b></span><span>ПОЗИЦИЯ <b id="lsimPos">X— Z—</b></span><span>ШПИНДЕЛЬ <b id="lsimRpm">S${c.rpm}</b></span><span>ИНСТРУМЕНТ <b id="lsimActiveTool">T—</b></span></div><div class="lsim-axis"><span>−Z · ПАТРОН / ЗАЖИМ</span><span>Z0 · ТОРЕЦ</span></div>
+  <div class="lsim-fsbar" aria-label="Управление в полном экране"><button type="button" data-fs="reset" title="В начало">|◀</button><button type="button" data-fs="back" title="Кадр назад">◀|</button><button type="button" data-fs="play" title="Пуск / пауза">▶</button><button type="button" data-fs="step" title="Кадр вперёд">|▶</button><button type="button" data-fs="fit" title="Показать всё">FIT</button><button type="button" data-fs="exit" title="Выйти из полного экрана">✕</button></div></div>
+ <div class="lsim-hint-gest">Тяните деталь пальцем · щипок или колесо — масштаб · двойное нажатие — сброс · ⛶ во весь экран</div>
  <div class="lsim-pass-track" aria-hidden="true"><i id="lsimTrack" style="width:0"></i></div><div class="lsim-legend"><span><i></i>текущая поверхность</span><span class="rapid"><i></i>G0 быстрый</span><span class="line"><i></i>G1 линия</span><span class="cw"><i></i>G2</span><span class="ccw"><i></i>G3</span><span class="insert"><i></i>пластина / напайка</span></div>
  <div class="lsim-transport"><div class="lsim-actions transport"><button class="btn ghost" id="lsimReset" title="В начало">|◀</button><button class="btn ghost" id="lsimReverse" title="Назад непрерывно">◀</button><button class="btn ghost" id="lsimBack" title="Предыдущий кадр">◀|</button><button class="btn ghost" id="lsimStep" title="Следующий кадр">|▶</button><button class="btn" id="lsimStart" title="Пуск / пауза" aria-pressed="false">▶</button><button class="btn ghost" id="lsimEnd" title="В конец">▶|</button></div><label class="lsim-speed"><span>Скорость</span><input id="lsimSpeed" data-lsim-field type="range" min="1" max="8" step="1" value="${c.speed}"><b id="lsimSpeedValue">×${c.speed}</b></label><div id="lsimStatus" class="lsim-status" aria-live="polite"></div></div>
  <div class="lsim-code-sync"><div class="lsim-active-block"><span>АКТИВНЫЙ КАДР</span><b id="lsimActiveBlock">— программа не загружена —</b></div><div id="lsimCodeWindow" class="lsim-code-window"></div></div>
@@ -432,7 +434,16 @@ function bindSimulator(){
   const hint=$('#lsimDialectHint');if(hint)hint.textContent=value==='fanuc'?'P/Q циклов — в микронах, повтор K, G71 двумя кадрами':'P/Q как задано, глубина D и I/K в мм, повтор L';
   if($('#lsimGcode')&&$('#lsimGcode').value.trim())analyzePastedGcode(false);else applyForm(false);
   toast(value==='fanuc'?'Разбор по правилам Fanuc':'Разбор по правилам Haas');});
- $('#lsimZoomOut').onclick=()=>changeZoom(.85);$('#lsimZoomFit').onclick=()=>changeZoom(1,true);$('#lsimZoomIn').onclick=()=>changeZoom(1.18);
+ $('#lsimZoomOut').onclick=()=>changeZoom(.82);$('#lsimZoomFit').onclick=()=>changeZoom(1,true);$('#lsimZoomIn').onclick=()=>changeZoom(1.22);
+ const fs=$('#lsimFull');if(fs)fs.onclick=()=>toggleFullscreen();
+ document.querySelectorAll('[data-fs]').forEach(b=>b.onclick=()=>{const a=b.dataset.fs;
+  if(a==='exit')return toggleFullscreen(false);
+  if(a==='fit')return changeZoom(1,true);
+  if(a==='reset')return seekBlock(0,0);
+  if(a==='back')return stepBlock(-1);
+  if(a==='step')return stepBlock(1);
+  if(a==='play'){const s=$('#lsimStart');if(s)s.click();b.textContent=simState&&simState.running?'Ⅱ':'▶';}});
+ bindCanvasGestures();
  $('#lsimStart').onclick=()=>{if(simState&&simState.running){haltRun();setStatus(null,{type:'warn',text:'Пауза. Нажмите ▶ ещё раз, чтобы продолжить.'});updateHud();return;}if(!simState&&!applyForm(false))return;if(simState.complete&&simState.nc){simState.segment=0;simState.progress=0;simState.complete=false;}simState.direction=1;simState.running=true;setPlayButton(true);lastTick=Date.now();setStatus(null,{type:'good',text:'Эмулятор запущен вперёд. Повторное нажатие Ⅱ остановит движение.'});runSimulation();};
  $('#lsimReverse').onclick=()=>{if(!simState||!simState.nc)return toast('Сначала загрузите NC');if(simState.running&&simState.direction<0){haltRun();return;}simState.direction=-1;simState.complete=false;simState.running=true;setPlayButton(true);lastTick=Date.now();runSimulation();};
  $('#lsimStep').onclick=()=>stepBlock(1);$('#lsimBack').onclick=()=>stepBlock(-1);
@@ -441,7 +452,78 @@ function bindSimulator(){
  if(window.ResizeObserver){if(resizeWatch)resizeWatch.disconnect();resizeWatch=new ResizeObserver(()=>{if(simState&&$('#lsimCanvas'))paint();});resizeWatch.observe($('#lsimCanvas'));}
 }
 
-function changeZoom(mult,fit){viewState.zoom=fit?1:Math.max(.7,Math.min(3,(viewState.zoom||1)*mult));saveView();paint();}
+function changeZoom(mult,fit){
+ if(fit){viewState.zoom=1;viewState.panX=0;viewState.panY=0;}
+ else viewState.zoom=Math.max(.4,Math.min(14,(viewState.zoom||1)*mult));
+ saveView();paint();}
+
+/* зум с привязкой к точке под пальцем или курсором: деталь не убегает из-под руки */
+function zoomAt(sx,sy,mult){
+ const cv=$('#lsimCanvas');if(!cv||!simState)return changeZoom(mult);
+ const r=cv.getBoundingClientRect(),W=r.width,H=r.height;
+ const before=flatGeom(W,H,simState,viewState.zoom||1,viewState.panX||0,viewState.panY||0);
+ const wz=before.invZ(sx),wx=before.invX(sy);
+ viewState.zoom=Math.max(.4,Math.min(14,(viewState.zoom||1)*mult));
+ const after=flatGeom(W,H,simState,viewState.zoom,0,0);
+ viewState.panX=sx-after.MX(wz);viewState.panY=sy-after.MY(wx);
+ saveView();paint();
+}
+
+/* перетаскивание детали, щипок двумя пальцами, колесо мыши, двойное нажатие — сброс */
+function bindCanvasGestures(){
+ const cv=$('#lsimCanvas');if(!cv||cv.dataset.gest)return;cv.dataset.gest='1';
+ const pts=new Map();let drag=null,pinch=null,lastTap=0;
+ const local=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};};
+ cv.addEventListener('pointerdown',e=>{
+  if(viewState.flat===false)return;
+  cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);
+  pts.set(e.pointerId,local(e));
+  if(pts.size===1){const p=pts.get(e.pointerId);drag={sx:p.x,sy:p.y,px:viewState.panX||0,py:viewState.panY||0,moved:false};}
+  else if(pts.size===2){drag=null;const [a,b]=[...pts.values()];
+   pinch={d:Math.hypot(b.x-a.x,b.y-a.y)||1,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,zoom:viewState.zoom||1,
+    px:viewState.panX||0,py:viewState.panY||0};}
+ });
+ cv.addEventListener('pointermove',e=>{
+  if(!pts.has(e.pointerId))return;
+  pts.set(e.pointerId,local(e));
+  if(pinch&&pts.size>=2){
+   const [a,b]=[...pts.values()],d=Math.hypot(b.x-a.x,b.y-a.y)||1;
+   const mult=d/pinch.d;
+   viewState.zoom=pinch.zoom;viewState.panX=pinch.px;viewState.panY=pinch.py;
+   zoomAt(pinch.cx,pinch.cy,mult);
+   return;
+  }
+  if(drag){const p=pts.get(e.pointerId),dx=p.x-drag.sx,dy=p.y-drag.sy;
+   if(Math.hypot(dx,dy)>3)drag.moved=true;
+   if(!drag.moved)return;
+   e.preventDefault();
+   viewState.panX=drag.px+dx;viewState.panY=drag.py+dy;paint();}
+ });
+ const release=e=>{
+  pts.delete(e.pointerId);
+  if(pts.size<2)pinch=null;
+  if(pts.size===0){
+   if(drag&&drag.moved)saveView();
+   else{const now=Date.now();if(now-lastTap<320){changeZoom(1,true);toast('Вид сброшен');}lastTap=now;}
+   drag=null;}
+ };
+ cv.addEventListener('pointerup',release);
+ cv.addEventListener('pointercancel',release);
+ cv.addEventListener('wheel',e=>{
+  if(viewState.flat===false)return;
+  e.preventDefault();const p=local(e);zoomAt(p.x,p.y,e.deltaY<0?1.12:1/1.12);
+ },{passive:false});
+}
+
+/* полный экран: сцена растягивается на всё окно, без выхода со страницы */
+function toggleFullscreen(force){
+ const stage=document.querySelector('.lsim-stage');if(!stage)return;
+ const on=force==null?!stage.classList.contains('full'):!!force;
+ stage.classList.toggle('full',on);
+ document.body.classList.toggle('lsim-full-open',on);
+ const btn=$('#lsimFull');if(btn){btn.setAttribute('aria-pressed',String(on));btn.textContent=on?'✕':'⛶';btn.title=on?'Выйти из полного экрана':'Во весь экран';}
+ requestAnimationFrame(()=>{paint();setTimeout(paint,120);});
+}
 function fitStockToNc(announce){if(!gcodeResult)return announce&&toast('Сначала откройте NC');const fit=inferStock(gcodeResult,readForm());$('#lsimStockD').value=fit.stockD;$('#lsimLength').value=fit.length;$('#lsimGrip').value=Math.round(fit.grip);applyForm(false);if(announce)toast(`Заготовка: Ø${fit.stockD} × ${fit.length} мм`);return true;}
 function seekBlock(index,progress){if(!simState)return;if(!simState.nc){simState=buildModel(readForm());simState.complete=index>0;simState.pass=index>0?simState.totalPasses:0;simState.progress=progress||0;}else{simState.segment=Math.max(0,Math.min(simState.nc.segments.length,index));simState.progress=progress||0;simState.complete=simState.segment>=simState.nc.segments.length;}haltRun();refreshMaterial();updateHud();paint();}
 function stepBlock(dir){if(!simState&&!applyForm(false))return;haltRun();if(!simState.nc){advance(dir>0?.16:-.16);}else{simState.segment=Math.max(0,Math.min(simState.nc.segments.length,simState.segment+dir));simState.progress=0;simState.complete=simState.segment>=simState.nc.segments.length;refreshMaterial();}simState.spin+=.35*dir;paint();updateHud();}
@@ -673,15 +755,25 @@ function drawPath2D(ctx,G,result){
  });
 }
 
+/* геометрия сцены отдельно от отрисовки: нужна и для мыши, и для щипка */
+function flatGeom(W,H,m,zoom,panX,panY){
+ const b=flatBounds(m),padL=46,padR=14,padT=12,padB=24;
+ const spanZ=Math.max(1,b.zMax-b.zMin),spanR=Math.max(1,b.rMax*2.3);
+ const k=Math.min((W-padL-padR)/spanZ,(H-padT-padB)/spanR)*Math.max(.15,zoom||1);
+ const cy=padT+(H-padT-padB)/2+(panY||0);
+ const left=padL+((W-padL-padR)-spanZ*k)/2,ox=left-b.zMin*k+(panX||0);
+ return{k,cy,ox,b,padL,padR,padT,padB,
+  MX:z=>ox+z*k,MY:x=>cy-x/2*k,
+  invZ:sx=>(sx-ox)/k,invX:sy=>(cy-sy)*2/k,
+  clip:{x:padL-6,y:0,w:W-padL-padR+20,h:H-padB+8}};
+}
+
 function draw2D(canvas,m,time){
  if(!canvas)return;const S=canvasSpace(canvas,false),ctx=S.ctx,W=S.w,H=S.h;
  ctx.clearRect(0,0,W,H);ctx.fillStyle=FLAT.bg;ctx.fillRect(0,0,W,H);
  if(!m){ctx.fillStyle=FLAT.text;ctx.font='500 11px "IBM Plex Mono",monospace';ctx.fillText('Откройте NC-программу',16,H/2);return;}
- const c=m.cfg,b=flatBounds(m),zoom=viewState.zoom||1,padL=46,padR=14,padT=12,padB=24;
- const spanZ=Math.max(1,b.zMax-b.zMin),spanR=Math.max(1,b.rMax*2.3);
- const k=Math.min((W-padL-padR)/spanZ,(H-padT-padB)/spanR)*zoom;
- const cy=padT+(H-padT-padB)/2,left=padL+((W-padL-padR)-spanZ*k)/2,ox=left-b.zMin*k;
- const G={k,cy,MX:z=>ox+z*k,MY:x=>cy-x/2*k,clip:{x:padL-6,y:0,w:W-padL-padR+20,h:H-padB+8}};
+ const c=m.cfg,G=flatGeom(W,H,m,viewState.zoom||1,viewState.panX||0,viewState.panY||0);
+ const b=G.b,k=G.k,cy=G.cy,padL=G.padL,padR=G.padR,padT=G.padT,padB=G.padB;
  const yUp=r=>cy-r*k,yDn=r=>cy+r*k;
 
  /* сетка и линейки */
@@ -770,7 +862,10 @@ function initBanner(){
  const tick=()=>{if(!$('#latheSimBannerCanvas')){bannerFrame=0;return;}const elapsed=Date.now()-bannerStart,duration=1850,totalCycle=duration*model.totalPasses,cycle=elapsed%totalCycle;model.pass=Math.floor(cycle/duration);model.progress=reduced?.48:(cycle%duration)/duration;model.spin=reduced?.8:elapsed*.005;model.running=!reduced;drawLathe(canvas,model,true,Date.now());if(!reduced)bannerFrame=requestAnimationFrame(tick);};tick();
 }
 function stopBanner(){if(bannerFrame){cancelAnimationFrame(bannerFrame);bannerFrame=0;}}
-function stopSimulation(){haltRun();if(resizeWatch){resizeWatch.disconnect();resizeWatch=null;}}
+function stopSimulation(){haltRun();if(resizeWatch){resizeWatch.disconnect();resizeWatch=null;}
+ const stage=document.querySelector('.lsim-stage');if(stage)stage.classList.remove('full');
+ document.body.classList.remove('lsim-full-open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('lsim-full-open'))toggleFullscreen(false);});
 
 const previousBind=bind;bind=function(){previousBind();bindSimulator();};
 const previousRender=render;render=function(){stopBanner();stopSimulation();if(tab==='work'&&folder==='simx'){showSimulator();return;}previousRender();if(tab==='work'&&!folder)initBanner();};

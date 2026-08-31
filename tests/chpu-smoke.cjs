@@ -24,7 +24,8 @@ assert(fs.readFileSync('operator-tools.js','utf8').includes('work-split'),'split
 assert(fs.readFileSync('operator-tools.js','utf8').includes('latheSimBannerCanvas'),'2.5D simulator banner is missing');
 assert(fs.readFileSync('operator-tools.js','utf8').includes('Эмулятор NC BACKPLOT'),'requested Backplot banner title is missing');
 assert(run("RazryadTools.searchIndex().some(x=>x.folder==='simx'&&x.n==='Эмулятор CNC')")===true,'CNC emulator is missing from global navigation search');
-assert(run("RazryadTools.workLayout().length")===8,'default customizable Work layout is invalid');
+assert(run("RazryadTools.workLayout().length")===9,'default customizable Work layout is invalid');
+assert(run("RazryadTools.workLayout()[0]")==='work:simx','CNC emulator must be the first card on the Work home');
 assert(fs.readFileSync('operator-tools.js','utf8').includes('setTimeout(()=>{timer=0;workBlockClickUntil')&&fs.readFileSync('operator-tools.js','utf8').includes('workEditorReset'),'long-press Work customization or factory reset is missing');
 assert(run("RazryadLatheSim.validate({...RazryadLatheSim.defaults(),stockD:60,targetD:45}).errors.length")===0,'valid lathe simulator setup was rejected');
 assert(run("RazryadLatheSim.validate({...RazryadLatheSim.defaults(),stockD:40,targetD:50}).errors.length")>0,'invalid external diameter was not rejected');
@@ -100,5 +101,11 @@ assert(run('Object.keys(RazryadLatheSim.TOOL_LIBRARY).length')>=25,'tool catalog
 assert(run("Object.values(RazryadLatheSim.TOOL_LIBRARY).filter(t=>t.brazed).length")>=6,'brazed (napayne) tools are missing from the catalog');
 assert(run("Object.values(RazryadLatheSim.TOOL_LIBRARY).filter(t=>t.group==='axial').length")>=5,'axial tools (drills, tap, reamer) are missing');
 assert(run("RazryadLatheSim.parseGcode(['G21','G187 P3','T0101','G00 X50. Z2.','G01 Z-10. F0.2'].join(String.fromCharCode(10)),{...RazryadLatheSim.defaults(),dialect:'fanuc'}).issues.some(i=>/G187/.test(i.text))")===true,'Fanuc dialect does not flag Haas-only codes');
+
+// V0.995 — крупнее сцена, перетаскивание, полный экран
+assert(simSource.includes('function bindCanvasGestures')&&simSource.includes('pointermove'),'canvas pan/pinch gestures are missing');
+assert(simSource.includes('function zoomAt')&&simSource.includes("addEventListener('wheel'"),'anchored zoom by wheel/pinch is missing');
+assert(simSource.includes('function toggleFullscreen')&&simSource.includes('id="lsimFull"')&&simSource.includes('data-fs="exit"'),'fullscreen mode or its exit control is missing');
+assert(fs.readFileSync('v99.css','utf8').includes('.lsim-stage.full'),'fullscreen styles are missing');
 
 console.log('chpu smoke tests: OK');

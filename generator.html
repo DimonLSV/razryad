@@ -53,7 +53,7 @@ input,select,textarea{width:100%;border:1px solid var(--line);background:var(--p
       <a class="back" href="./chpu.html" aria-label="Вернуться в справочник">‹</a>
       <div class="logo" aria-hidden="true"></div>
       <div class="brand"><b>РАЗРЯД</b><span>Фото → G-код Haas</span></div>
-      <div class="draft">V0.994 · PRE-MARKET</div>
+      <div class="draft">V0.995 · PRE-MARKET</div>
     </div>
     <div class="progress" id="progress"></div>
     <div class="stepmeta"><b id="stepTitle">Шаблон детали</b><span id="stepCount">Шаг 1 из 6</span></div>
@@ -257,7 +257,7 @@ $('#sendBtn').onclick=()=>{$('#gateway').value=localStorage.getItem('razryad-dnc
 $('#restartBtn').onclick=()=>{state.step=1;state.template='shaft';applyPreset('shaft');state.gcode='';state.source='';$$('.template').forEach(b=>b.classList.toggle('selected',b.dataset.template==='shaft'));$('#fileInput').value='';$('#ocrText').value='';$('#preview').classList.remove('on');$('#simConfirmed').checked=false;$$('.export').forEach(b=>b.disabled=true);go(1)};
 window.addEventListener('beforeunload',saveDraft);drawProgress();
 </script>
-<script src="./backplot-bridge.js?v=0994a"></script>
+<script src="./backplot-bridge.js?v=0995a"></script>
 <script src="./vendor/qrcode/qrcode.js"></script>
 <script src="./generator-pro.js"></script>
 <script src="./generator-v99.js"></script>

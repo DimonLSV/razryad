@@ -21,9 +21,18 @@ const WORK_EXTRA=[
  {id:'inner',route:'calc:id',n:'Контур внутренний',d:'Расточка, фаски и переходы отверстия',icon:'Ø',bg:'calc'}
 ];
 const workKey=x=>x.split?'split:'+x.id:(x.route||'work:'+x.id);
-const DEFAULT_WORK_LAYOUT=[...WORK.map(workKey),'work:profilex'];
+const DEFAULT_WORK_LAYOUT=['work:simx',...WORK.map(workKey),'work:profilex'];
 function workCatalog(){const a=[...WORK,...WORK_EXTRA],seen=new Set();return a.filter(x=>{const k=workKey(x);if(seen.has(k))return false;seen.add(k);return true;});}
-function workLayout(){const catalog=new Set(workCatalog().map(workKey)),saved=loadJSON(WORK_LAYOUT_KEY,DEFAULT_WORK_LAYOUT);const valid=(Array.isArray(saved)?saved:DEFAULT_WORK_LAYOUT).filter(k=>catalog.has(k));return valid.length?valid.slice(0,12):[...DEFAULT_WORK_LAYOUT];}
+const WORK_SIM_MIGRATED='razryad-work-sim-top-v1';
+function workLayout(){const catalog=new Set(workCatalog().map(workKey)),saved=loadJSON(WORK_LAYOUT_KEY,DEFAULT_WORK_LAYOUT);
+ let valid=(Array.isArray(saved)?saved:DEFAULT_WORK_LAYOUT).filter(k=>catalog.has(k));
+ if(!valid.length)valid=[...DEFAULT_WORK_LAYOUT];
+ /* эмулятор поднят на первое место; у кого уже была своя раскладка — переносим один раз */
+ if(!localStorage.getItem(WORK_SIM_MIGRATED)){
+  valid=['work:simx',...valid.filter(k=>k!=='work:simx')];
+  try{localStorage.setItem(WORK_SIM_MIGRATED,'1');saveJSON(WORK_LAYOUT_KEY,valid.slice(0,12));}catch(e){}
+ }
+ return valid.slice(0,12);}
 function workItem(key){return workCatalog().find(x=>workKey(x)===key)||null;}
 function workCardHtml(x,index){if(!x)return'';const slot=`data-work-slot="${index}"`;return x.split?`<div class="work-split ${x.bg} work-layout-item" ${slot}>${x.split.map(s=>`<button type="button" data-route="${s[0]}"><i>${s[3]}</i><b>${s[1]}</b><span>${s[2]}</span></button>`).join('')}</div>`:`<div class="work-card ${x.bg} work-layout-item" ${slot} ${x.href?`data-href="${x.href}"`:x.route?`data-route="${x.route}"`:`data-work="${x.id}"`}><i style="font:600 22px IBM Plex Mono;color:var(--ember);font-style:normal">${x.icon}</i><b>${x.n}</b><span>${x.d}</span></div>`;}
 function renderWorkGrid(){return workLayout().map((key,index)=>workCardHtml(workItem(key),index)).join('');}

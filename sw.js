@@ -1,4 +1,4 @@
-const CACHE='razryad-0994-0831a';
+const CACHE='razryad-0995-0831a';
 const FILES=['./','./index.html','./chpu.html','./generator.html','./termist.html','./privacy.html',
  './manifest-chpu.webmanifest','./manifest-termist.webmanifest',
  './icon-chpu-192.png','./icon-chpu-512.png','./icon-termist-192.png','./icon-termist-512.png',
