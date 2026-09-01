@@ -1,7 +1,7 @@
-/* РАЗРЯД 0.993 — единый проверяемый Эмулятор CNC: плоский разрез токарной программы */
+﻿/* РАЗРЯД 0.993 — единый проверяемый Эмулятор CNC: плоский разрез токарной программы */
 (function(){
 const STORE='razryad-lathe-sim-v99';
-const VIEW_STORE='razryad-lathe-backplot-view-v99';
+const VIEW_STORE='razryad-cnc-emulator-view-v1';
 const PROFILE='razryad-machine-profile-v99';
 const TOOL_STORE='razryad-lathe-tools-v992';
 let bannerFrame=0,simFrame=0,bannerStart=Date.now(),simState=null,lastTick=0,resizeWatch=null,gcodeResult=null,viewState=loadView();
@@ -28,45 +28,108 @@ function n(v){const x=Number(v);return Number.isFinite(x)?x:0;}
    insert — форма пластины, lead — главный угол в плане, hand — правый/левый. */
 const TOOL_GROUPS=[['ext','Резцы наружные · сменная пластина'],['bore','Резцы расточные · сменная пластина'],['groove','Канавочные и отрезные'],['thr','Резьбовые'],['brazed','Напайные резцы (ГОСТ)'],['axial','Осевой инструмент']];
 const TOOL_LIBRARY={
- /* наружные со сменной пластиной */
- cnmg:{name:'PCLNR 2525 + CNMG · проходной 95°',group:'ext',operation:'external',diameter:0,workingLength:32,bodyD:25,minBore:0,nose:.8,pointAngle:0,shape:'turn',insert:'r80',lead:95,hand:'R'},
- dnmg:{name:'PDJNR 2525 + DNMG · проходной 93°',group:'ext',operation:'external',diameter:0,workingLength:32,bodyD:25,minBore:0,nose:.8,pointAngle:0,shape:'turn',insert:'r55',lead:93,hand:'R'},
- tnmg:{name:'PTGNR 2525 + TNMG · проходной 91°',group:'ext',operation:'external',diameter:0,workingLength:32,bodyD:25,minBore:0,nose:.8,pointAngle:0,shape:'turn',insert:'tri',lead:91,hand:'R'},
- wnmg:{name:'MWLNR 2525 + WNMG · проходной 95°',group:'ext',operation:'external',diameter:0,workingLength:32,bodyD:25,minBore:0,nose:.8,pointAngle:0,shape:'turn',insert:'tri80',lead:95,hand:'R'},
- vnmg:{name:'SVJBR 2020 + VBMT · профильный 93°',group:'ext',operation:'external',diameter:0,workingLength:32,bodyD:20,minBore:0,nose:.4,pointAngle:0,shape:'turn',insert:'r35',lead:93,hand:'R'},
- dcmt:{name:'SDJCR 2020 + DCMT · чистовой 93°',group:'ext',operation:'external',diameter:0,workingLength:30,bodyD:20,minBore:0,nose:.4,pointAngle:0,shape:'turn',insert:'r55',lead:93,hand:'R'},
- face:{name:'MSKNR 2525 + SNMG · подрезной 75°',group:'ext',operation:'external',diameter:0,workingLength:30,bodyD:25,minBore:0,nose:.8,pointAngle:0,shape:'turn',insert:'sq',lead:75,hand:'R'},
- /* расточные со сменной пластиной */
- ccmt:{name:'S25S-SCLCR + CCMT · расточной 95°',group:'bore',operation:'boring',diameter:0,workingLength:55,bodyD:12,minBore:16,nose:.4,pointAngle:0,shape:'bore',insert:'r80',lead:95,hand:'R'},
- sducr:{name:'S20R-SDUCR + DCMT · расточной 93°',group:'bore',operation:'boring',diameter:0,workingLength:50,bodyD:16,minBore:20,nose:.4,pointAngle:0,shape:'bore',insert:'r55',lead:93,hand:'R'},
- svucr:{name:'S16Q-SVUCR + VCMT · профильный расточной',group:'bore',operation:'boring',diameter:0,workingLength:45,bodyD:14,minBore:16,nose:.2,pointAngle:0,shape:'bore',insert:'r35',lead:93,hand:'R'},
- /* канавочные и отрезные */
- mgmn:{name:'MGEHR 2020 + MGMN300 · канавка 3 мм',group:'groove',operation:'groove',diameter:0,workingLength:22,bodyD:20,minBore:0,nose:.2,pointAngle:0,insertWidth:3,shape:'groove',lead:90,hand:'R'},
- mgmn2:{name:'MGEHR 2020 + MGMN200 · канавка 2 мм',group:'groove',operation:'groove',diameter:0,workingLength:18,bodyD:20,minBore:0,nose:.2,pointAngle:0,insertWidth:2,shape:'groove',lead:90,hand:'R'},
- cutoff:{name:'Отрезной GTN-3 · 3 мм',group:'groove',operation:'groove',diameter:0,workingLength:32,bodyD:20,minBore:0,nose:.2,pointAngle:0,insertWidth:3,shape:'groove',lead:90,hand:'R'},
- mgivr:{name:'MGIVR 2016 + MGMN200 · внутренняя канавка',group:'groove',operation:'groove',diameter:0,workingLength:40,bodyD:16,minBore:22,nose:.2,pointAngle:0,insertWidth:2,shape:'groovein',lead:90,hand:'R'},
- /* резьбовые */
- thread:{name:'SER 2020 + 16ER · резьбовой наружный',group:'thr',operation:'thread',diameter:0,workingLength:30,bodyD:20,minBore:0,nose:.1,pointAngle:60,shape:'thread',insert:'thr',lead:90,hand:'R'},
- threadin:{name:'SNR 0020 + 16IR · резьбовой внутренний',group:'thr',operation:'thread',diameter:0,workingLength:45,bodyD:16,minBore:20,nose:.1,pointAngle:60,shape:'threadin',insert:'thr',lead:90,hand:'R'},
- /* напайные */
- brazed:{name:'Напайной проходной прямой',group:'brazed',operation:'external',diameter:0,workingLength:30,bodyD:20,minBore:0,nose:.8,pointAngle:0,shape:'turn',insert:'brz',lead:45,hand:'R',brazed:true},
- brazed_bent:{name:'Напайной проходной отогнутый 45°',group:'brazed',operation:'external',diameter:0,workingLength:30,bodyD:20,minBore:0,nose:1,pointAngle:0,shape:'turn',insert:'brz',lead:45,hand:'R',brazed:true},
- brazed_up:{name:'Напайной проходной упорный 90°',group:'brazed',operation:'external',diameter:0,workingLength:30,bodyD:20,minBore:0,nose:.8,pointAngle:0,shape:'turn',insert:'brz',lead:90,hand:'R',brazed:true},
- brazed_face:{name:'Напайной подрезной',group:'brazed',operation:'external',diameter:0,workingLength:28,bodyD:20,minBore:0,nose:.8,pointAngle:0,shape:'turn',insert:'brz',lead:75,hand:'R',brazed:true},
- brazed_bore:{name:'Напайной расточной проходной',group:'brazed',operation:'boring',diameter:0,workingLength:45,bodyD:16,minBore:20,nose:.8,pointAngle:0,shape:'bore',insert:'brz',lead:60,hand:'R',brazed:true},
- brazed_cut:{name:'Напайной отрезной',group:'brazed',operation:'groove',diameter:0,workingLength:30,bodyD:20,minBore:0,nose:.2,pointAngle:0,insertWidth:4,shape:'groove',lead:90,hand:'R',brazed:true},
- brazed_thr:{name:'Напайной резьбовой',group:'brazed',operation:'thread',diameter:0,workingLength:28,bodyD:20,minBore:0,nose:.1,pointAngle:60,shape:'thread',insert:'brz',lead:90,hand:'R',brazed:true},
- /* осевой инструмент */
- drill:{name:'Спиральное сверло HSS 118°',group:'axial',operation:'drill',diameter:10,workingLength:55,bodyD:10,minBore:0,nose:0,pointAngle:118,shape:'axial'},
- drill_carb:{name:'Твердосплавное сверло 140°',group:'axial',operation:'drill',diameter:10,workingLength:50,bodyD:10,minBore:0,nose:0,pointAngle:140,shape:'axial'},
- drill_smp:{name:'Сверло со сменными пластинами 180°',group:'axial',operation:'drill',diameter:20,workingLength:60,bodyD:20,minBore:0,nose:0,pointAngle:178,shape:'axial'},
- centerdrill:{name:'Центровочное сверло 60°',group:'axial',operation:'centerdrill',diameter:4,workingLength:12,bodyD:10,minBore:0,nose:0,pointAngle:60,shape:'axial'},
- tap:{name:'Машинный метчик',group:'axial',operation:'tap',diameter:10,workingLength:30,bodyD:10,minBore:8.5,nose:0,pointAngle:0,shape:'axial'},
- reamer:{name:'Развёртка машинная',group:'axial',operation:'drill',diameter:12,workingLength:40,bodyD:12,minBore:11.8,nose:0,pointAngle:170,shape:'axial'}
+ /* Наружные резцы со сменной пластиной. Размеры по каталогу ISO:
+    shankH×shankW — сечение державки, holder — полная длина, workingLength — рабочий вылет,
+    edge — длина режущей кромки пластины, lead — главный угол в плане φ. */
+ cnmg:{name:'PCLNR 2525 M12 + CNMG 120408 · проходной упорный 95°',group:'ext',operation:'external',
+  diameter:0,workingLength:40,bodyD:25,shankH:25,shankW:25,holder:150,edge:12.9,thick:4.76,minBore:0,nose:.8,pointAngle:0,
+  shape:'turn',insert:'r80',lead:95,hand:'R',note:'Основной черновой и получистовой. Ромб 80°, работает к патрону и в упор.'},
+ dnmg:{name:'PDJNR 2525 M15 + DNMG 150608 · проходной 93°',group:'ext',operation:'external',
+  diameter:0,workingLength:40,bodyD:25,shankH:25,shankW:25,holder:150,edge:15.5,thick:6.35,minBore:0,nose:.8,pointAngle:0,
+  shape:'turn',insert:'r55',lead:93,hand:'R',note:'Ромб 55°: универсал под контур и небольшие обратные углы.'},
+ tnmg:{name:'PTGNR 2525 M16 + TNMG 160408 · проходной 91°',group:'ext',operation:'external',
+  diameter:0,workingLength:40,bodyD:25,shankH:25,shankW:25,holder:150,edge:16.5,thick:4.76,minBore:0,nose:.8,pointAngle:0,
+  shape:'turn',insert:'tri',lead:91,hand:'R',note:'Треугольник 60°: три кромки, выгоден по цене на черновой.'},
+ wnmg:{name:'MWLNR 2525 M08 + WNMG 080408 · проходной 95°',group:'ext',operation:'external',
+  diameter:0,workingLength:40,bodyD:25,shankH:25,shankW:25,holder:150,edge:8.7,thick:4.76,minBore:0,nose:.8,pointAngle:0,
+  shape:'turn',insert:'tri80',lead:95,hand:'R',note:'Тригон 80°: шесть кромок, жёсткая вершина для тяжёлой черновой.'},
+ vnmg:{name:'SVJBR 2020 K16 + VBMT 160404 · профильный 93°',group:'ext',operation:'external',
+  diameter:0,workingLength:35,bodyD:20,shankH:20,shankW:20,holder:125,edge:16.6,thick:4.76,minBore:0,nose:.4,pointAngle:0,
+  shape:'turn',insert:'r35',lead:93,hand:'R',note:'Ромб 35°: заходит в узкие галтели и обратные конусы, но кромка слабая.'},
+ dcmt:{name:'SDJCR 2020 K11 + DCMT 11T304 · чистовой 93°',group:'ext',operation:'external',
+  diameter:0,workingLength:35,bodyD:20,shankH:20,shankW:20,holder:125,edge:11.6,thick:3.97,minBore:0,nose:.4,pointAngle:0,
+  shape:'turn',insert:'r55',lead:93,hand:'R',note:'Позитивная пластина: лёгкое резание, чистовые проходы и тонкие детали.'},
+ face:{name:'MSKNR 2525 M12 + SNMG 120408 · подрезной 75°',group:'ext',operation:'external',
+  diameter:0,workingLength:38,bodyD:25,shankH:25,shankW:25,holder:150,edge:12.7,thick:4.76,minBore:0,nose:.8,pointAngle:0,
+  shape:'turn',insert:'sq',lead:75,hand:'R',note:'Квадрат 90°, четыре кромки. Торцевание и снятие корки.'},
+ /* Расточные оправки: минимальный диаметр отверстия из каталога, он же в проверке столкновений. */
+ ccmt:{name:'S16Q-SCLCR 09 + CCMT 09T304 · расточной 95°',group:'bore',operation:'boring',
+  diameter:0,workingLength:80,bodyD:16,shankH:16,shankW:16,holder:180,edge:9.7,thick:3.97,minBore:20,nose:.4,pointAngle:0,
+  shape:'bore',insert:'r80',lead:95,hand:'R',note:'Стальная оправка ⌀16. Вылет до 4 диаметров, отверстие от ⌀20.'},
+ ccmt25:{name:'S25S-SCLCR 09 + CCMT 09T308 · расточной 95°',group:'bore',operation:'boring',
+  diameter:0,workingLength:110,bodyD:25,shankH:25,shankW:25,holder:250,edge:9.7,thick:3.97,minBore:32,nose:.8,pointAngle:0,
+  shape:'bore',insert:'r80',lead:95,hand:'R',note:'Оправка ⌀25 для глубокой расточки. Отверстие от ⌀32.'},
+ sducr:{name:'S12M-SDUCR 07 + DCMT 070204 · расточной 93°',group:'bore',operation:'boring',
+  diameter:0,workingLength:60,bodyD:12,shankH:12,shankW:12,holder:150,edge:7.7,thick:2.38,minBore:16,nose:.4,pointAngle:0,
+  shape:'bore',insert:'r55',lead:93,hand:'R',note:'Тонкая оправка ⌀12 под малые отверстия от ⌀16.'},
+ svucr:{name:'S16Q-SVUCR 11 + VCMT 110304 · профильный расточной',group:'bore',operation:'boring',
+  diameter:0,workingLength:80,bodyD:16,shankH:16,shankW:16,holder:180,edge:11,thick:3.97,minBore:20,nose:.2,pointAngle:0,
+  shape:'bore',insert:'r35',lead:93,hand:'R',note:'Ромб 35° внутри: галтели и поднутрения в отверстии.'},
+ /* Канавочные и отрезные: ширина пластины и предельная глубина реза — главные размеры. */
+ mgmn:{name:'MGEHR 2020-3 + MGMN300 · канавка 3 мм',group:'groove',operation:'groove',
+  diameter:0,workingLength:30,bodyD:20,shankH:20,shankW:20,holder:125,minBore:0,nose:.2,pointAngle:0,
+  insertWidth:3,maxDepth:15,shape:'groove',lead:90,hand:'R',note:'Наружная канавка шириной 3 мм, глубина до 15 мм.'},
+ mgmn2:{name:'MGEHR 2020-2 + MGMN200 · канавка 2 мм',group:'groove',operation:'groove',
+  diameter:0,workingLength:26,bodyD:20,shankH:20,shankW:20,holder:125,minBore:0,nose:.2,pointAngle:0,
+  insertWidth:2,maxDepth:12,shape:'groove',lead:90,hand:'R',note:'Узкая канавка 2 мм: стопорные кольца и проточки под шлифовку.'},
+ cutoff:{name:'Отрезной MGEHR 2525-3 · лезвие 3 мм',group:'groove',operation:'groove',
+  diameter:0,workingLength:45,bodyD:25,shankH:25,shankW:25,holder:150,minBore:0,nose:.2,pointAngle:0,
+  insertWidth:3,maxDepth:32,shape:'groove',lead:90,hand:'R',note:'Отрезка прутка до ⌀64. Лезвие узкое, боковая нагрузка недопустима.'},
+ mgivr:{name:'MGIVR 2016-2 + MGMN200 · внутренняя канавка',group:'groove',operation:'groove',
+  diameter:0,workingLength:60,bodyD:16,shankH:16,shankW:16,holder:150,minBore:22,nose:.2,pointAngle:0,
+  insertWidth:2,maxDepth:8,shape:'groovein',lead:90,hand:'R',note:'Канавка в отверстии от ⌀22, глубина до 8 мм.'},
+ /* Резьбовые: профиль 60°, шаг задаёт пластина. */
+ thread:{name:'SER 2020 K16 + 16ER · резьбовой наружный',group:'thr',operation:'thread',
+  diameter:0,workingLength:35,bodyD:20,shankH:20,shankW:20,holder:125,minBore:0,nose:.1,pointAngle:60,
+  shape:'thread',insert:'thr',lead:90,hand:'R',note:'Наружная метрическая. Шаг определяется пластиной, а не программой.'},
+ threadin:{name:'SNR 0020 K16 + 16IR · резьбовой внутренний',group:'thr',operation:'thread',
+  diameter:0,workingLength:90,bodyD:20,shankH:20,shankW:20,holder:200,minBore:25,nose:.1,pointAngle:60,
+  shape:'threadin',insert:'thr',lead:90,hand:'R',note:'Внутренняя резьба в отверстии от ⌀25.'},
+ /* Напайные резцы по ГОСТ: державка 25×16, твердосплавная пластина припаяна. */
+ brazed:{name:'Напайной проходной прямой 25×16 · ГОСТ 18878',group:'brazed',operation:'external',
+  diameter:0,workingLength:38,bodyD:16,shankH:16,shankW:25,holder:140,minBore:0,nose:.8,pointAngle:0,
+  shape:'turn',insert:'brz',lead:45,hand:'R',brazed:true,note:'Прямой проходной, φ 45°. После переточки нужна повторная привязка.'},
+ brazed_bent:{name:'Напайной проходной отогнутый 25×16 · ГОСТ 18877',group:'brazed',operation:'external',
+  diameter:0,workingLength:38,bodyD:16,shankH:16,shankW:25,holder:140,minBore:0,nose:1,pointAngle:0,
+  shape:'turn',insert:'brz',lead:45,hand:'R',brazed:true,note:'Отогнутая головка: точение и подрезка торца одним резцом.'},
+ brazed_up:{name:'Напайной проходной упорный 25×16 · ГОСТ 18879',group:'brazed',operation:'external',
+  diameter:0,workingLength:38,bodyD:16,shankH:16,shankW:25,holder:140,minBore:0,nose:.8,pointAngle:0,
+  shape:'turn',insert:'brz',lead:90,hand:'R',brazed:true,note:'φ 90°: цилиндр и перпендикулярный уступ, почти не отжимает деталь.'},
+ brazed_face:{name:'Напайной подрезной торцовый 25×16 · ГОСТ 18880',group:'brazed',operation:'external',
+  diameter:0,workingLength:36,bodyD:16,shankH:16,shankW:25,holder:140,minBore:0,nose:.8,pointAngle:0,
+  shape:'turn',insert:'brz',lead:75,hand:'R',brazed:true,note:'Торцевание от центра к периферии.'},
+ brazed_bore:{name:'Напайной расточной проходной 20×20 · ГОСТ 18882',group:'brazed',operation:'boring',
+  diameter:0,workingLength:70,bodyD:20,shankH:20,shankW:20,holder:170,minBore:26,nose:.8,pointAngle:0,
+  shape:'bore',insert:'brz',lead:60,hand:'R',brazed:true,note:'Расточка сквозных отверстий от ⌀26.'},
+ brazed_cut:{name:'Напайной отрезной 25×16 · ГОСТ 18874',group:'brazed',operation:'groove',
+  diameter:0,workingLength:40,bodyD:16,shankH:16,shankW:25,holder:140,minBore:0,nose:.2,pointAngle:0,
+  insertWidth:4,maxDepth:25,shape:'groove',lead:90,hand:'R',brazed:true,note:'Лезвие 4 мм. Отрезка и широкие канавки.'},
+ brazed_thr:{name:'Напайной резьбовой 25×16 · ГОСТ 18885',group:'brazed',operation:'thread',
+  diameter:0,workingLength:36,bodyD:16,shankH:16,shankW:25,holder:140,minBore:0,nose:.1,pointAngle:60,
+  shape:'thread',insert:'brz',lead:90,hand:'R',brazed:true,note:'Профиль 60° затачивается по шаблону.'},
+ /* Осевой инструмент: диаметр задаёт оператор, угол при вершине определяет форму дна. */
+ drill:{name:'Сверло спиральное HSS 118° (Р6М5)',group:'axial',operation:'drill',
+  diameter:10,workingLength:87,bodyD:10,holder:133,minBore:0,nose:0,pointAngle:118,
+  shape:'axial',note:'Универсальное. Глубже 3⌀ только с выводом стружки, циклом G83 или G74.'},
+ drill_carb:{name:'Сверло твердосплавное 140°',group:'axial',operation:'drill',
+  diameter:10,workingLength:60,bodyD:10,holder:103,minBore:0,nose:0,pointAngle:140,
+  shape:'axial',note:'Самоцентрирующееся, скорость втрое выше HSS. Требует жёсткости и СОЖ.'},
+ drill_smp:{name:'Сверло со сменными пластинами 180°',group:'axial',operation:'drill',
+  diameter:20,workingLength:60,bodyD:20,holder:120,minBore:0,nose:0,pointAngle:178,
+  shape:'axial',note:'От ⌀16. Плоское дно, большой съём, обязателен подвод СОЖ через тело.'},
+ centerdrill:{name:'Сверло центровочное ⌀4 · тип A 60°',group:'axial',operation:'centerdrill',
+  diameter:4,workingLength:11,bodyD:10,holder:56,minBore:0,nose:0,pointAngle:60,
+  shape:'axial',note:'Центровое отверстие под задний центр и как направление под сверло.'},
+ tap:{name:'Метчик машинный M10×1,5',group:'axial',operation:'tap',
+  diameter:10,workingLength:30,bodyD:10,holder:100,minBore:8.5,nose:0,pointAngle:0,
+  shape:'axial',note:'Отверстие под резьбу ⌀8,5. Обороты постоянные, подача равна шагу.'},
+ reamer:{name:'Развёртка машинная ⌀12 H7',group:'axial',operation:'drill',
+  diameter:12,workingLength:52,bodyD:12,holder:151,minBore:11.8,nose:0,pointAngle:170,
+  shape:'axial',note:'Снимает 0,1–0,3 мм. Отверстие должно быть предварительно расточено.'}
 };
 function toolStation(value){const tv=Math.abs(Math.round(Number(value)||0));return tv>=100?Math.floor(tv/100):tv;}
 function operationForKind(kind,fallback){return TOOL_LIBRARY[kind]&&TOOL_LIBRARY[kind].operation||fallback||'external';}
-function defaultToolConfig(station,cfg,hint){const fallback={...(cfg||defaults())},stored=loadToolStore()[station]||{},kind=stored.kind||hint&&hint.kind||fallback.tool||'cnmg',base=TOOL_LIBRARY[kind]||TOOL_LIBRARY.cnmg,operation=stored.operation||hint&&hint.operation||(Number(station)===0?fallback.operation:operationForKind(kind,fallback.operation));return{station:Number(station)||0,code:hint&&hint.code||'',kind,operation,diameter:Number(stored.diameter??base.diameter)||0,workingLength:Number(stored.workingLength??base.workingLength)||0,bodyD:Number(stored.bodyD??base.bodyD)||0,minBore:Number(stored.minBore??base.minBore)||0,nose:Number(stored.nose??base.nose??fallback.nose)||0,pointAngle:Number(stored.pointAngle??base.pointAngle)||0,insertWidth:Number(stored.insertWidth??base.insertWidth)||3,confirmed:stored.confirmed===true};}
+function defaultToolConfig(station,cfg,hint){const fallback={...(cfg||defaults())},stored=loadToolStore()[station]||{},kind=stored.kind||hint&&hint.kind||fallback.tool||'cnmg',base=TOOL_LIBRARY[kind]||TOOL_LIBRARY.cnmg,operation=stored.operation||hint&&hint.operation||(Number(station)===0?fallback.operation:operationForKind(kind,fallback.operation));return{station:Number(station)||0,code:hint&&hint.code||'',kind,operation,diameter:Number(stored.diameter??base.diameter)||0,workingLength:Number(stored.workingLength??base.workingLength)||0,bodyD:Number(stored.bodyD??base.bodyD)||0,minBore:Number(stored.minBore??base.minBore)||0,nose:Number(stored.nose??base.nose??fallback.nose)||0,pointAngle:Number(stored.pointAngle??base.pointAngle)||0,insertWidth:Number(stored.insertWidth??base.insertWidth)||3,maxDepth:Number(stored.maxDepth??base.maxDepth)||0,confirmed:stored.confirmed===true};}
 function toolHintFromText(text){const t=String(text||'').toUpperCase();if(/CENTER\s*DRILL|ЦЕНТРОВ(?:ОЧН|К)|ЦЕНТРОВКА/.test(t))return{operation:'centerdrill',kind:'centerdrill'};if(/\bTAP\b|МЕТЧИК/.test(t))return{operation:'tap',kind:'tap'};if(/\bDRILL\b|СВЕРЛ/.test(t))return{operation:'drill',kind:'drill'};if(/\bBOR(?:E|ING)\b|РАСТОЧ|SCLCR|CCMT/.test(t))return{operation:'boring',kind:'ccmt'};if(/GROOV|КАНАВ|MGEHR|MGMN/.test(t))return{operation:'groove',kind:'mgmn'};if(/THREAD|РЕЗЬБ|\bSER\b|16ER|16IR/.test(t))return{operation:'thread',kind:'thread'};if(/EXTERNAL|НАРУЖ|PCLNR|CNMG|SVJBR|VNMG/.test(t))return{operation:'external',kind:/SVJBR|VNMG/.test(t)?'vnmg':'cnmg'};return null;}
 function detectToolCatalog(code,cfg){
  const map=new Map(),lines=String(code||'').split(/\r?\n/);let active=0;
@@ -87,7 +150,7 @@ function detectToolCatalog(code,cfg){
  });
  return[...map.values()].map(entry=>{let hint=entry.hints[0]||null;if(!hint&&entry.xs.length&&Math.max(...entry.xs)<=Math.max(6,(Number(cfg&&cfg.boreD)||0)*1.5))hint={operation:'boring',kind:'ccmt'};const c=defaultToolConfig(entry.station,cfg,{...(hint||{}),code:entry.code});c.codes=[...entry.codes];c.firstLine=entry.firstLine;return c;});
 }
-function normalizeToolConfigs(cfg,catalog){const supplied=cfg&&cfg.toolConfigs||{},out={};(catalog||[]).forEach(item=>{const saved=supplied[item.station]||supplied[String(item.station)]||{},base=defaultToolConfig(item.station,cfg,item),kind=saved.kind||base.kind,lib=TOOL_LIBRARY[kind]||TOOL_LIBRARY.cnmg;out[item.station]={...base,...saved,station:item.station,code:item.code||base.code,kind,operation:saved.operation||base.operation||lib.operation,diameter:Number(saved.diameter??base.diameter),workingLength:Number(saved.workingLength??base.workingLength),bodyD:Number(saved.bodyD??base.bodyD),minBore:Number(saved.minBore??base.minBore),nose:Number(saved.nose??base.nose),pointAngle:Number(saved.pointAngle??base.pointAngle),insertWidth:Number(saved.insertWidth??base.insertWidth),confirmed:saved.confirmed==null?base.confirmed:saved.confirmed===true};});return out;}
+function normalizeToolConfigs(cfg,catalog){const supplied=cfg&&cfg.toolConfigs||{},out={};(catalog||[]).forEach(item=>{const saved=supplied[item.station]||supplied[String(item.station)]||{},base=defaultToolConfig(item.station,cfg,item),kind=saved.kind||base.kind,lib=TOOL_LIBRARY[kind]||TOOL_LIBRARY.cnmg;out[item.station]={...base,...saved,station:item.station,code:item.code||base.code,kind,operation:saved.operation||base.operation||lib.operation,diameter:Number(saved.diameter??base.diameter),workingLength:Number(saved.workingLength??base.workingLength),bodyD:Number(saved.bodyD??base.bodyD),minBore:Number(saved.minBore??base.minBore),nose:Number(saved.nose??base.nose),pointAngle:Number(saved.pointAngle??base.pointAngle),insertWidth:Number(saved.insertWidth??base.insertWidth),maxDepth:Number(saved.maxDepth??base.maxDepth)||0,confirmed:saved.confirmed==null?base.confirmed:saved.confirmed===true};});return out;}
 
 function targetOuter(c,t){
  const stock=c.stockD/2,base=c.targetD/2;
@@ -174,9 +237,10 @@ function parseGcode(code,rawCfg){
  const catalog=detectToolCatalog(code,cfg),toolConfigs=normalizeToolConfigs({...cfg,toolConfigs:cfg.toolConfigs||{}},catalog);cfg.toolConfigs=toolConfigs;
  const add=(type,text,line,segment)=>{const key=`${type}:${text}:${line||0}`;if(seen.has(key))return;seen.add(key);issues.push({type,text,line:line||0});if(segment){segment.suspicious=true;(segment.reasons||(segment.reasons=[])).push(text);}};
  duplicateLabels.forEach(x=>add('bad',`Номер кадра N${x.label} повторяется: диапазоны P/Q неоднозначны.`,x.line));
- const definitionLines=new Set();records.forEach(r=>{if(!r.gs.some(g=>[70,71].includes(g))||!Number.isFinite(r.out.P)||!Number.isFinite(r.out.Q))return;const a=labels.get(Math.round(r.out.P)),b=labels.get(Math.round(r.out.Q));if(a==null||b==null||b<a){if(a==null)add('bad',`G${r.gs.includes(71)?71:70}: кадр P${Math.round(r.out.P)} не найден.`,r.line);if(b==null)add('bad',`G${r.gs.includes(71)?71:70}: кадр Q${Math.round(r.out.Q)} не найден.`,r.line);if(a!=null&&b!=null&&b<a)add('bad','Диапазон P/Q задан в обратном порядке.',r.line);return;}for(let i=a;i<=b;i++)definitionLines.add(i);});
+ /* кадры контура между P и Q принадлежат циклу и не должны исполняться повторно как обычные ходы */
+ const definitionLines=new Set();records.forEach(r=>{const cyc=r.gs.find(g=>[70,71,72,73].includes(g));if(cyc==null||!Number.isFinite(r.out.P)||!Number.isFinite(r.out.Q))return;const a=labels.get(Math.round(r.out.P)),b=labels.get(Math.round(r.out.Q));if(a==null||b==null||b<a){if(a==null)add('bad',`G${cyc}: кадр P${Math.round(r.out.P)} не найден.`,r.line);if(b==null)add('bad',`G${cyc}: кадр Q${Math.round(r.out.Q)} не найден.`,r.line);if(a!=null&&b!=null&&b<a)add('bad','Диапазон P/Q задан в обратном порядке.',r.line);return;}for(let i=a;i<=b;i++)definitionLines.add(i);});
  const stationSpec=station=>toolConfigs[station]||defaultToolConfig(station,cfg,{code:station?String(station).padStart(2,'0')+'01':''});
- let pos={x:cfg.stockD+12,z:6},motion='G00',unit=1,spindleMode='G97',g50=false,spindleOn=false,spindleStart=false,end=false,g99=false,g18=false,compMode=0,rpm=cfg.rpm,feed=cfg.feed,toolCode='',station=0,g71Depth=0,g71Retract=.5,g74Retract=.5,g75Retract=.5,g76Setup=null,g90Modal=null;
+ let pos={x:cfg.stockD+12,z:6},motion='G00',unit=1,spindleMode='G97',g50=false,spindleOn=false,spindleStart=false,end=false,g99=false,g18=false,compMode=0,rpm=cfg.rpm,feed=cfg.feed,toolCode='',station=0,g71Depth=0,g71Retract=.5,g72Depth=0,g72Retract=.5,g73ShiftX=0,g73ShiftZ=0,g73Passes=1,g74Retract=.5,g75Retract=.5,g76Setup=null,g90Modal=null;
  const collisionMat=blankStock({...cfg,toolConfigs});
  const toPoint=(from,out,u=unit)=>{const to={...from};if(Number.isFinite(out.X))to.x=out.X*u;if(Number.isFinite(out.Z))to.z=out.Z*u;if(Number.isFinite(out.U))to.x=from.x+out.U*u;if(Number.isFinite(out.W))to.z=from.z+out.W*u;return to;};
  /* Fanuc задаёт глубины циклов в микронах без точки, Haas — в миллиметрах с точкой.
@@ -192,6 +256,7 @@ function parseGcode(code,rawCfg){
   for(const q of samples){const r=Math.abs(q.x)/2,k=Math.max(0,Math.min(collisionMat.z.length-1,Math.round((q.z+cfg.length)/cfg.length*(collisionMat.z.length-1)))),outer=collisionMat.outer[k],inner=collisionMat.inner[k];
    if(q.z<-freeLen&&r<cfg.stockD/2+Math.max(12,(spec.bodyD||0)/2)){add('bad','Траектория или корпус инструмента входит в заданную зону зажима/патрона.',segment.line,segment);break;}
    if(axial){const toolR=Math.max(0,(spec.diameter||0)/2),bodyR=Math.max(toolR,(spec.bodyD||0)/2);if(toolR<=0)add('bad','Для осевого инструмента не задан диаметр.',segment.line,segment);if(toolR>=outer-.2)add('bad','Диаметр осевого инструмента не оставляет стенку заготовки.',segment.line,segment);if(segment.rapid&&!segment.cycle&&q.z<0&&inner+0.05<toolR){add('bad','Быстрый ход осевого инструмента входит в неснятый металл.',segment.line,segment);break;}if(q.z<-(spec.workingLength||0)&&bodyR>inner+.05){add('bad','Корпус/патрон инструмента касается торца или отверстия.',segment.line,segment);break;}if(op==='tap'&&q.z<0&&inner+0.05<(spec.minBore||spec.diameter*.8)/2){add('bad','Отверстие под метчик меньше заданного минимального диаметра.',segment.line,segment);break;}}
+   else if(op==='groove'&&spec.minBore&&inner*2+.05<spec.minBore&&q.z<=0){add('bad',`Внутреннему канавочному резцу нужно отверстие не меньше Ø${spec.minBore} мм.`,segment.line,segment);break;}
    else if(op==='boring'){if(spec.minBore&&inner*2+0.05<spec.minBore&&q.z<=0)add('bad',`Расточная оправка требует отверстие не меньше Ø${spec.minBore} мм.`,segment.line,segment);const hit=segment.rapid&&q.z<=0&&q.z>=-freeLen&&r>inner+.05&&r<outer-.05;if(hit){add('bad','Быстрый ход расточного резца пересекает текущую стенку отверстия.',segment.line,segment);break;}}
    else{const hit=segment.rapid&&q.z<=0&&q.z>=-freeLen&&r<outer-.05&&(inner<=.05||r>inner+.05);if(hit){add('bad','Быстрый ход G00 пересекает текущую поверхность заготовки.',segment.line,segment);break;}}
   }
@@ -205,7 +270,7 @@ function parseGcode(code,rawCfg){
   if(!r.clean)return;if(definitionLines.has(r.index))return;
   const {out,gs,ms}=r;
   if(gs.includes(20))unit=25.4;if(gs.includes(21))unit=1;
-  if(gs.includes(18))g18=true;if(gs.includes(0))motion='G00';if(gs.includes(1))motion='G01';if(gs.includes(2))motion='G02';if(gs.includes(3))motion='G03';if(gs.some(g=>[0,1,2,3,70,71,74,75,76,81,83].includes(g)))g90Modal=null;
+  if(gs.includes(18))g18=true;if(gs.includes(0))motion='G00';if(gs.includes(1))motion='G01';if(gs.includes(2))motion='G02';if(gs.includes(3))motion='G03';if(gs.some(g=>[0,1,2,3,70,71,72,73,74,75,76,81,83].includes(g)))g90Modal=null;
   if(gs.includes(50))g50=true;if(gs.includes(96)){spindleMode='G96';if(!g50)add('bad','G96 включён без предварительного ограничения G50 S…',r.line);}if(gs.includes(97))spindleMode='G97';if(gs.includes(99))g99=true;
   if(gs.includes(40))compMode=0;if(gs.includes(41))compMode=41;if(gs.includes(42))compMode=42;
   if(ms.some(x=>[3,4,13,14].includes(x))){spindleOn=true;spindleStart=true;}if(ms.some(x=>[5,15].includes(x)))spindleOn=false;if(ms.includes(30)){end=true;spindleOn=false;}
@@ -225,23 +290,117 @@ function parseGcode(code,rawCfg){
    if(/\bG54\.1\b/.test(r.clean))add('warn','G54.1 — дополнительная нулевая точка Fanuc. На Haas это G154 P__.',r.line);
    if(/\bG5[01]\.1\b/.test(r.clean))add('warn','G50.1/G51.1 — зеркало Fanuc. На Haas это G100/G101.',r.line);
    if(ms.includes(198))add('warn','M198 — вызов с внешнего устройства на Fanuc; на Haas работа с носителя идёт иначе.',r.line);
-   if(Number.isFinite(out.K)&&gs.some(g=>[70,71,76].includes(g)))add('warn','Число повторов на Haas задаётся адресом L, а не K.',r.line);
+   if(Number.isFinite(out.K)&&gs.some(g=>[70,71].includes(g)))add('warn','Число повторов на Haas задаётся адресом L, а не K.',r.line);
   }
   if(gs.includes(28)||gs.includes(53))add('warn','G28/G53 показан только как программная линия: машинный ноль и реальная безопасная позиция проверяются на стойке.',r.line);
   if(Number.isFinite(out.S)&&spindleMode==='G97'&&p.maxRpm&&out.S>p.maxRpm)add('bad',`S${out.S} выше лимита профиля станка S${p.maxRpm}.`,r.line);
   if(gs.includes(71)&&!Number.isFinite(out.P)&&!Number.isFinite(out.Q)){if(Number.isFinite(out.U))g71Depth=Math.abs(out.U*unit);if(Number.isFinite(out.D))g71Depth=Math.abs(out.D*unit);if(Number.isFinite(out.R))g71Retract=Math.abs(out.R*unit);if(!g71Depth)add('bad','Первый кадр G71 должен задать глубину U/D.',r.line);return;}
-  if(gs.includes(71)&&Number.isFinite(out.P)&&Number.isFinite(out.Q)){const contour=contourFor(r,spec);if(!contour.length)return;const pts=[];contour.forEach((s,i)=>{(s.points||[s.from,s.to]).forEach((q,j)=>{if(i||j)pts.push({...q});else pts.push({...q});});});let zDir=0,nonMonotonic=false;for(let i=1;i<pts.length;i++){const dz=pts[i].z-pts[i-1].z;if(Math.abs(dz)<1e-6)continue;const d=Math.sign(dz);if(zDir&&d!==zDir)nonMonotonic=true;zDir=zDir||d;}if(nonMonotonic){add('bad','G71 Type II с обратным ходом Z заблокирован: требуется монотонный контур Type I.',r.line);return;}const allowance=Math.abs(Number(out.U)||0)*unit,depth=Math.abs(Number(out.D)||g71Depth||cfg.depth),stepX=Math.max(.02,depth*2),external=op!=='boring',targetXs=pts.map(q=>q.x+(external?allowance:-allowance)),limit=external?Math.min(...targetXs):Math.max(...targetXs),start={...pos};let level=start.x,pass=0;while((external?level-stepX>limit+.001:level+stepX<limit-.001)&&pass<80){level+=external?-stepX:stepX;const cutPts=pts.map(q=>({z:q.z,x:external?Math.max(q.x+allowance,level):Math.min(q.x-allowance,level)})),entry=cutPts[0];if(Math.hypot(entry.z-pos.z,(entry.x-pos.x)/2)>.001)addLinear(pos,entry,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G71',synthetic:true});addPolyline(cutPts,{motion:'G01',rapid:false,cutting:spindleOn,line:r.line,source:r.source,clean:`${r.clean} (ПРОХОД ${pass+1})`,toolSpec:spec,operation:op,cycle:'G71',synthetic:true});const last=cutPts.at(-1),away={x:last.x+(external?1:-1)*Math.max(.2,g71Retract*2),z:last.z};addLinear(last,away,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G71',synthetic:true});addLinear(away,start,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G71',synthetic:true});pos={...start};pass++;}if(pass>=80)add('bad','G71 потребовал более 80 проходов: проверьте глубину U/D и диаметры.',r.line);else if(!pass)add('warn','G71 не создал черновых слоёв: заготовка уже близка к контуру или неверна операция инструмента.',r.line);return;}
+  if(gs.includes(71)&&Number.isFinite(out.P)&&Number.isFinite(out.Q)){const contour=contourFor(r,spec);if(!contour.length)return;const pts=[];contour.forEach((s,i)=>{(s.points||[s.from,s.to]).forEach((q,j)=>{if(i||j)pts.push({...q});else pts.push({...q});});});let zDir=0,nonMonotonic=false;for(let i=1;i<pts.length;i++){const dz=pts[i].z-pts[i-1].z;if(Math.abs(dz)<1e-6)continue;const d=Math.sign(dz);if(zDir&&d!==zDir)nonMonotonic=true;zDir=zDir||d;}if(nonMonotonic){add('bad','G71 Type II с обратным ходом Z заблокирован: требуется монотонный контур Type I.',r.line);return;}const allowance=Math.abs(Number(out.U)||0)*unit,depth=Math.abs(Number(out.D)||g71Depth||cfg.depth),stepX=Math.max(.02,depth*2),
+   /* сторону снятия определяет геометрия: если старт снаружи контура — наружная обработка,
+      если внутри — расточка. Тип инструмента при этом только сверяется. */
+   maxCx=Math.max(...pts.map(q=>q.x)),minCx=Math.min(...pts.map(q=>q.x)),
+   external=pos.x>=maxCx-.001?true:pos.x<=minCx+.001?false:op!=='boring',
+   targetXs=pts.map(q=>q.x+(external?allowance:-allowance)),limit=external?Math.min(...targetXs):Math.max(...targetXs),start={...pos};if(external!==(op!=='boring'))add('warn',external?'Контур снимается снаружи, а станции назначена расточка: сверьте тип инструмента.':'Контур снимается изнутри, а станции назначен наружный резец: сверьте тип инструмента.',r.line);
+   let level=start.x,pass=0;while((external?level-stepX>limit+.001:level+stepX<limit-.001)&&pass<80){level+=external?-stepX:stepX;const cutPts=pts.map(q=>({z:q.z,x:external?Math.max(q.x+allowance,level):Math.min(q.x-allowance,level)})),entry=cutPts[0];if(Math.hypot(entry.z-pos.z,(entry.x-pos.x)/2)>.001)addLinear(pos,entry,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G71',synthetic:true});addPolyline(cutPts,{motion:'G01',rapid:false,cutting:spindleOn,line:r.line,source:r.source,clean:`${r.clean} (ПРОХОД ${pass+1})`,toolSpec:spec,operation:op,cycle:'G71',synthetic:true});const last=cutPts.at(-1),away={x:last.x+(external?1:-1)*Math.max(.2,g71Retract*2),z:last.z};addLinear(last,away,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G71',synthetic:true});addLinear(away,start,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G71',synthetic:true});pos={...start};pass++;}if(pass>=80)add('bad','G71 потребовал более 80 проходов: проверьте глубину U/D и диаметры.',r.line);else if(!pass)add('warn','G71 не создал черновых слоёв: заготовка уже близка к контуру или неверна операция инструмента.',r.line);return;}
   if(gs.includes(70)){if(!Number.isFinite(out.P)||!Number.isFinite(out.Q)){add('bad','G70 должен содержать P и Q.',r.line);return;}const contour=contourFor(r,spec);if(!contour.length)return;for(const cs of contour){const seg={...cs,toolSpec:{...spec},cutting:cs.motion!=='G00'&&spindleOn,spindle:spindleOn,cycle:'G70',synthetic:true,suspicious:false,reasons:[]};inspectAndPush(seg);pos={...(cs.programmedTo||cs.to)};}return;}
-  if((gs.includes(90)||g90Modal&&gs.length===0)&&['X','Z','U','W'].some(k=>Number.isFinite(out[k]))){if(Number.isFinite(out.I)){add('bad','Конусный G90 с I заблокирован до выбора направления и квадранта.',r.line);return;}const start={...pos},cycleWords={...out};if(!Number.isFinite(cycleWords.Z)&&!Number.isFinite(cycleWords.W)&&g90Modal)cycleWords.Z=g90Modal.z/unit;const to=toPoint(start,cycleWords,unit),radial={x:to.x,z:start.z};if(Math.abs(radial.x-start.x)>.001)addLinear(start,radial,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G90',synthetic:true});addLinear(radial,to,{motion:'G01',rapid:false,cutting:spindleOn,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G90',synthetic:true});const clear={x:start.x,z:to.z};addLinear(to,clear,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G90',synthetic:true});addLinear(clear,start,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G90',synthetic:true});g90Modal={z:to.z};pos=start;return;}
+  /* Простые токарные циклы в четыре хода. G90 точение, G94 подрезка торца, G92 резьба.
+     В системе кодов B те же циклы называются G77, G78 и G79 — принимаем оба написания.
+     Кадр без G-кода, но с координатами, повторяет предыдущий цикл: так задают проходы. */
+  const simpleCode=gs.includes(90)||gs.includes(77)?'G90':gs.includes(94)||gs.includes(79)?'G94':gs.includes(92)||gs.includes(78)?'G92':null;
+  const simpleRepeat=!simpleCode&&g90Modal&&!gs.length;
+  if((simpleCode||simpleRepeat)&&['X','Z','U','W'].some(k=>Number.isFinite(out[k]))){
+   const kind=simpleCode||g90Modal.kind;
+   /* G92 без подачи и без активного резьбового цикла — это установка координат, а не резьба */
+   if(kind==='G92'&&simpleCode&&!Number.isFinite(out.F)&&!(g90Modal&&g90Modal.kind==='G92')&&!Number.isFinite(feed)){
+    add('warn','G92 без подачи прочитан как установка системы координат, а не как цикл резьбы.',r.line);return;}
+   if(Number.isFinite(out.I)||Number.isFinite(out.K)&&kind!=='G92'){
+    add('bad',`Конусный ${kind} с I/K заблокирован: направление и квадрант конуса неоднозначны.`,r.line);return;}
+   const start={...pos},w={...out},prev=g90Modal&&g90Modal.kind===kind?g90Modal:null;
+   if(!Number.isFinite(w.Z)&&!Number.isFinite(w.W)&&prev)w.Z=prev.z/unit;
+   if(!Number.isFinite(w.X)&&!Number.isFinite(w.U)&&prev)w.X=prev.x/unit;
+   const to=toPoint(start,w,unit);
+   const mk=(a,b,rapid,cut)=>{if(Math.hypot(b.z-a.z,(b.x-a.x)/2)<.001)return;
+    addLinear(a,b,{motion:rapid?'G00':'G01',rapid,cutting:cut&&spindleOn,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,operation:kind==='G92'?'thread':op,cycle:kind,synthetic:true});};
+   if(kind==='G94'){ /* подрезка: подвод по Z, рез по X, отвод по Z, возврат по X */
+    const zIn={x:start.x,z:to.z};mk(start,zIn,true,false);mk(zIn,{x:to.x,z:to.z},false,true);
+    mk({x:to.x,z:to.z},{x:to.x,z:start.z},false,false);mk({x:to.x,z:start.z},start,true,false);
+   }else{ /* точение и резьба: врезание по X, проход по Z, отвод по X, возврат по Z */
+    const xIn={x:to.x,z:start.z};mk(start,xIn,true,false);mk(xIn,to,false,true);
+    mk(to,{x:start.x,z:to.z},kind==='G92',false);mk({x:start.x,z:to.z},start,true,false);
+   }
+   g90Modal={kind,z:to.z,x:to.x};pos=start;return;}
   if(gs.includes(75)&&!Number.isFinite(out.X)){if(Number.isFinite(out.R))g75Retract=Math.abs(out.R*unit);return;}
-  if(gs.includes(75)&&Number.isFinite(out.X)){if(op!=='groove')add('warn','G75 назначен инструменту не как канавочная операция.',r.line);const start={...pos},targetZ=Number.isFinite(out.Z)?out.Z*unit:start.z,zDir=Math.sign(targetZ-start.z)||-1,zStep=Math.max(.01,Number.isFinite(out.K)?Math.abs(out.K*unit):Number.isFinite(out.Q)&&out.Q!==0?micron(out.Q,unit,wordOf(r,'Q')):Math.abs(targetZ-start.z)||1),zList=[];let zz=start.z,guardZ=0;while((zDir<0?zz>targetZ+.001:zz<targetZ-.001)&&guardZ++<100){zList.push(zz);zz=zDir<0?Math.max(targetZ,zz-zStep):Math.min(targetZ,zz+zStep);}zList.push(targetZ);const target=out.X*unit,dir=Math.sign(target-start.x)||-1,peck=Math.max(.02,Number.isFinite(out.I)?Math.abs(out.I*unit)*2:Number.isFinite(out.P)?micron(out.P,unit,wordOf(r,'P'))*2:Math.abs(target-start.x));for(const z of zList){const approach={x:start.x,z};if(Math.hypot(approach.z-pos.z,(approach.x-pos.x)/2)>.001)addLinear(pos,approach,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});let cur=start.x,guard=0;while((dir<0?cur>target+.001:cur<target-.001)&&guard++<100){const next=dir<0?Math.max(target,cur-peck):Math.min(target,cur+peck),a={x:cur,z},b={x:next,z};addLinear(a,b,{motion:'G01',rapid:false,cutting:spindleOn,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});if(next!==target){const back={x:next-dir*g75Retract*2,z};addLinear(b,back,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});addLinear(back,b,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});}cur=next;}pos={x:target,z};addLinear(pos,approach,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});pos=approach;}if(Math.hypot(pos.z-start.z,(pos.x-start.x)/2)>.001)addLinear(pos,start,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});pos=start;return;}
+  if(gs.includes(75)&&Number.isFinite(out.X)){if(op!=='groove')add('warn','G75 назначен инструменту не как канавочная операция.',r.line);
+   /* полная глубина канавки известна сразу: сравниваем с вылетом пластины по каталогу */
+   const gDepth=Math.abs(pos.x-out.X*unit)/2;
+   if(spec.maxDepth&&gDepth>spec.maxDepth+.05)add('bad',`Канавка глубиной ${gDepth.toFixed(1)} мм: пластина шириной ${spec.insertWidth||3} мм рассчитана максимум на ${spec.maxDepth} мм.`,r.line);const start={...pos},targetZ=Number.isFinite(out.Z)?out.Z*unit:start.z,zDir=Math.sign(targetZ-start.z)||-1,zStep=Math.max(.01,Number.isFinite(out.K)?Math.abs(out.K*unit):Number.isFinite(out.Q)&&out.Q!==0?micron(out.Q,unit,wordOf(r,'Q')):Math.abs(targetZ-start.z)||1),zList=[];let zz=start.z,guardZ=0;while((zDir<0?zz>targetZ+.001:zz<targetZ-.001)&&guardZ++<100){zList.push(zz);zz=zDir<0?Math.max(targetZ,zz-zStep):Math.min(targetZ,zz+zStep);}zList.push(targetZ);const target=out.X*unit,dir=Math.sign(target-start.x)||-1,peck=Math.max(.02,Number.isFinite(out.I)?Math.abs(out.I*unit)*2:Number.isFinite(out.P)?micron(out.P,unit,wordOf(r,'P'))*2:Math.abs(target-start.x));for(const z of zList){const approach={x:start.x,z};if(Math.hypot(approach.z-pos.z,(approach.x-pos.x)/2)>.001)addLinear(pos,approach,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});let cur=start.x,guard=0;while((dir<0?cur>target+.001:cur<target-.001)&&guard++<100){const next=dir<0?Math.max(target,cur-peck):Math.min(target,cur+peck),a={x:cur,z},b={x:next,z};addLinear(a,b,{motion:'G01',rapid:false,cutting:spindleOn,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});if(next!==target){const back={x:next-dir*g75Retract*2,z};addLinear(b,back,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});addLinear(back,b,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});}cur=next;}pos={x:target,z};addLinear(pos,approach,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});pos=approach;}if(Math.hypot(pos.z-start.z,(pos.x-start.x)/2)>.001)addLinear(pos,start,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G75',synthetic:true});pos=start;return;}
   if(gs.includes(76)&&!Number.isFinite(out.X)){g76Setup={...out,line:r.line};return;}
   if(gs.includes(76)&&Number.isFinite(out.X)&&Number.isFinite(out.Z)){if(op!=='thread')add('warn','G76 назначен инструменту не как резьбовая операция.',r.line);const start={...pos},targetX=out.X*unit,targetZ=out.Z*unit,height=Number.isFinite(out.K)?Math.abs(out.K*unit):Number.isFinite(out.P)&&out.P>20?micron(out.P,unit,wordOf(r,'P')):Math.abs(start.x-targetX)/2,first=Number.isFinite(out.D)?Math.abs(out.D*unit):Number.isFinite(out.Q)?micron(out.Q,unit,wordOf(r,'Q')):height/2.5,rawPasses=first>0?Math.ceil((height/first)*(height/first)):6,passes=Math.max(3,Math.min(24,rawPasses));if(!(height>0&&first>0))add('bad','G76: не удалось определить высоту профиля и глубину первого прохода.',r.line);if(rawPasses>24)add('warn',`G76 расчётно требует ${rawPasses} проходов; в эмуляторе показаны первые 24.`,r.line);for(let i=1;i<=passes;i++){const q=i/passes,level=start.x-(start.x-targetX)*Math.sqrt(q),entry={x:level,z:start.z};addLinear(i===1?start:{x:start.x,z:start.z},entry,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G76',synthetic:true});const endPt={x:level,z:targetZ};addLinear(entry,endPt,{motion:'G01',rapid:false,cutting:spindleOn,line:r.line,source:r.source,clean:`${r.clean} (ПРОХОД ${i})`,toolSpec:spec,cycle:'G76',synthetic:true});const clear={x:start.x+2,z:targetZ};addLinear(endPt,clear,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G76',synthetic:true});addLinear(clear,start,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G76',synthetic:true});}pos=start;return;}
   if(gs.includes(74)&&!Number.isFinite(out.Z)){if(Number.isFinite(out.R))g74Retract=Math.abs(out.R*unit);return;}
   const axialCycle=gs.find(g=>[81,83].includes(g))||(gs.includes(74)&&Number.isFinite(out.Z)&&['drill','centerdrill','tap'].includes(op)?74:0);
   if(gs.includes(74)&&Number.isFinite(out.Z)&&!axialCycle){add('bad','G74 неоднозначен: назначьте станции сверление либо используйте поддерживаемую отдельную операцию торцевой канавки.',r.line);return;}
   if(axialCycle){if(!['drill','centerdrill','tap'].includes(op)){add('bad',`G${axialCycle} требует назначить станции осевой инструмент.`,r.line);return;}const start={...pos},axisX=Number.isFinite(out.X)?out.X*unit:start.x,rPlane=Number.isFinite(out.R)?out.R*unit:Math.max(1,start.z),depth=Number.isFinite(out.Z)?out.Z*unit:NaN;if(!Number.isFinite(depth)){add('bad',`G${axialCycle}: не задана глубина Z.`,r.line);return;}if(Number.isFinite(out.Q)&&out.Q<=0)add('bad',`G${axialCycle}: шаг Q должен быть больше нуля.`,r.line);const hasVariable=['I','J','K'].some(k=>Number.isFinite(out[k]));if(Number.isFinite(out.Q)&&hasVariable)add('bad',`G${axialCycle}: нельзя одновременно задавать Q и I/J/K.`,r.line);if(hasVariable&&(!(out.I>0)||!(out.K>0)||Number(out.J)<0))add('bad',`G${axialCycle}: для переменного клевка нужны I>0, J≥0 и K>0.`,r.line);let at={x:axisX,z:start.z};if(Math.hypot(at.z-pos.z,(at.x-pos.x)/2)>.001)addLinear(pos,at,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:`G${axialCycle}`,synthetic:true});if(Math.abs(at.z-rPlane)>.001){const q={x:axisX,z:rPlane};addLinear(at,q,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:`G${axialCycle}`,synthetic:true});at=q;}let peck=axialCycle===81?Math.abs(depth-rPlane):Math.max(.05,Number.isFinite(out.Q)?micron(out.Q,unit,wordOf(r,'Q')):hasVariable?Math.abs(out.I*unit):Math.min(Math.abs(depth-rPlane),Math.max(1,(spec.diameter||5)*1.5)));const minPeck=hasVariable?Math.max(.05,Math.abs(out.K*unit)):peck,peckDrop=hasVariable?Math.max(0,Math.abs((out.J||0)*unit)):0,dir=Math.sign(depth-rPlane)||-1;let z=at.z,guard=0;while((dir<0?z>depth+.001:z<depth-.001)&&guard++<200){const next=dir<0?Math.max(depth,z-peck):Math.min(depth,z+peck),tip={x:axisX,z:next};addLinear({x:axisX,z},tip,{motion:'G01',rapid:false,cutting:spindleOn,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:`G${axialCycle}`,synthetic:true});z=next;peck=Math.max(minPeck,peck-peckDrop);if(z!==depth){const retract={x:axisX,z:axialCycle===83?rPlane:z-dir*Math.max(.2,g74Retract)};addLinear(tip,retract,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:`G${axialCycle}`,synthetic:true});addLinear(retract,{x:axisX,z},{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:`G${axialCycle}`,synthetic:true});}}const retract={x:axisX,z:rPlane};addLinear({x:axisX,z:depth},retract,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:`G${axialCycle}`,synthetic:true});pos=retract;return;}
-  if(gs.some(g=>[72,73,77,78,79,92,94].includes(g))&&['X','Z','U','W'].some(k=>Number.isFinite(out[k]))){add('bad',`G${gs.find(g=>[72,73,77,78,79,92,94].includes(g))} как токарный цикл не должен превращаться в обычный ход: выберите поддерживаемую схему.`,r.line);return;}
+  /* G72 — черновой поперечный: слои снимаются плоскостями по Z, от торца вглубь.
+     Первый кадр задаёт глубину слоя W (или D) и отход R, второй — диапазон P/Q и припуски. */
+  if(gs.includes(72)&&!Number.isFinite(out.P)&&!Number.isFinite(out.Q)){
+   if(Number.isFinite(out.W))g72Depth=Math.abs(out.W*unit);
+   if(Number.isFinite(out.D))g72Depth=Math.abs(out.D*unit);
+   if(Number.isFinite(out.R))g72Retract=Math.abs(out.R*unit);
+   if(!g72Depth)add('bad','Первый кадр G72 должен задать глубину слоя W/D.',r.line);
+   return;}
+  if(gs.includes(72)&&Number.isFinite(out.P)&&Number.isFinite(out.Q)){
+   const contour=contourFor(r,spec);if(!contour.length)return;
+   const pts=[];contour.forEach(s=>(s.points||[s.from,s.to]).forEach(q=>pts.push({...q})));
+   let dir=0,bad=false;for(let i=1;i<pts.length;i++){const dx=pts[i].x-pts[i-1].x;if(Math.abs(dx)<1e-6)continue;const d=Math.sign(dx);if(dir&&d!==dir)bad=true;dir=dir||d;}
+   if(bad){add('bad','G72 требует монотонный по X контур: обратный ход заблокирован.',r.line);return;}
+   const allowZ=Math.abs(Number(out.W)||0)*unit,allowX=Math.abs(Number(out.U)||0)*unit;
+   const depth=Math.abs(Number(out.D)||g72Depth||cfg.depth),step=Math.max(.05,depth);
+   const start={...pos},targetZs=pts.map(q=>q.z+allowZ),limit=Math.min(...targetZs);
+   let level=start.z,pass=0;
+   while(level-step>limit+.001&&pass<80){
+    level-=step;
+    const cutPts=pts.map(q=>({z:Math.max(q.z+allowZ,level),x:q.x+(op==='boring'?-allowX:allowX)}));
+    const entry=cutPts[0];
+    if(Math.hypot(entry.z-pos.z,(entry.x-pos.x)/2)>.001)
+     addLinear(pos,entry,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G72',synthetic:true});
+    addPolyline(cutPts,{motion:'G01',rapid:false,cutting:spindleOn,line:r.line,source:r.source,clean:`${r.clean} (ПРОХОД ${pass+1})`,toolSpec:spec,operation:op,cycle:'G72',synthetic:true});
+    /* отход из реза: сперва вдоль Z от стенки, затем по X наружу и только потом возврат */
+    const last=cutPts[cutPts.length-1],away={x:last.x,z:last.z+Math.max(.2,g72Retract)},clear={x:start.x,z:away.z};
+    addLinear(last,away,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G72',synthetic:true});
+    addLinear(away,clear,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G72',synthetic:true});
+    addLinear(clear,start,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G72',synthetic:true});
+    pos={...start};pass++;}
+   if(pass>=80)add('bad','G72 потребовал более 80 слоёв: проверьте глубину W/D.',r.line);
+   else if(!pass)add('warn','G72 не создал черновых слоёв: заготовка уже близка к контуру.',r.line);
+   return;}
+  /* G73 — повтор контура со сходящимся смещением: заготовка уже близка к форме детали. */
+  if(gs.includes(73)&&!Number.isFinite(out.P)&&!Number.isFinite(out.Q)){
+   if(Number.isFinite(out.U))g73ShiftX=Math.abs(out.U*unit);
+   if(Number.isFinite(out.I))g73ShiftX=Math.abs(out.I*unit);
+   if(Number.isFinite(out.W))g73ShiftZ=Math.abs(out.W*unit);
+   if(Number.isFinite(out.K))g73ShiftZ=Math.abs(out.K*unit);
+   if(Number.isFinite(out.R))g73Passes=Math.max(1,Math.min(60,Math.round(Math.abs(out.R))));
+   if(Number.isFinite(out.D))g73Passes=Math.max(1,Math.min(60,Math.round(Math.abs(out.D))));
+   return;}
+  if(gs.includes(73)&&Number.isFinite(out.P)&&Number.isFinite(out.Q)){
+   const contour=contourFor(r,spec);if(!contour.length)return;
+   const pts=[];contour.forEach(s=>(s.points||[s.from,s.to]).forEach(q=>pts.push({...q})));
+   const shiftX=Number.isFinite(out.I)?Math.abs(out.I*unit):g73ShiftX,shiftZ=Number.isFinite(out.K)?Math.abs(out.K*unit):g73ShiftZ;
+   const n=Math.max(1,Math.min(60,Number.isFinite(out.R)?Math.round(Math.abs(out.R)):g73Passes));
+   if(!(shiftX>0||shiftZ>0)){add('bad','G73: не заданы припуски смещения U/W (I/K).',r.line);return;}
+   const allowX=Math.abs(Number(out.U)||0)*unit,allowZ=Math.abs(Number(out.W)||0)*unit,start={...pos},outer=op!=='boring';
+   for(let i=0;i<n;i++){
+    const q=n>1?1-i/(n-1):0; /* от полного смещения к нулю */
+    const cutPts=pts.map(p=>({z:p.z+allowZ+shiftZ*q,x:p.x+(outer?1:-1)*(allowX+shiftX*2*q)}));
+    const entry=cutPts[0];
+    addLinear(pos,entry,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G73',synthetic:true});
+    addPolyline(cutPts,{motion:'G01',rapid:false,cutting:spindleOn,line:r.line,source:r.source,clean:`${r.clean} (ПРОХОД ${i+1})`,toolSpec:spec,operation:op,cycle:'G73',synthetic:true});
+    const last=cutPts[cutPts.length-1],off={x:last.x+(outer?2:-2),z:last.z},clear={x:off.x,z:start.z};
+    addLinear(last,off,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G73',synthetic:true});
+    addLinear(off,clear,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G73',synthetic:true});
+    addLinear(clear,start,{motion:'G00',rapid:true,cutting:false,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,cycle:'G73',synthetic:true});
+    pos={...start};}
+   return;}
   const hasMove=['X','Z','U','W'].some(k=>Number.isFinite(out[k]));if(!hasMove)return;const to=toPoint(pos,out,unit),arc=motion==='G02'||motion==='G03',points=arc?arcPath(pos,to,out,motion==='G02',cfg,unit):[{...pos},{...to}],segment=makeSegment(pos,to,{motion,points:points||undefined,words:out,unit,line:r.line,source:r.source,clean:r.clean,toolSpec:spec,operation:op});if(arc&&!points)add('bad','Дуга G02/G03 не построена: проверьте R либо I/K и конечную точку.',r.line,segment);inspectAndPush(segment);pos=to;
  });
  if(compMode)add('bad','Компенсация G41/G42 не отменена кодом G40.',lines.length);
@@ -261,9 +420,27 @@ function applySegmentCut(mat,seg,cfg,portion=1){
  if(!seg||!seg.cutting||portion<=0)return mat;const pts=seg.points&&seg.points.length>1?seg.points:[seg.from,seg.to],op=seg.operation||cfg.operation,spec=seg.toolSpec||defaultToolConfig(seg.toolStation||0,cfg),axial=['drill','centerdrill'].includes(op);if(pts.some(p=>p.x<0))return mat;const free=-Math.max(1,cfg.length-cfg.grip),limit=Math.max(0,Math.min(1,portion)),profileStep=cfg.length/Math.max(1,mat.z.length-1),faceAtZero=Math.abs(seg.to.z-seg.from.z)<1e-6&&Math.abs(seg.to.z)<=profileStep*.55;
  if(axial){const spans=[];let total=0;for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i].z-pts[i-1].z,(pts[i].x-pts[i-1].x)/2);spans.push(d);total+=d;}let remain=total*limit,deepest=Math.min(0,pts[0].z);for(let i=1;i<pts.length&&remain>1e-8;i++){const a=pts[i-1],b=pts[i],d=spans[i-1],take=Math.min(1,d?remain/d:1);deepest=Math.min(deepest,a.z+(b.z-a.z)*take);remain-=d*take;}const toolR=Math.max(0,(spec.diameter||0)/2),angle=Math.max(20,Math.min(175,spec.pointAngle||118))*Math.PI/180,tan=Math.tan(angle/2);for(let k=0;k<mat.z.length;k++){const z=mat.z[k];if(z>0.05||z<deepest-.05||z<free-.05)continue;const behind=Math.max(0,z-deepest),radius=Math.min(toolR,behind*tan);if(radius>mat.inner[k]&&radius<mat.outer[k]-.2)mat.inner[k]=radius;}return mat;}
  if(faceAtZero)return mat;
+ /* Подрезка торца снимает не тонкий срез, а весь слой от плоскости реза до свободного
+    торца. Проверяем это для каждого радиального участка траектории: иначе между
+    проходами G72/G94 остаётся несуществующий металл и отвод ложно считается ударом. */
+ const faceSlab=(a,b,take,compShift)=>{
+  if(axial||op==='groove'||op==='thread')return false;
+  if(Math.abs(b.z-a.z)>=.05||Math.abs(b.x-a.x)<=.05)return false;
+  const zc=b.z,rA=Math.abs(a.x)/2,rB=Math.abs(b.x)/2,rMin=Math.min(rA,rB)+(compShift||0),rMax=Math.max(rA,rB);
+  if(zc>.05||zc<free-.05)return false;
+  const kc=Math.max(0,Math.min(mat.z.length-1,Math.round((zc+cfg.length)/cfg.length*(mat.z.length-1))));
+  if(rMax<mat.outer[kc]-.05)return false; /* резец вошёл сбоку, а не с торца — слой не срезан */
+  const reach=Math.max(0,rMin+(rMax-rMin)*(1-Math.max(0,Math.min(1,take))));
+  /* от узла плоскости реза и до торца: узел берём тем же округлением, что и проверка
+     столкновений, иначе между ними остаётся нетронутая полоса шириной в один шаг сетки */
+  for(let k=kc;k<mat.z.length&&mat.z[k]<=.05;k++)
+   if(reach<mat.outer[k])mat.outer[k]=Math.max(mat.inner[k]+.2,reach);
+  return true;
+ };
  const spans=[];let total=0;for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i].z-pts[i-1].z,(pts[i].x-pts[i-1].x)/2);spans.push(d);total+=d;}let remain=total*limit;
  for(let i=1;i<pts.length&&remain>1e-8;i++){const a=pts[i-1],b=pts[i],d=spans[i-1],take=Math.min(1,d?remain/d:1),steps=Math.max(2,Math.ceil(Math.hypot((b.z-a.z)*take,(b.x-a.x)*take/2)/.5));
   const dz=b.z-a.z,dr=(b.x-a.x)/2,len=Math.hypot(dz,dr),normalR=len?dz/len:0,compShift=seg.compMode&&!seg.geometryCompensated?(seg.compMode===41?1:-1)*normalR*Math.max(0,spec.nose||0):0;
+  if(faceSlab(a,b,take,compShift)){remain-=d*take;continue;}
   for(let j=0;j<=steps;j++){const q=j/steps*take,z=a.z+(b.z-a.z)*q,x=a.x+(b.x-a.x)*q,r=Math.max(0,Math.abs(x)/2+compShift);if(z>0.05||z<free-0.05)continue;const k=Math.max(0,Math.min(mat.z.length-1,Math.round((z+cfg.length)/cfg.length*(mat.z.length-1)))),spread=op==='groove'?Math.max(0,Math.ceil((spec.insertWidth||0)/2/profileStep)):0,k0=Math.max(0,k-spread),k1=Math.min(mat.z.length-1,k+spread);
    for(let kk=k0;kk<=k1;kk++){if(op==='boring'){if(r>mat.inner[kk]&&r<mat.outer[kk]-.2)mat.inner[kk]=r;}else if(op!=='tap'&&r>0&&r<mat.outer[kk])mat.outer[kk]=Math.max(mat.inner[kk]+.2,r);}
   }remain-=d*take;
@@ -333,7 +510,7 @@ function showSimulator(){
 }
 
 function consumeHandoff(){
- const item=window.RazryadBackplot&&window.RazryadBackplot.take?window.RazryadBackplot.take():null;
+ const item=window.RazryadEmulator&&window.RazryadEmulator.take?window.RazryadEmulator.take():null;
  if(!item||!item.code||!$('#lsimGcode'))return false;
  $('#lsimGcode').value=item.code;analyzePastedGcode(false);
  const report=$('#lsimGReport');if(report)report.insertAdjacentHTML('afterbegin',`<div class="lsim-import-source"><b>${h(item.title||'NC-программа')}</b><span>Передано из ${h(item.source||'приложения')}</span></div>`);
@@ -343,8 +520,8 @@ function consumeHandoff(){
 function openWithCode(code,meta){
  const item={code:String(code||'').trim(),title:meta&&meta.title||'NC-программа',source:meta&&meta.source||'РАЗРЯД',created:Date.now()};
  if(!item.code)return false;
- if(window.RazryadBackplot&&window.RazryadBackplot.store)window.RazryadBackplot.store(item);
- tab='work';folder='simx';geoCase=null;rank=null;filter='Все';deeper();try{history.replaceState({...history.state,razryadBackplotRoute:true},'',location.href);}catch(_){}render();return true;
+ if(window.RazryadEmulator&&window.RazryadEmulator.store)window.RazryadEmulator.store(item);
+ tab='work';folder='simx';geoCase=null;rank=null;filter='Все';deeper();try{history.replaceState({...history.state,razryadEmulatorRoute:true},'',location.href);}catch(_){}render();return true;
 }
 
 function readForm(){
@@ -371,17 +548,19 @@ function operationName(op){return({external:'Наружная / торец',bori
 function optionList(items,selected){return items.map(([v,label])=>`<option value="${v}" ${v===selected?'selected':''}>${label}</option>`).join('');}
 /* выпадающий список инструмента, разбитый по группам, как в каталоге инструмента */
 function toolOptions(selected){return TOOL_GROUPS.map(([g,label])=>{const list=Object.entries(TOOL_LIBRARY).filter(([,v])=>v.group===g);if(!list.length)return'';return`<optgroup label="${h(label)}">${list.map(([key,v])=>`<option value="${key}" ${key===selected?'selected':''}>${h(v.name)}</option>`).join('')}</optgroup>`;}).join('');}
-function collectToolConfigs(){const out={};document.querySelectorAll('.lsim-tool-card[data-station]').forEach(card=>{const get=name=>card.querySelector(`[data-tool-field="${name}"]`),station=Number(card.dataset.station),num=name=>n(get(name)&&get(name).value);out[station]={station,code:card.dataset.code||'',operation:get('operation')&&get('operation').value||'external',kind:get('kind')&&get('kind').value||'cnmg',diameter:num('diameter'),workingLength:num('workingLength'),bodyD:num('bodyD'),minBore:num('minBore'),nose:num('nose'),pointAngle:num('pointAngle'),insertWidth:num('insertWidth'),confirmed:!!(get('confirmed')&&get('confirmed').checked)};});return out;}
+function collectToolConfigs(){const out={};document.querySelectorAll('.lsim-tool-card[data-station]').forEach(card=>{const get=name=>card.querySelector(`[data-tool-field="${name}"]`),station=Number(card.dataset.station),num=name=>n(get(name)&&get(name).value);out[station]={station,code:card.dataset.code||'',operation:get('operation')&&get('operation').value||'external',kind:get('kind')&&get('kind').value||'cnmg',diameter:num('diameter'),workingLength:num('workingLength'),bodyD:num('bodyD'),minBore:num('minBore'),nose:num('nose'),pointAngle:num('pointAngle'),insertWidth:num('insertWidth'),maxDepth:num('maxDepth'),confirmed:!!(get('confirmed')&&get('confirmed').checked)};});return out;}
 function renderToolSetup(result){const box=$('#lsimToolSetup');if(!box)return;const tools=result&&result.tools||[];if(!tools.length){box.hidden=true;box.innerHTML='';return;}const existing=collectToolConfigs(),opItems=[['external','Наружная / торец'],['boring','Расточка'],['groove','Канавка'],['thread','Резьба'],['drill','Сверление'],['centerdrill','Центрование'],['tap','Метчик']];
  box.hidden=false;box.innerHTML=`<div class="lsim-controls-title"><b>2. Инструменты из программы</b><span>${tools.length} ${tools.length===1?'СТАНЦИЯ':'СТАНЦИИ'}</span></div><p class="lsim-help">Проверьте назначение каждого T. Диаметр, рабочая длина и корпус участвуют и в рисунке, и в проверке столкновений.</p><div class="lsim-tool-list">${tools.map((raw,index)=>{const t={...raw,...(existing[raw.station]||{})},code=t.code||String(t.station).padStart(2,'0')+'01';return`<section class="lsim-tool-card ${t.confirmed?'confirmed':''} ${index?'collapsed':''}" data-station="${t.station}" data-code="${h(code)}"><button type="button" class="lsim-tool-head"><span class="lsim-tool-badge">T${String(t.station).padStart(2,'0')}</span><b>${h(operationName(t.operation))}</b><small>${h(code)} · ${t.confirmed?'ПОДТВЕРЖДЁН':'ПРОВЕРИТЬ'}</small><i>⌄</i></button><div class="lsim-tool-fields">
  <label class="fld"><span>Операция T${String(t.station).padStart(2,'0')}</span><select data-tool-field="operation">${optionList(opItems,t.operation)}</select></label><label class="fld"><span>Инструмент</span><select data-tool-field="kind">${toolOptions(t.kind)}</select></label>
  <label class="fld"><span>Ø режущей части, мм</span><input data-tool-field="diameter" type="number" min="0" step="0.1" value="${n(t.diameter)}"></label><label class="fld"><span>Рабочая длина / вылет, мм</span><input data-tool-field="workingLength" type="number" min="1" step="1" value="${n(t.workingLength)}"></label>
  <label class="fld"><span>Ø корпуса / державки, мм</span><input data-tool-field="bodyD" type="number" min="1" step="0.1" value="${n(t.bodyD)}"></label><label class="fld"><span>Минимальный Ø отверстия, мм</span><input data-tool-field="minBore" type="number" min="0" step="0.1" value="${n(t.minBore)}"></label>
  <label class="fld"><span>Радиус вершины, мм</span><input data-tool-field="nose" type="number" min="0" step="0.1" value="${n(t.nose)}"></label><label class="fld"><span>Угол сверла / профиля, °</span><input data-tool-field="pointAngle" type="number" min="0" max="175" step="1" value="${n(t.pointAngle)}"></label>
- <label class="fld"><span>Ширина пластины канавки, мм</span><input data-tool-field="insertWidth" type="number" min="0.2" step="0.1" value="${n(t.insertWidth)||3}"></label><label class="lsim-tool-confirm"><input data-tool-field="confirmed" type="checkbox" ${t.confirmed?'checked':''}><span>Назначение и габариты проверены оператором</span></label>
+ <label class="fld"><span>Ширина пластины канавки, мм</span><input data-tool-field="insertWidth" type="number" min="0.2" step="0.1" value="${n(t.insertWidth)||3}"></label><label class="fld"><span>Предельная глубина канавки, мм</span><input data-tool-field="maxDepth" type="number" min="0" step="0.5" value="${n(t.maxDepth)||0}"></label>
+ <label class="lsim-tool-confirm"><input data-tool-field="confirmed" type="checkbox" ${t.confirmed?'checked':''}><span>Назначение и габариты проверены оператором</span></label>
  <canvas class="lsim-tool-preview" data-tool-preview width="210" height="84" aria-label="Схема выбранного инструмента"></canvas>
+ <p class="lsim-tool-note" data-tool-note>${h((TOOL_LIBRARY[t.kind]||{}).note||'')}</p>
  </div></section>`;}).join('')}</div>`;bindToolCards();document.querySelectorAll('.lsim-tool-card').forEach(refreshToolPreview);}
-function bindToolCards(){document.querySelectorAll('.lsim-tool-card').forEach(card=>{const head=card.querySelector('.lsim-tool-head');if(head)head.onclick=()=>{card.classList.toggle('collapsed');if(!card.classList.contains('collapsed'))requestAnimationFrame(()=>refreshToolPreview(card));};card.querySelectorAll('[data-tool-field]').forEach(field=>field.onchange=()=>{const all=collectToolConfigs(),spec=all[Number(card.dataset.station)],kind=TOOL_LIBRARY[spec.kind]||TOOL_LIBRARY.cnmg;if(field.dataset.toolField==='kind'){const op=card.querySelector('[data-tool-field="operation"]');if(op)op.value=kind.operation;const set=(name,value)=>{const e=card.querySelector(`[data-tool-field="${name}"]`);if(e)e.value=value;};set('diameter',kind.diameter);set('workingLength',kind.workingLength);set('bodyD',kind.bodyD);set('minBore',kind.minBore);set('nose',kind.nose);set('pointAngle',kind.pointAngle);set('insertWidth',kind.insertWidth||3);}const confirmed=card.querySelector('[data-tool-field="confirmed"]')?.checked;card.classList.toggle('confirmed',!!confirmed);const small=card.querySelector('.lsim-tool-head small');if(small)small.textContent=`${card.dataset.code} · ${confirmed?'ПОДТВЕРЖДЁН':'ПРОВЕРИТЬ'}`;const title=card.querySelector('.lsim-tool-head b'),op=card.querySelector('[data-tool-field="operation"]');if(title&&op)title.textContent=operationName(op.value);refreshToolPreview(card);saveToolStore(collectToolConfigs());applyForm(false);});});}
+function bindToolCards(){document.querySelectorAll('.lsim-tool-card').forEach(card=>{const head=card.querySelector('.lsim-tool-head');if(head)head.onclick=()=>{card.classList.toggle('collapsed');if(!card.classList.contains('collapsed'))requestAnimationFrame(()=>refreshToolPreview(card));};card.querySelectorAll('[data-tool-field]').forEach(field=>field.onchange=()=>{const all=collectToolConfigs(),spec=all[Number(card.dataset.station)],kind=TOOL_LIBRARY[spec.kind]||TOOL_LIBRARY.cnmg;if(field.dataset.toolField==='kind'){const op=card.querySelector('[data-tool-field="operation"]');if(op)op.value=kind.operation;const set=(name,value)=>{const e=card.querySelector(`[data-tool-field="${name}"]`);if(e)e.value=value;};set('diameter',kind.diameter);set('workingLength',kind.workingLength);set('bodyD',kind.bodyD);set('minBore',kind.minBore);set('nose',kind.nose);set('pointAngle',kind.pointAngle);set('insertWidth',kind.insertWidth||3);set('maxDepth',kind.maxDepth||0);const nt=card.querySelector('[data-tool-note]');if(nt)nt.textContent=kind.note||'';}const confirmed=card.querySelector('[data-tool-field="confirmed"]')?.checked;card.classList.toggle('confirmed',!!confirmed);const small=card.querySelector('.lsim-tool-head small');if(small)small.textContent=`${card.dataset.code} · ${confirmed?'ПОДТВЕРЖДЁН':'ПРОВЕРИТЬ'}`;const title=card.querySelector('.lsim-tool-head b'),op=card.querySelector('[data-tool-field="operation"]');if(title&&op)title.textContent=operationName(op.value);refreshToolPreview(card);saveToolStore(collectToolConfigs());applyForm(false);});});}
 
 function renderGReport(result){
  const box=$('#lsimGReport');if(!box)return;
@@ -416,8 +595,8 @@ function applyForm(announce){
 
 function bindSimulator(){
  if(!$('#lsimCanvas'))return;
- const back=document.querySelector('[data-lsim-back]');if(back)back.onclick=()=>{if(history.state&&history.state.razryadDepth)history.back();else{try{history.replaceState({...history.state,razryadBackplotRoute:false},'',location.pathname);}catch(_){}folder=null;render();}};
- document.querySelectorAll('#nav [data-tab]').forEach(item=>item.onclick=()=>{tab=item.dataset.tab;folder=null;geoCase=null;rank=null;filter='Все';const q=$('#q');if(q)q.value='';try{history.replaceState({...history.state,razryadBackplotRoute:false},'',location.pathname);}catch(_){}deeper();render();});
+ const back=document.querySelector('[data-lsim-back]');if(back)back.onclick=()=>{if(history.state&&history.state.razryadDepth)history.back();else{try{history.replaceState({...history.state,razryadEmulatorRoute:false},'',location.pathname);}catch(_){}folder=null;render();}};
+ document.querySelectorAll('#nav [data-tab]').forEach(item=>item.onclick=()=>{tab=item.dataset.tab;folder=null;geoCase=null;rank=null;filter='Все';const q=$('#q');if(q)q.value='';try{history.replaceState({...history.state,razryadEmulatorRoute:false},'',location.pathname);}catch(_){}deeper();render();});
  document.querySelectorAll('[data-lsim-field]').forEach(x=>x.onchange=()=>{if(x.id==='lsimSpeed'){const v=$('#lsimSpeedValue');if(v)v.textContent=`×${x.value}`;if(simState)simState.cfg.speed=n(x.value)||1;return;}updateVisibility();applyForm(false);});
  $('#lsimBuild').onclick=()=>applyForm(true);
  $('#lsimGFileBtn').onclick=()=>$('#lsimGFile').click();
@@ -676,7 +855,9 @@ function fillPoly(ctx,pts,fill,stroke,w){ctx.beginPath();pts.forEach((p,i)=>i?ct
 /* инструмент в плоском виде: масштаб общий со сценой, поэтому габариты видны честно */
 function drawTool2D(ctx,G,m,spec,op,point){
  const k=G.k,mm=v=>v*k,tipX=G.MX(point.z),tipY=G.MY(point.x),shape=spec.shape||(op==='boring'?'bore':op==='groove'?'groove':op==='thread'?'thread':['drill','centerdrill','tap'].includes(op)?'axial':'turn');
- const body=Math.max(8,spec.bodyD||20),work=Math.max(18,spec.workingLength||30),braze=!!spec.brazed;
+ /* реальные габариты: сечение державки, вылет, длина кромки пластины и глубина лезвия */
+ const body=Math.max(6,spec.shankH||spec.bodyD||20),work=Math.max(12,spec.workingLength||30),braze=!!spec.brazed;
+ const edge=Math.max(5,spec.edge||(spec.nose||.8)*8+7),deep=Math.max(4,spec.maxDepth||14);
  ctx.save();ctx.lineJoin='round';
  if(shape==='axial'){
   const r=Math.max(.6,(spec.diameter||6)/2),bodyR=Math.max(r,(spec.bodyD||spec.diameter||8)/2),ang=Math.max(20,Math.min(178,spec.pointAngle||118))*Math.PI/180,cone=r/Math.tan(ang/2);
@@ -689,19 +870,26 @@ function drawTool2D(ctx,G,m,spec,op,point){
  const inner=shape==='bore'||shape==='groovein'||shape==='threadin',sign=inner?1:-1; /* наружный инструмент выше поверхности, внутренний ниже */
  ctx.translate(tipX,tipY);
  if(shape==='groove'||shape==='groovein'){
-  const wI=Math.max(.5,spec.insertWidth||3),bladeH=Math.min(work,26);
+  /* узкое лезвие фактической ширины, высотой в предельную глубину реза, и державка за ним */
+  const wI=Math.max(.5,spec.insertWidth||3),bladeH=Math.min(deep,work);
   fillPoly(ctx,[[-mm(wI/2),0],[mm(wI/2),0],[mm(wI/2),sign*mm(bladeH)],[-mm(wI/2),sign*mm(bladeH)]],braze?FLAT.braze:FLAT.carbide,'#fff2b4',1.1);
-  fillPoly(ctx,[[-mm(wI/2+1.5),sign*mm(bladeH)],[mm(wI/2+1.5),sign*mm(bladeH)],[mm(work),sign*mm(bladeH+body*.5)],[mm(work),sign*mm(bladeH+body)],[-mm(wI/2+1.5),sign*mm(bladeH+body)]],FLAT.chuck,FLAT.chuckEdge,1.2);
+  if(inner) /* внутренний канавочный сидит на прямой оправке, уходящей из отверстия наружу */
+   fillPoly(ctx,[[-mm(wI/2+1),sign*mm(bladeH)],[mm(work),sign*mm(bladeH)],[mm(work),sign*mm(bladeH+body)],[-mm(wI/2+1),sign*mm(bladeH+body)]],FLAT.chuck,FLAT.chuckEdge,1.2);
+  else
+   fillPoly(ctx,[[-mm(wI/2+1.2),sign*mm(bladeH)],[mm(wI/2+1.2),sign*mm(bladeH)],[mm(work),sign*mm(bladeH+body*.45)],[mm(work),sign*mm(bladeH+body)],[-mm(wI/2+1.2),sign*mm(bladeH+body)]],FLAT.chuck,FLAT.chuckEdge,1.2);
  }else if(shape==='thread'||shape==='threadin'){
-  fillPoly(ctx,insertPoly('thr',90,7).map(p=>[mm(p[0]),sign*mm(p[1])]),braze?FLAT.braze:FLAT.carbide,'#fff2b4',1.1);
-  fillPoly(ctx,[[mm(2),sign*mm(5)],[mm(work),sign*mm(5)],[mm(work),sign*mm(5+body)],[mm(2),sign*mm(5+body)]],FLAT.chuck,FLAT.chuckEdge,1.2);
+  const L=Math.max(4,Math.min(9,edge*.55));
+  fillPoly(ctx,insertPoly('thr',90,L).map(p=>[mm(p[0]),sign*mm(p[1])]),braze?FLAT.braze:FLAT.carbide,'#fff2b4',1.1);
+  fillPoly(ctx,[[mm(1.5),sign*mm(L*.7)],[mm(work),sign*mm(L*.7)],[mm(work),sign*mm(L*.7+body)],[mm(1.5),sign*mm(L*.7+body)]],FLAT.chuck,FLAT.chuckEdge,1.2);
  }else if(shape==='bore'){
-  const barR=Math.max(3,body/2);
-  fillPoly(ctx,[[mm(1),0],[mm(work),-mm(barR*.4)],[mm(work),mm(barR*1.6)],[mm(1),mm(barR*1.1)]],FLAT.chuck,FLAT.chuckEdge,1.2);
-  fillPoly(ctx,insertPoly(spec.insert||'r80',spec.lead||95,7).map(p=>[mm(p[0]),mm(p[1])]),braze?FLAT.braze:FLAT.carbide,'#fff2b4',1.1);
+  /* оправка круглого сечения: диаметр реальный, поэтому видно, влезает ли она в отверстие */
+  const barD=Math.max(4,spec.bodyD||body),L=Math.max(4,Math.min(10,edge*.7));
+  fillPoly(ctx,[[mm(1),0],[mm(work),-mm(barD*.15)],[mm(work),mm(barD*.85)],[mm(1),mm(barD*.7)]],FLAT.chuck,FLAT.chuckEdge,1.2);
+  fillPoly(ctx,insertPoly(spec.insert||'r80',spec.lead||95,L).map(p=>[mm(p[0]),mm(p[1])]),braze?FLAT.braze:FLAT.carbide,'#fff2b4',1.1);
  }else{
-  const L=Math.max(6,Math.min(11,(spec.nose||.8)*6+7));
-  fillPoly(ctx,[[mm(2),-mm(2)],[mm(work),-mm(2)],[mm(work),-mm(2+body)],[mm(2),-mm(2+body)]],FLAT.chuck,FLAT.chuckEdge,1.2);
+  /* наружный резец: квадратная державка фактического сечения и пластина по длине кромки */
+  const L=Math.max(5,Math.min(12,edge*.7));
+  fillPoly(ctx,[[mm(1.5),-mm(1.5)],[mm(work),-mm(1.5)],[mm(work),-mm(1.5+body)],[mm(1.5),-mm(1.5+body)]],FLAT.chuck,FLAT.chuckEdge,1.2);
   fillPoly(ctx,insertPoly(spec.insert||'r80',spec.lead||95,L).map(p=>[mm(p[0]),-mm(p[1])]),braze?FLAT.braze:FLAT.carbide,'#fff2b4',1.15);
   if(braze){ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(mm(1),-mm(1.5));ctx.lineTo(mm(L*.8),-mm(L*.5));ctx.stroke();}
  }
@@ -870,7 +1058,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.class
 const previousBind=bind;bind=function(){previousBind();bindSimulator();};
 const previousRender=render;render=function(){stopBanner();stopSimulation();if(tab==='work'&&folder==='simx'){showSimulator();return;}previousRender();if(tab==='work'&&!folder)initBanner();};
 
-window.RazryadLatheSim={TOOL_LIBRARY,TOOL_GROUPS,drawToolPreview,draw2D,defaults,validate,buildModel,targetOuter,stripGComments,parseGcode,arcPath,stockProfile,inferStock,applySegmentCut,buildPlayback,detectToolCatalog,toolHintFromText,openWithCode,consumeHandoff};
-try{if(new URLSearchParams(location.search).get('open')==='backplot'||history.state&&history.state.razryadBackplotRoute){tab='work';folder='simx';history.replaceState({...history.state,razryadBackplotRoute:true},'',location.pathname);}}catch(_){}
+window.RazryadCNC={TOOL_LIBRARY,TOOL_GROUPS,drawToolPreview,draw2D,defaults,validate,buildModel,targetOuter,stripGComments,parseGcode,arcPath,stockProfile,inferStock,applySegmentCut,buildPlayback,detectToolCatalog,toolHintFromText,openWithCode,consumeHandoff};
+try{if(new URLSearchParams(location.search).get('open')==='emulator'||history.state&&history.state.razryadEmulatorRoute){tab='work';folder='simx';history.replaceState({...history.state,razryadEmulatorRoute:true},'',location.pathname);}}catch(_){}
 render();
 })();

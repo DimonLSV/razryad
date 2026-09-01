@@ -53,7 +53,7 @@ input,select,textarea{width:100%;border:1px solid var(--line);background:var(--p
       <a class="back" href="./chpu.html" aria-label="Вернуться в справочник">‹</a>
       <div class="logo" aria-hidden="true"></div>
       <div class="brand"><b>РАЗРЯД</b><span>Фото → G-код Haas</span></div>
-      <div class="draft">V0.995 · PRE-MARKET</div>
+      <div class="draft">V0.996 · PRE-MARKET</div>
     </div>
     <div class="progress" id="progress"></div>
     <div class="stepmeta"><b id="stepTitle">Шаблон детали</b><span id="stepCount">Шаг 1 из 6</span></div>
@@ -160,7 +160,7 @@ input,select,textarea{width:100%;border:1px solid var(--line);background:var(--p
       </div>
       <div class="card" style="margin-top:11px"><div class="confirm"><input type="checkbox" id="simConfirmed"><label for="simConfirmed"><b>Симуляцию проверил, путь верный</b><br><span class="muted">Патрон, ноль детали и направление осей сверены на станке.</span></label></div></div>
       <div class="codebox"><div class="codehead"><span id="programName">O0100.NC</span><span class="tag" id="postTag">HAAS · G71/G70/G76</span></div><pre id="gcode"></pre></div>
-      <button class="btn backplot-launch" id="backplotBtn" type="button">▶ Проверить в эмулятор CNC</button>
+      <button class="btn cnc-emu-launch" id="emulatorBtn" type="button">▶ Проверить в эмулятор CNC</button>
       <div class="btnrow three" style="margin-top:10px"><button class="btn secondary mini export" id="copyBtn" disabled>Копировать</button><button class="btn secondary mini export" id="saveBtn" disabled>Скачать .NC</button><button class="btn mini export" id="sendBtn" disabled>Wi‑Fi / DNC</button></div>
       <button class="swap" id="restartBtn" style="margin-top:12px">Создать ещё одну программу</button>
       <div class="card"><div class="eyebrow">Передать и сохранить опыт</div><div class="inline-actions"><button class="btn secondary mini" id="showQr">QR карточка наладки</button><button class="btn secondary mini" id="recordResult">Записать результат</button><button class="btn secondary mini" id="backupHistory">Резервная копия</button></div><div id="qrArea" style="display:none;margin-top:10px"><div class="qrbox" id="qrBox"></div><div class="compact-note" style="margin-top:7px">QR содержит компактную карточку параметров, не полный G-код. Перед запуском программа всё равно проверяется на стойке.</div></div></div>
@@ -252,12 +252,12 @@ let anim=null;$('#playBtn').onclick=()=>{cancelAnimationFrame(anim);let start=pe
 $('#simConfirmed').onchange=e=>$$('.export').forEach(b=>b.disabled=!e.target.checked||!state.safe);
 async function copyCode(){try{await navigator.clipboard.writeText(state.gcode);toast('G-код скопирован')}catch(e){const t=document.createElement('textarea');t.value=state.gcode;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();toast('G-код скопирован')}}
 $('#copyBtn').onclick=copyCode;$('#copyBottom').onclick=copyCode;$('#saveBtn').onclick=()=>{const name=`O${state.programNo||'0100'}.NC`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([state.gcode],{type:'text/plain'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);toast(`Файл ${name} сохранён`)};
-$('#backplotBtn').onclick=()=>{if(!state.gcode)return toast('Сначала сгенерируйте программу');window.RazryadBackplot.open(state.gcode,{title:`O${state.programNo||'0100'} · Фото → G-код`,source:'Фото / PDF / DXF → G-код'});};
+$('#emulatorBtn').onclick=()=>{if(!state.gcode)return toast('Сначала сгенерируйте программу');window.RazryadEmulator.open(state.gcode,{title:`O${state.programNo||'0100'} · Фото → G-код`,source:'Фото / PDF / DXF → G-код'});};
 $('#sendBtn').onclick=()=>{$('#gateway').value=localStorage.getItem('razryad-dnc-url')||'';$('#dncModal').classList.add('on')};function closeModal(){$('#dncModal').classList.remove('on')}$('#closeModal').onclick=closeModal;$('#cancelSend').onclick=closeModal;$('#dncModal').onclick=e=>{if(e.target===$('#dncModal'))closeModal()};$('#doSend').onclick=async()=>{const url=$('#gateway').value.trim();if(!/^https?:\/\//i.test(url)){toast('Введите полный http:// адрес');return}localStorage.setItem('razryad-dnc-url',url);$('#doSend').disabled=true;$('#doSend').textContent='Отправка…';try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain','X-Filename':`O${state.programNo||'0100'}.NC`},body:state.gcode});if(!r.ok)throw new Error();toast('Программа передана шлюзу');closeModal()}catch(e){toast('Шлюз не ответил — проверьте адрес и CORS')}finally{$('#doSend').disabled=false;$('#doSend').textContent='Отправить'}};
 $('#restartBtn').onclick=()=>{state.step=1;state.template='shaft';applyPreset('shaft');state.gcode='';state.source='';$$('.template').forEach(b=>b.classList.toggle('selected',b.dataset.template==='shaft'));$('#fileInput').value='';$('#ocrText').value='';$('#preview').classList.remove('on');$('#simConfirmed').checked=false;$$('.export').forEach(b=>b.disabled=true);go(1)};
 window.addEventListener('beforeunload',saveDraft);drawProgress();
 </script>
-<script src="./backplot-bridge.js?v=0995a"></script>
+<script src="./cnc-emulator-bridge.js?v=0996a"></script>
 <script src="./vendor/qrcode/qrcode.js"></script>
 <script src="./generator-pro.js"></script>
 <script src="./generator-v99.js"></script>

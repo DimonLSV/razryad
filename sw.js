@@ -1,8 +1,8 @@
-const CACHE='razryad-0995-0831a';
+const CACHE='razryad-0996-0901a';
 const FILES=['./','./index.html','./chpu.html','./generator.html','./termist.html','./privacy.html',
  './manifest-chpu.webmanifest','./manifest-termist.webmanifest',
  './icon-chpu-192.png','./icon-chpu-512.png','./icon-termist-192.png','./icon-termist-512.png',
- './generator-pro.js','./generator-v99.js','./backplot-bridge.js','./operator-tools.js','./chpu-v99.js','./lathe-sim-v99.js','./termist-v99.js','./v99.css','./vendor/qrcode/qrcode.js','./samples/turning-demo.nc',
+ './generator-pro.js','./generator-v99.js','./cnc-emulator-bridge.js','./operator-tools.js','./chpu-v99.js','./lathe-sim-v99.js','./termist-v99.js','./v99.css','./vendor/qrcode/qrcode.js','./samples/turning-demo.nc',
  './assets/backgrounds/work.jpg','./assets/backgrounds/codes.jpg','./assets/backgrounds/calc.jpg','./assets/backgrounds/control.jpg','./assets/backgrounds/learn.jpg',
  './assets/backgrounds/therm-work-v99.jpg','./assets/backgrounds/therm-steels-v99.jpg','./assets/backgrounds/therm-process-v99.jpg','./assets/backgrounds/therm-learn-v99.jpg',
  './vendor/ocr/tesseract.min.js','./vendor/ocr/worker.min.js',

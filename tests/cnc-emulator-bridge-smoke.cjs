@@ -1,0 +1,21 @@
+const fs=require('fs'),vm=require('vm');
+const storage=new Map(),localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)};
+let copied='',sheetOpen=true;const sheet={classList:{remove(v){if(v==='open')sheetOpen=false}}};
+const root={querySelectorAll(){return[]}},document={readyState:'complete',body:root,querySelectorAll(s){return s.includes('#sheet.open')?[sheet]:[]}};
+class MutationObserver{constructor(fn){this.fn=fn}observe(){}}
+const location={pathname:'/generator.html',href:''};
+const navigator={clipboard:{writeText(v){copied=v;return Promise.resolve()}}};
+const ctx=vm.createContext({console,document,MutationObserver,localStorage,location,navigator,Date});ctx.window=ctx;
+vm.runInContext(fs.readFileSync('cnc-emulator-bridge.js','utf8'),ctx,{filename:'cnc-emulator-bridge.js'});
+const assert=(v,m)=>{if(!v)throw new Error(m)};
+assert(ctx.RazryadEmulator.looksLikeLatheNc('G00 X50 Z2\nG01 Z-20 F.2'),'valid X/Z lathe code was not detected');
+assert(!ctx.RazryadEmulator.looksLikeLatheNc('G00 X10 Y10'),'milling-only code was incorrectly offered to 2D lathe emulator');
+ctx.RazryadEmulator.store({code:'G00 X50 Z2',title:'test'});
+assert(ctx.RazryadEmulator.take().title==='test'&&!localStorage.getItem(ctx.RazryadEmulator.KEY),'handoff was not consumed exactly once');
+ctx.RazryadEmulator.open('G00 X50 Z2\nG01 Z-10',{title:'from generator'});
+assert(location.href==='./chpu.html?open=emulator','cross-page handoff did not navigate to emulator');
+let received='';ctx.RazryadCNC={openWithCode(code){received=code;return true}};location.href='';
+ctx.RazryadEmulator.open('G00 X60 Z3\nG01 Z-20',{title:'same page'});
+assert(received.includes('X60')&&location.href==='','same-page handoff did not use the loaded simulator');
+assert(copied.includes('X60')&&!sheetOpen,'emulator button did not copy the code or close the open sheet before navigation');
+console.log('emulator bridge smoke tests: OK');

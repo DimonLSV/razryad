@@ -127,11 +127,11 @@ nav .nb{transition:transform .18s,background .18s,color .18s}nav .nb.on{box-shad
 @media (max-width:360px){.v99-grid{grid-template-columns:1fr}.v99-wide{grid-column:auto}.v99-actions.three{grid-template-columns:1fr 1fr}.v99-hero h2{font-size:24px}}
 @media (prefers-reduced-motion:reduce){.v99-hero:after,.device header:after,.v99-timer.run{animation:none!important}.v99-enter{animation:none!important}}
 
-/* V0.993: единый Backplot, экспериментальные режимы и настраиваемая главная */
+/* V0.993: единый эмулятор CNC, экспериментальные режимы и настраиваемая главная */
 .experimental-warning{border:1px solid #9b3b32;border-left:4px solid #ff5145;border-radius:11px;background:linear-gradient(135deg,#2a0f0d,#180d0d);padding:10px 11px;margin:0 0 11px;color:#f2d7d4;box-shadow:0 8px 22px rgba(88,10,6,.22)}
 .experimental-warning b{display:block;color:#ff766c;font:600 11px "IBM Plex Mono",monospace;letter-spacing:.055em}.experimental-warning span{display:block;margin-top:5px;font-size:10.5px;line-height:1.48;color:#e2c2bf}
-.backplot-launch{width:100%;margin-top:10px;background:linear-gradient(135deg,#ff9a3d,#ff6100)!important;color:#160900!important;box-shadow:0 7px 22px rgba(255,107,0,.24)}
-.backplot-bridge-actions{display:flex;justify-content:flex-end;margin:-3px 0 11px}.backplot-bridge-btn{border:1px solid #6f451f;border-radius:8px;background:#21150e;color:#ffad61;padding:7px 9px;font:600 9px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.04em;cursor:pointer}.backplot-bridge-btn span{color:#ff6b00;margin-right:3px}
+.cnc-emu-launch{width:100%;margin-top:10px;background:linear-gradient(135deg,#ff9a3d,#ff6100)!important;color:#160900!important;box-shadow:0 7px 22px rgba(255,107,0,.24)}
+.cnc-emu-actions{display:flex;justify-content:flex-end;margin:-3px 0 11px}.cnc-emu-btn{border:1px solid #6f451f;border-radius:8px;background:#21150e;color:#ffad61;padding:7px 9px;font:600 9px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.04em;cursor:pointer}.cnc-emu-btn span{color:#ff6b00;margin-right:3px}
 .lsim-import-source{display:flex;justify-content:space-between;gap:9px;align-items:flex-start;border-bottom:1px solid rgba(255,255,255,.08);padding:0 0 8px;margin:0 0 8px}.lsim-import-source b{color:#ffad61;font:500 12px "Oswald",sans-serif}.lsim-import-source span{color:#82909a;font:500 8px "IBM Plex Mono",monospace;text-align:right}
 .work-sec{display:flex;align-items:center;justify-content:space-between}.work-sec button{border:1px solid #4b3b2f;border-radius:8px;background:#21160f;color:#ff9c48;padding:6px 8px;font:600 8px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.05em}.work-layout-item{position:relative;touch-action:pan-y}.work-layout-item::after{content:"УДЕРЖАТЬ";position:absolute;right:7px;top:7px;border-radius:5px;background:rgba(5,8,11,.68);color:#8d98a1;padding:3px 5px;font:600 6.5px "IBM Plex Mono",monospace;letter-spacing:.04em;opacity:0;transition:opacity .2s}.work-sec:hover~.work-grid .work-layout-item::after{opacity:.8}
 .work-editor{position:fixed;inset:0;z-index:120;display:none;align-items:flex-end;justify-content:center;background:rgba(2,4,6,.78);backdrop-filter:blur(8px);padding:12px}.work-editor.open{display:flex;animation:workFade .18s ease}.work-editor-sheet{width:min(430px,100%);max-height:min(86vh,820px);overflow:auto;border:1px solid #4a5660;border-radius:18px 18px 12px 12px;background:linear-gradient(180deg,#171d22,#0d1013);padding:14px;box-shadow:0 -18px 55px rgba(0,0,0,.62);animation:workSheet .28s cubic-bezier(.2,.8,.2,1)}
@@ -139,10 +139,10 @@ nav .nb{transition:transform .18s,background .18s,color .18s}nav .nb.on{box-shad
 .work-current{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:thin}.work-current button{flex:0 0 122px;min-height:55px;border:1px solid #313c45;border-radius:9px;background:#0b0f12;color:#d7dde1;padding:7px;display:grid;grid-template-columns:23px 1fr;gap:6px;text-align:left}.work-current button.on{border-color:#ff7a18;background:#25170d}.work-current i,.work-catalog i{font:600 13px "IBM Plex Mono",monospace;color:#ff9c45;font-style:normal}.work-current b{font-size:9.5px}.work-current small{display:block;color:#77838d;font-size:7.5px;margin-top:3px}
 .work-catalog{display:grid;grid-template-columns:1fr 1fr;gap:7px}.work-catalog button{min-height:62px;border:1px solid #34404a;border-radius:10px;background:#0c1115;color:#e2e7ea;padding:8px;display:grid;grid-template-columns:25px 1fr;gap:7px;text-align:left;cursor:pointer}.work-catalog button:active{border-color:#ff7a18;transform:scale(.98)}.work-catalog b{font:500 12px "Oswald",sans-serif}.work-catalog small{display:block;color:#89959e;font-size:8px;line-height:1.3;margin-top:3px}.work-editor-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.work-editor-actions .btn{font-size:9px;min-height:42px}.work-editor-actions .btn:disabled{opacity:.35}
 @keyframes workFade{from{opacity:0}to{opacity:1}}@keyframes workSheet{from{transform:translateY(35px);opacity:.3}to{transform:none;opacity:1}}
-@media(max-width:380px){.work-catalog{grid-template-columns:1fr}.work-editor{padding:7px}.work-editor-sheet{max-height:90vh}.backplot-bridge-btn{width:100%}}
+@media(max-width:380px){.work-catalog{grid-template-columns:1fr}.work-editor{padding:7px}.work-editor-sheet{max-height:90vh}.cnc-emu-btn{width:100%}}
 @media(prefers-reduced-motion:reduce){.work-editor,.work-editor-sheet{animation:none!important}.work-layout-item::after{transition:none}}
 
-/* --- Backplot: выбор диалекта стойки --- */
+/* --- Эмулятор CNC: выбор диалекта стойки --- */
 .lsim-dialect{display:grid;grid-template-columns:auto auto auto 1fr;gap:7px;align-items:center;margin-top:9px;padding:7px 9px;border:1px solid #3d4851;border-radius:11px;background:linear-gradient(180deg,#151b21,#0d1114)}
 .lsim-dialect>span{color:#8d99a2;font:600 8px "IBM Plex Mono",monospace;letter-spacing:.08em}
 .lsim-dialect button{border:1px solid #3c4852;border-radius:6px;background:#10161b;color:#aeb9c2;min-height:30px;padding:5px 13px;font:600 9px "IBM Plex Mono",monospace;cursor:pointer}
@@ -172,3 +172,5 @@ body.lsim-full-open nav{display:none}
 .lsim-stage.full .lsim-fsbar button[data-fs="play"]{background:linear-gradient(180deg,#ffb158,#f27814);color:#0a0d10;border-color:#df8a2b}
 .lsim-stage.full .lsim-fsbar button[data-fs="exit"]{color:#ff8f7f;border-color:#5a2f28}
 .lsim-stage.full .lsim-axis{display:none}
+.lsim-tool-note{grid-column:1/-1;margin:6px 0 0;color:#8d99a2;font-size:10px;line-height:1.45}
+.lsim-tool-note:empty{display:none}
