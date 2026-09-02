@@ -9,6 +9,7 @@ const ctx=vm.createContext({console,Math,Date,JSON,Number,String,Array,Object,Fl
  localStorage:{getItem:()=>null,setItem(){},removeItem(){}},
  requestAnimationFrame:()=>1,cancelAnimationFrame(){},setTimeout:()=>1});
 ctx.window=ctx;
+vm.runInContext(fs.readFileSync(path.join(root,'cnc-sim-core.js'),'utf8'),ctx,{filename:'cnc-sim-core.js'});
 vm.runInContext(fs.readFileSync(path.join(root,'mill-sim-v99.js'),'utf8'),ctx,{filename:'mill-sim-v99.js'});
 const M=ctx.RazryadMill;
 
@@ -346,6 +347,42 @@ const bandX=(mat,y,depth)=>{const j=Math.round((y-mat.y0)/mat.step);let w=0;
  const cw=run(prog(true),cfg).mat,ccw=run(prog(true).replace('G02','G03'),cfg).mat;
  let worst=0;for(let i=0;i<cw.z.length;i++)worst=Math.max(worst,Math.abs(cw.z[i]-ccw.z[i]));
  near(worst,0,.01,'G02 и G03 по полной окружности дали разные кольца');
+}
+
+/* ---------- 26. Дуги во всех трёх плоскостях ---------- */
+{
+ /* Раньше дуга вне G17 строилась в XY: эмулятор показывал не ту траекторию и
+    честно об этом предупреждал, но картинка всё равно была неверной. */
+ const cfg={...M.defaults(),stockX:140,stockY:100,stockZ:40,toolConfigs:tool(1)};
+ const H='G21 G90 G40 G49 G80\nT01 M06\nG43 H01\nS3000 M03\n';
+ const arcOf=code=>{
+  const res=M.parseMillGcode(code,cfg);
+  const seg=res.segments.find(s=>s.arc);
+  assert(seg,'Дуга не построена: '+code.split('\n').filter(l=>/G0?[23]/.test(l))[0]);
+  return seg;
+ };
+ const onCircle=(seg,cu,cv,r,au,av,label)=>{
+  seg.points.forEach(p=>near(Math.hypot(p[au]-cu,p[av]-cv),r,.02,label));
+ };
+ const xy=arcOf(H+'G17\nG00 X50. Y50. Z2.\nG01 Z-3. F150\nG02 X90. Y50. I20. J0. F400\nM30');
+ onCircle(xy,70,50,20,'x','y','Дуга G17 ушла с радиуса в плоскости XY');
+ xy.points.forEach(p=>near(p.z,-3,1e-9,'Дуга G17 не должна менять Z без винтовой подачи'));
+
+ const zx=arcOf(H+'G18\nG00 X50. Y50. Z2.\nG01 Z-3. F150\nG02 Z-43. X50. K-20. I0. F400\nM30');
+ onCircle(zx,-23,50,20,'z','x','Дуга G18 ушла с радиуса в плоскости ZX');
+ zx.points.forEach(p=>near(p.y,50,1e-9,'Дуга G18 не должна менять Y'));
+
+ const yz=arcOf(H+'G19\nG00 X50. Y50. Z2.\nG01 Z-3. F150\nG02 Y90. Z-3. J20. K0. F400\nM30');
+ onCircle(yz,70,-3,20,'y','z','Дуга G19 ушла с радиуса в плоскости YZ');
+ yz.points.forEach(p=>near(p.x,50,1e-9,'Дуга G19 не должна менять X'));
+
+ /* винтовая интерполяция: третья ось идёт по прямой от начала к концу */
+ const helix=arcOf(H+'G17\nG00 X50. Y50. Z2.\nG01 Z-1. F150\nG02 X90. Y50. Z-9. I20. J0. F400\nM30');
+ onCircle(helix,70,50,20,'x','y','Винтовая дуга ушла с радиуса');
+ near(helix.points[0].z,-1,1e-9,'Винтовая дуга начинается не с исходной Z');
+ near(helix.points[helix.points.length-1].z,-9,1e-9,'Винтовая дуга не пришла в конечную Z');
+ for(let i=1;i<helix.points.length;i++)
+  assert(helix.points[i].z<=helix.points[i-1].z+1e-9,'Винтовая дуга по Z должна идти монотонно');
 }
 
 console.log('mill machining tests: OK ('+checks+' проверок)');

@@ -7,12 +7,13 @@
    радиусом при вершине — галтель в углу паза, а сверло — конус на дне.
 
    Подсветка G-кода, цвета траектории и стили редактора берутся у токарного
-   модуля через window.RazryadCNC — они общие для обоих эмуляторов. */
+   модуля через window.RazryadSimCore — они общие для обоих эмуляторов и
+   не зависят от того, загрузился ли токарный. */
 (function(){
 const STORE='razryad-mill-sim-v99';
 const VIEW_STORE='razryad-mill-view-v1';
 const TOOL_STORE='razryad-mill-tools-v99';
-const CNC=window.RazryadCNC||{};
+const CNC=window.RazryadSimCore||{};
 let millState=null,millFrame=0,millLast=0,millResult=null,millResize=null,viewState=loadView();
 const root=document.querySelector('.device');
 
@@ -295,12 +296,20 @@ function words(line){const out={},all=[];
  return{out,all};}
 
 /* дуга в плоскости XY по I/J или R */
-function arcXY(from,to,w,cw,unit){
- const a={x:from.x,y:from.y},b={x:to.x,y:to.y};
+/* Дуга в любой из трёх плоскостей. G17 — XY со смещениями I/J, G18 — ZX с K/I,
+   G19 — YZ с J/K. Третья ось идёт по прямой: так работает винтовая интерполяция.
+   Математика одна, меняются только имена осей, поэтому считаем в паре (u,v)
+   и раскладываем обратно в конце. */
+const PLANE_AXES={17:{u:'x',v:'y',w:'z',iu:'I',iv:'J'},
+                  18:{u:'z',v:'x',w:'y',iu:'K',iv:'I'},
+                  19:{u:'y',v:'z',w:'x',iu:'J',iv:'K'}};
+function arcXY(from,to,w,cw,unit,plane){
+ const ax=PLANE_AXES[plane]||PLANE_AXES[17];
+ const a={x:from[ax.u],y:from[ax.v]},b={x:to[ax.u],y:to[ax.v]};
  const chord=Math.hypot(b.x-a.x,b.y-a.y);
  let centres=[];
- if(Number.isFinite(w.I)||Number.isFinite(w.J)){
-  centres=[{x:a.x+(Number.isFinite(w.I)?w.I*unit:0),y:a.y+(Number.isFinite(w.J)?w.J*unit:0)}];
+ if(Number.isFinite(w[ax.iu])||Number.isFinite(w[ax.iv])){
+  centres=[{x:a.x+(Number.isFinite(w[ax.iu])?w[ax.iu]*unit:0),y:a.y+(Number.isFinite(w[ax.iv])?w[ax.iv]*unit:0)}];
  }else if(Number.isFinite(w.R)){
   const rad=Math.abs(w.R*unit);
   if(chord<1e-9||rad<chord/2-1e-6)return null;
@@ -328,7 +337,8 @@ function arcXY(from,to,w,cw,unit){
  if(Math.abs(endR-pick.r)>Math.max(.02,pick.r*.002))return null;
  const count=Math.max(8,Math.min(240,Math.ceil(Math.abs(pick.sweep)*pick.r/.8))),out=[];
  for(let i=0;i<=count;i++){const q=i/count,ang=pick.sa+pick.sweep*q;
-  out.push({x:pick.c.x+Math.cos(ang)*pick.r,y:pick.c.y+Math.sin(ang)*pick.r,z:from.z+(to.z-from.z)*q});}
+  const p={};p[ax.u]=pick.c.x+Math.cos(ang)*pick.r;p[ax.v]=pick.c.y+Math.sin(ang)*pick.r;
+  p[ax.w]=from[ax.w]+(to[ax.w]-from[ax.w])*q;out.push(p);}
  out[0]={...from};out[out.length-1]={...to};
  return out;
 }
@@ -463,7 +473,7 @@ function parseMillGcode(code,rawCfg){
   if(clean.includes('#')||/\b(IF|WHILE|GOTO|M97|M98)\b/.test(clean))
    add('bad','Макросы и подпрограммы нельзя достоверно раскрыть: вставьте развёрнутую программу.',line1);
   if(plane!==17&&(gs.includes(2)||gs.includes(3)))
-   add('warn','Дуга задана не в плоскости G17: эмулятор строит её в XY.',line1);
+   add('warn','Дуга в плоскости G'+plane+': построена верно, но карта высот показывает вид сверху — боковой контур смотрите в разрезе.',line1);
   if(gs.includes(28)||gs.includes(53))add('warn','G28/G53 показан как программная линия: машинный ноль проверяется на стойке.',line1);
   if(comp&&!compD)add('warn','G41/G42 без адреса D: корректор радиуса не назначен.',line1);
 
@@ -502,7 +512,7 @@ function parseMillGcode(code,rawCfg){
   if(!hasMove)return;
   const to=toPoint(pos,out,unit);
   const arc=motion==='G02'||motion==='G03';
-  let pts=arc?arcXY(pos,to,out,motion==='G02',unit):[{...pos},{...to}];
+  let pts=arc?arcXY(pos,to,out,motion==='G02',unit,plane):[{...pos},{...to}];
   if(arc&&!pts){add('bad','Дуга G02/G03 не построена: проверьте I/J либо R и конечную точку.',line1);pts=[{...pos},{...to}];}
   const rapid=motion==='G00';
   if(!rapid&&comp)pts=offsetPoints(pts,comp,R);
@@ -1247,7 +1257,36 @@ function showMill(){
  if(typeof bind==='function')bind();
  if(typeof numFix==='function')numFix();
  $('#screen').scrollTop=0;
- applyMillForm(false);syncMillEditor(true);
+ applyMillForm(false);syncMillEditor(true);consumeMillHandoff();
+}
+
+/* Приём программы, переданной из генератора, примеров или «Фото → G-код».
+   Мост кладёт её в общее хранилище и помечает, какому эмулятору она адресована;
+   чужую не забираем, иначе токарный код осел бы здесь и пропал. */
+function consumeMillHandoff(){
+ const bridge=window.RazryadEmulator;
+ if(!bridge||!bridge.peek||!$('#msimGcode'))return false;
+ const item=bridge.peek();
+ if(!item||!item.code||item.kind==='lathe')return false;
+ if(bridge.take)bridge.take();
+ $('#msimGcode').value=item.code;
+ analyzeMill(false);
+ const box=$('#msimReport');
+ if(box)box.insertAdjacentHTML('afterbegin','<div class="lsim-import-source"><b>'+h(item.title||'NC-программа')
+  +'</b><span>Передано из '+h(item.source||'приложения')+'</span></div>');
+ if(typeof toast==='function')toast('Код передан во фрезерный эмулятор');
+ return true;
+}
+
+function millOpenWithCode(code,meta){
+ const item={code:String(code||'').trim(),title:meta&&meta.title||'NC-программа',
+  source:meta&&meta.source||'РАЗРЯД',kind:'mill',created:Date.now()};
+ if(!item.code)return false;
+ if(window.RazryadEmulator&&window.RazryadEmulator.store)window.RazryadEmulator.store(item);
+ tab='work';folder='millx';
+ if(typeof deeper==='function')deeper();
+ try{history.replaceState({...history.state,razryadMillRoute:true},'',location.href);}catch(_){}
+ render();return true;
 }
 /* release=true — уходим с экрана: опорные снимки карты высот занимают десятки
    мегабайт, держать их, пока пользователь в другом разделе, незачем */
@@ -1274,7 +1313,7 @@ if(typeof render==='function'){const prevRender=render;
 
 window.RazryadMill={MILL_TOOLS,MILL_GROUPS,millToolOptions,bottomProfile,blankBlock,cloneBlock,
  applyMillCut,blockProfile,makeMillCutter,parseMillGcode,detectMillTools,inferBlock,arcXY,
- defaults,summarizeBlock,drawMill,DEMO};
+ defaults,summarizeBlock,drawMill,DEMO,openWithCode:millOpenWithCode,consumeHandoff:consumeMillHandoff};
 try{if(new URLSearchParams(location.search).get('open')==='mill'||history.state&&history.state.razryadMillRoute){
  tab='work';folder='millx';history.replaceState({...history.state,razryadMillRoute:true},'',location.pathname);}}catch(_){}
 if(typeof render==='function')render();

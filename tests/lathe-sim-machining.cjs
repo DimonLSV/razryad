@@ -12,7 +12,7 @@ ctx.window=ctx;ctx.window.addEventListener=()=>{};ctx.window.scrollTo=()=>{};
 const html=fs.readFileSync(path.join(root,'chpu.html'),'utf8');
 const scripts=[...html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g)].map(x=>x[1]).filter(x=>x.trim());
 vm.runInContext(scripts[scripts.length-1],ctx,{filename:'chpu-inline.js'});
-['operator-tools.js','chpu-v99.js','lathe-sim-v99.js'].forEach(f=>vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),ctx,{filename:f}));
+['cnc-sim-core.js','operator-tools.js','chpu-v99.js','lathe-sim-v99.js'].forEach(f=>vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),ctx,{filename:f}));
 const CNC=ctx.RazryadCNC;
 
 let checks=0;
@@ -197,6 +197,21 @@ const tool=(station,over)=>({[station]:{station,kind:'cnmg',operation:'external'
  /* остаток — сама точка, где инструмент стоит: она в полный проход попадает между
     узлами сетки. Держим его на уровне единиц микрон. */
  assert(worst<=.005,'Частичный проход снял больше полного на '+(worst*1000).toFixed(1)+' мкм');
+}
+/* ---------- 16d. Торцевание крупным шагом не оставляет колец ---------- */
+{
+ /* Раньше слой от плоскости реза до торца сносила отдельная эвристика faceSlab.
+    Теперь его снимает сама огибающая: вспомогательная кромка тянется вперёд по Z
+    на длину пластины. Проверяем то, ради чего эвристика была нужна — цикл с шагом
+    заметно крупнее сетки. Между проходами не должно остаться нетронутых колец. */
+ const r=runNC(head+'T0101\nG00 X64. Z0.\nG94 X0. Z-3. F0.15\nZ-6.\nZ-9.\nZ-12.\nG00 X70. Z5.\nM30');
+ [-1,-2,-3,-4,-5,-6,-8,-10,-11].forEach(z=>
+  assert(at(r.mat,z).outer<1,'Торцевание G94 оставило кольцо на Z'+z+': Ø'+(at(r.mat,z).outer*2).toFixed(2)));
+ near(at(r.mat,-13).outer,30,.05,'Торцевание ушло глубже последнего прохода');
+ /* и одиночная подрезка ведёт себя так же */
+ const one=runNC(head+'T0101\nG00 X64. Z-3.\nG01 X0. F0.15\nG00 X64.\nZ5.\nM30');
+ [-1,-2].forEach(z=>assert(at(one.mat,z).outer<1,'Одиночная подрезка оставила кольцо на Z'+z));
+ near(at(one.mat,-4).outer,30,.05,'Одиночная подрезка ушла глубже плоскости реза');
 }
 /* ---------- 17. Реальная программа с постпроцессора проходит без ложных ударов ---------- */
 {

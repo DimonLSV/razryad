@@ -20,8 +20,8 @@ function paint(){const cv=$('#lsimCanvas');if(!cv)return;
 function saveView(){try{localStorage.setItem(VIEW_STORE,JSON.stringify(viewState))}catch(_){}}
 function loadToolStore(){try{return JSON.parse(localStorage.getItem(TOOL_STORE)||'{}')||{}}catch(_){return{}}}
 function saveToolStore(v){try{localStorage.setItem(TOOL_STORE,JSON.stringify(v||{}))}catch(_){}}
-function h(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function n(v){const x=Number(v);return Number.isFinite(x)?x:0;}
+const h=v=>(window.RazryadSimCore||{}).h(v);
+const n=v=>(window.RazryadSimCore||{}).n(v);
 /* Насколько резцу позволено уйти за ось при подрезке торца: X-0,5…X-2 — штатная
    практика, чтобы не осталась пуговка. Больше этого — уже описка в знаке, и такой
    кадр не снимает металл, а помечается ошибкой. */
@@ -34,96 +34,10 @@ const AXIS_OVERRUN=5;
    Светлая схема повторяет CIMCO один в один; тёмная сохраняет те же оттенки,
    но поднимает светлоту — иначе тёмно-синий X на чёрном фоне не читается.
    ============================================================ */
-const GK_THEMES={
- cimco:{bg:'#ffffff',fg:'#000000',gutter:'#f0f0f0',gutterText:'#8a8a8a',current:'#ffffa0',bad:'#ffdcd8',caret:'#c03000',line:'#dcdcdc',
-  comment:'#000080',percent:'#800080',skip:'#808080',macro:'#c000c0',
-  A:'#ff8040',B:'#ff8040',C:'#ff8000',D:'#000080',E:'#0000ff',F:'#800000',G:'#408080',H:'#0000a0',I:'#0000ff',
-  J:'#0080c0',K:'#ff0000',L:'#008080',M:'#008000',N:'#000000',O:'#0000ff',P:'#0000ff',Q:'#00b000',R:'#0000ff',
-  S:'#800000',T:'#800000',U:'#0000ff',V:'#0080c0',W:'#ff0000',X:'#0000ff',Y:'#0080c0',Z:'#ff0000'},
- night:{bg:'#0a0e12',fg:'#c9d3da',gutter:'#111820',gutterText:'#5c6b77',current:'#2a1d0c',bad:'#3a1512',caret:'#ff8a34',line:'#22303a',
-  comment:'#8896c8',percent:'#d18ad1',skip:'#7c8b96',macro:'#e08ae0',
-  A:'#ffa06a',B:'#ffa06a',C:'#ffa63d',D:'#8f9bff',E:'#7c96ff',F:'#ff8f7a',G:'#5fc7c7',H:'#8fa6ff',I:'#7c96ff',
-  J:'#4fc0ee',K:'#ff6b5e',L:'#4fd0c8',M:'#5fd07a',N:'#c9d3da',O:'#7c96ff',P:'#7c96ff',Q:'#63e08a',R:'#7c96ff',
-  S:'#ff8f7a',T:'#ff8f7a',U:'#7c96ff',V:'#4fc0ee',W:'#ff6b5e',X:'#7c96ff',Y:'#4fc0ee',Z:'#ff6b5e'}
-};
-/* адреса, которые CIMCO печатает полужирным (в Iso.mac у них старший байт 2 или 3) */
-const GK_BOLD='ABCDFGLMNSTZ';
-const GK_LETTERS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-/* Стили подсветки собираем из палитры, чтобы цвет адреса задавался в одном месте. */
-function gkStyleSheet(){
- const rule=(sel,body)=>sel+'{'+body+'}';
- let css='';
- Object.entries(GK_THEMES).forEach(([name,t])=>{
-  const p='.gk[data-gk-theme="'+name+'"] ';
-  css+=rule(p.trim(),'background:'+t.bg+';color:'+t.fg);
-  css+=rule(p+'.gk-gutter','background:'+t.gutter+';color:'+t.gutterText+';border-right:1px solid '+t.line);
-  css+=rule(p+'.gk-line.current','background:'+t.current);
-  css+=rule(p+'.gk-line.bad','background:'+t.bad);
-  css+=rule(p+'textarea','caret-color:'+t.caret);
-  css+=rule(p+'.gk-comment','color:'+t.comment+';font-style:italic');
-  css+=rule(p+'.gk-percent','color:'+t.percent+';font-weight:700');
-  css+=rule(p+'.gk-skip','color:'+t.skip);
-  css+=rule(p+'.gk-macro','color:'+t.macro);
-  GK_LETTERS.split('').forEach(L=>{
-   css+=rule(p+'.gk-'+L,'color:'+t[L]+(GK_BOLD.includes(L)?';font-weight:700':''));
-  });
- });
- return css;
-}
-function ensureGkStyles(){
- if(document.getElementById('gkSyntaxStyles'))return;
- const el=document.createElement('style');el.id='gkSyntaxStyles';el.textContent=gkStyleSheet();
- (document.head||document.body).appendChild(el);
-}
-
-/* Разбор одной строки кадра на цветные лексемы: адрес забирает и своё число,
-   как в CIMCO — там значение печатается цветом своей буквы. */
-function highlightGcode(text){
- const src=String(text==null?'':text);let out='',i=0;
- const digit=c=>c>='0'&&c<='9';
- while(i<src.length){
-  const ch=src[i];
-  if(ch==='\n'){out+='\n';i++;continue;}
-  if(ch==='('){ /* комментарий в скобках не переходит на следующую строку */
-   let j=i+1;while(j<src.length&&src[j]!==')'&&src[j]!=='\n')j++;
-   const cut=src[j]===')'?j+1:j;
-   out+='<span class="gk-comment">'+h(src.slice(i,cut))+'</span>';i=cut;continue;}
-  if(ch===';'){let j=i;while(j<src.length&&src[j]!=='\n')j++;
-   out+='<span class="gk-comment">'+h(src.slice(i,j))+'</span>';i=j;continue;}
-  if(ch==='%'){out+='<span class="gk-percent">%</span>';i++;continue;}
-  if(ch==='/'&&(i===0||src[i-1]==='\n')){out+='<span class="gk-skip">/</span>';i++;continue;}
-  if(ch==='#'){let j=i+1;while(j<src.length&&(digit(src[j])||src[j]==='['||src[j]===']'))j++;
-   out+='<span class="gk-macro">'+h(src.slice(i,j))+'</span>';i=j;continue;}
-  const up=ch.toUpperCase();
-  if(up>='A'&&up<='Z'){
-   let j=i+1;while(j<src.length&&(src[j]===' '||src[j]==='\t'))j++;
-   let k=j;if(src[k]==='+'||src[k]==='-')k++;
-   let seen=0;while(k<src.length&&(digit(src[k])||src[k]==='.')){if(digit(src[k]))seen++;k++;}
-   const end=seen?k:i+1;
-   out+='<span class="gk-'+up+'">'+h(src.slice(i,end))+'</span>';i=end;continue;}
-  out+=h(ch);i++;
- }
- return out;
-}
-/* Построчная разметка: нужна и для номеров кадров, и для подсветки текущей строки и ошибок. */
-function highlightGcodeLines(text,opts){
- const o=opts||{},lines=String(text==null?'':text).split(/\r?\n/);
- return lines.map((line,idx)=>{
-  const no=idx+1,cls=['gk-line'];
-  if(o.active===no)cls.push('current');
-  if(o.badLines&&o.badLines.has(no))cls.push('bad');
-  return '<span class="'+cls.join(' ')+'">'+(highlightGcode(line)||'&nbsp;')+'</span>';
- }).join('');
-}
-function gcodeGutter(text,opts){
- const o=opts||{},count=String(text==null?'':text).split(/\r?\n/).length;let out='';
- for(let i=1;i<=count;i++){
-  const cls=['gk-num'];if(o.active===i)cls.push('current');if(o.badLines&&o.badLines.has(i))cls.push('bad');
-  out+='<span class="'+cls.join(' ')+'">'+i+'</span>';
- }
- return out;
-}
+/* Подсветка G-кода и мелкие помощники живут в общем ядре cnc-sim-core.js:
+ ими пользуется и фрезерный эмулятор, и держать копию в каждом незачем. */
+const CORE=window.RazryadSimCore||{};
+const {GK_THEMES,gkStyleSheet,ensureGkStyles,highlightGcode,highlightGcodeLines,gcodeGutter}=CORE;
 
 /* Каталог инструмента: группа, геометрия для проверок и силуэт для 2D-отрисовки.
    shape — как рисовать: turn (наружный), bore (расточной), groove, thread, axial.
@@ -954,25 +868,6 @@ function applySegmentCut(mat,seg,cfg,portion=1){
  const profileStep=step,faceAtZero=Math.abs(seg.to.z-seg.from.z)<1e-6&&Math.abs(seg.to.z)<=profileStep*.55;
  if(faceAtZero)return mat;
 
- /* Подрезка торца выносит слой и дальше вылета кромки — там металл сметает уже
-    корпус державки. Ближнюю зону формирует огибающая, поэтому здесь начинаем
-    за её пределом и обрываемся на первой нетронутой ступени выше точки входа. */
- const faceSlab=(p,q,take,shift)=>{
-  if(!outer||op==='groove'||op==='thread')return false;
-  if(Math.abs(q.z-p.z)>=.05||Math.abs(q.x-p.x)<=.05)return false;
-  if(q.x>p.x)return false; /* движение от оси наружу — это отвод, а не подрезка */
-  const zc=q.z,rA=Math.abs(p.x)/2,rB=Math.abs(q.x)/2;
-  const rMin=Math.min(rA,rB)+(shift||0),rMax=Math.max(rA,rB);
-  if(zc>.05||zc<free-.05)return false;
-  const kc=kAt(zc);
-  if(rMax<mat.outer[kc]-.05)return false; /* резец вошёл сбоку, а не с торца */
-  const reach=Math.max(0,rMin+(rMax-rMin)*(1-Math.max(0,Math.min(1,take))));
-  for(let k=kAt(zc+envHi);k<=last&&mat.z[k]<=.05;k++){
-   if(mat.outer[k]>rMax+.05)break; /* дальше стоит ступень выше входа резца */
-   if(reach<mat.outer[k])mat.outer[k]=Math.max(mat.inner[k],reach);
-  }
-  return true;
- };
 
  let remain=total*limit;
  for(let i=1;i<pts.length&&remain>1e-8;i++){
@@ -1035,7 +930,6 @@ function applySegmentCut(mat,seg,cfg,portion=1){
    /* и всегда сама текущая точка инструмента: там он стоит на самом деле */
    if(take>1e-12)cutAt(take);
   }
-  faceSlab(p,q,take,shift);
   remain-=d*take;
  }
  return mat;
@@ -1207,15 +1101,19 @@ function showSimulator(){
 }
 
 function consumeHandoff(){
- const item=window.RazryadEmulator&&window.RazryadEmulator.take?window.RazryadEmulator.take():null;
- if(!item||!item.code||!$('#lsimGcode'))return false;
+ /* чужую программу не забираем: фрезерный код должен дождаться своего эмулятора */
+ const bridge=window.RazryadEmulator;
+ if(!bridge||!bridge.peek||!$('#lsimGcode'))return false;
+ const item=bridge.peek();
+ if(!item||!item.code||item.kind==='mill')return false;
+ if(bridge.take)bridge.take();
  $('#lsimGcode').value=item.code;analyzePastedGcode(false);
  const report=$('#lsimGReport');if(report)report.insertAdjacentHTML('afterbegin',`<div class="lsim-import-source"><b>${h(item.title||'NC-программа')}</b><span>Передано из ${h(item.source||'приложения')}</span></div>`);
  toast('Код передан в эмулятор CNC');return true;
 }
 
 function openWithCode(code,meta){
- const item={code:String(code||'').trim(),title:meta&&meta.title||'NC-программа',source:meta&&meta.source||'РАЗРЯД',created:Date.now()};
+ const item={code:String(code||'').trim(),title:meta&&meta.title||'NC-программа',source:meta&&meta.source||'РАЗРЯД',kind:'lathe',created:Date.now()};
  if(!item.code)return false;
  if(window.RazryadEmulator&&window.RazryadEmulator.store)window.RazryadEmulator.store(item);
  tab='work';folder='simx';geoCase=null;rank=null;filter='Все';deeper();try{history.replaceState({...history.state,razryadEmulatorRoute:true},'',location.href);}catch(_){}render();return true;
@@ -1579,7 +1477,7 @@ function canvasSpace(canvas,banner){
 /* Цвета ходов — как на бэкплоте CIMCO: G0 синий, G1 зелёный, G2 жёлтый, G3 оранжевый. */
 const PATH_COLORS={rapid:'#4a86ff',line:'#41d977',cw:'#ffe14d',ccw:'#ff9330',bad:'#ff4438'};
 function palette(){return{bg:'#070a0d',grid:'#1b252d',steel:'#8798a5',steel2:'#35434d',edge:'#c8d2d8',dark:'#11171c',orange:'#ff6b00',hot:'#ffad49',tool:'#e8d397',cool:'#55b9da',hole:'#040607'};}
-function rounded(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+const rounded=(ctx,x,y,w,h,r)=>CORE.rounded(ctx,x,y,w,h,r);
 
 function currentOuter(m,t){
  const c=m.cfg;if(m.nc&&m.material){const i=Math.max(0,Math.min(m.material.outer.length-1,Math.round(t*(m.material.outer.length-1))));return m.material.outer[i];}const stock=c.stockD/2,target=targetOuter(c,t);if(m.complete)return target;
@@ -1696,7 +1594,7 @@ function flatBounds(m){
  }
  return{zMin,zMax:Math.max(zMax,2),rMax};
 }
-function niceStep(px,k){const list=[.5,1,2,5,10,20,25,50,100,200,500];for(const s of list)if(s*k>=px)return s;return 1000;}
+const niceStep=(px,k)=>CORE.niceStep(px,k);
 function programPoint(m){
  if(m.nc){const seg=activeSegment(),p=seg?pointOnSegment(seg,m.progress):(displaySegment()||{to:{x:m.cfg.stockD+10,z:4}}).to;return{...p};}
  const c=m.cfg,t=m.progress||0;return{x:currentOuter(m,1)*2,z:-Math.max(0,(c.length-c.grip))*t};

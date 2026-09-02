@@ -7,6 +7,7 @@ const ctx=vm.createContext({console,document,localStorage,navigator:{},history:{
 const html=fs.readFileSync('chpu.html','utf8'),scripts=[...html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g)].map(x=>x[1]).filter(x=>x.trim());
 // Последний большой встроенный скрипт содержит данные и старые разделы.
 vm.runInContext(scripts[scripts.length-1],ctx,{filename:'chpu-inline.js'});
+vm.runInContext(fs.readFileSync('cnc-sim-core.js','utf8'),ctx,{filename:'cnc-sim-core.js'});
 vm.runInContext(fs.readFileSync('operator-tools.js','utf8'),ctx,{filename:'operator-tools.js'});
 vm.runInContext(fs.readFileSync('chpu-v99.js','utf8'),ctx,{filename:'chpu-v99.js'});
 vm.runInContext(fs.readFileSync('lathe-sim-v99.js','utf8'),ctx,{filename:'lathe-sim-v99.js'});
@@ -106,7 +107,17 @@ assert(run("RazryadV99.shopStats({good:18,reject:2,target:25}).rejectRate")===10
 // V0.994 — плоский 2D emulator, каталог инструмента, диалект стойки
 // V0.997 — переключатель вида стал парой подписанных кнопок 2D / 2.5D
 assert(simSource.includes('function draw2D')&&simSource.includes('data-lsim-mode="flat"')&&simSource.includes('data-lsim-mode="solid"'),'flat 2D emulator renderer or its mode switch is missing');
-assert(simSource.includes('function highlightGcode')&&simSource.includes('GK_THEMES')&&simSource.includes('data-lsim-codetheme="cimco"'),'CIMCO G-code syntax colouring is missing');
+// V0.999 — подсветка переехала в общее ядро, оба эмулятора берут её оттуда
+{const core=fs.readFileSync('cnc-sim-core.js','utf8');
+ assert(core.includes('function highlightGcode')&&core.includes('GK_THEMES'),'G-code syntax colouring is missing from the shared core');
+ assert(core.includes('window.RazryadSimCore='),'shared core does not export RazryadSimCore');
+ assert(simSource.includes('data-lsim-codetheme="cimco"'),'CIMCO colour theme selector is missing from the lathe emulator');
+ assert(!simSource.includes('function highlightGcode'),'lathe emulator still keeps its own copy of the highlighter');
+ const mill=fs.readFileSync('mill-sim-v99.js','utf8');
+ assert(mill.includes('window.RazryadSimCore')&&!mill.includes('window.RazryadCNC'),'milling emulator must take shared helpers from the core, not from the lathe');
+ const order=html.indexOf('cnc-sim-core.js');
+ assert(order>0&&order<html.indexOf('lathe-sim-v99.js')&&order<html.indexOf('mill-sim-v99.js'),'shared core must be loaded before both emulators');
+ assert(fs.readFileSync('sw.js','utf8').includes('./cnc-sim-core.js'),'shared core is missing from the offline cache list');}
 assert(simSource.includes('function makeCutter')&&simSource.includes('cloneStock'),'incremental material cutter is missing');
 assert(simSource.includes('drawToolPreview')&&simSource.includes('data-tool-preview'),'tool preview is missing');
 assert(simSource.includes('data-lsim-dialect="fanuc"')&&simSource.includes("cfg.dialect==='fanuc'"),'Haas/Fanuc dialect switch is missing');
