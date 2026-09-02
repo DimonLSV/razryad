@@ -257,7 +257,7 @@ $('#sendBtn').onclick=()=>{$('#gateway').value=localStorage.getItem('razryad-dnc
 $('#restartBtn').onclick=()=>{state.step=1;state.template='shaft';applyPreset('shaft');state.gcode='';state.source='';$$('.template').forEach(b=>b.classList.toggle('selected',b.dataset.template==='shaft'));$('#fileInput').value='';$('#ocrText').value='';$('#preview').classList.remove('on');$('#simConfirmed').checked=false;$$('.export').forEach(b=>b.disabled=true);go(1)};
 window.addEventListener('beforeunload',saveDraft);drawProgress();
 </script>
-<script src="./cnc-emulator-bridge.js?v=0996a"></script>
+<script src="./cnc-emulator-bridge.js?v=0998a"></script>
 <script src="./vendor/qrcode/qrcode.js"></script>
 <script src="./generator-pro.js"></script>
 <script src="./generator-v99.js"></script>

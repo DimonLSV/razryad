@@ -24,9 +24,19 @@ assert(fs.readFileSync('operator-tools.js','utf8').includes('work-split'),'split
 assert(fs.readFileSync('operator-tools.js','utf8').includes('latheSimBannerCanvas'),'2.5D simulator banner is missing');
 assert(fs.readFileSync('operator-tools.js','utf8').includes('ЭМУЛЯТОР CNC'),'requested emulator banner title is missing');
 assert(run("RazryadTools.searchIndex().some(x=>x.folder==='simx'&&x.n==='Эмулятор CNC')")===true,'CNC emulator is missing from global navigation search');
-assert(run("RazryadTools.workLayout().length")===9,'default customizable Work layout is invalid');
+assert(run("RazryadTools.workLayout().length")===10,'default customizable Work layout is invalid');
 assert(run("RazryadTools.workLayout()[0]")==='work:simx','CNC emulator must be the first card on the Work home');
 assert(fs.readFileSync('operator-tools.js','utf8').includes('setTimeout(()=>{timer=0;workBlockClickUntil')&&fs.readFileSync('operator-tools.js','utf8').includes('workEditorReset'),'long-press Work customization or factory reset is missing');
+// V0.998 — фрезерный эмулятор X/Y/Z рядом с токарным
+assert(html.includes('mill-sim-v99.js'),'milling emulator script is not loaded');
+assert(fs.readFileSync('sw.js','utf8').includes('./mill-sim-v99.js'),'milling emulator is missing from the offline cache list');
+assert(fs.readFileSync('operator-tools.js','utf8').includes("route:'work:millx'"),'milling emulator route is missing');
+assert(run("RazryadTools.searchIndex().some(x=>x.folder==='millx')")===true,'milling emulator is missing from global navigation search');
+assert(run("RazryadTools.workLayout().includes('work:millx')")===true,'milling emulator card is missing from the Work home');
+{const mill=fs.readFileSync('mill-sim-v99.js','utf8');
+ assert(mill.includes('function parseMillGcode')&&mill.includes('function applyMillCut')&&mill.includes('function makeMillCutter'),'milling engine is incomplete');
+ assert(mill.includes('function bottomProfile')&&mill.includes("kind==='ball'")&&mill.includes("kind==='bull'")&&mill.includes("kind==='cone'"),'milling tool bottom profiles (ball/bull/cone) are missing');
+ assert(mill.includes('const MILL_TOOLS=')&&mill.includes('millToolOptions'),'milling tool catalogue is missing');}
 assert(run("RazryadCNC.validate({...RazryadCNC.defaults(),stockD:60,targetD:45}).errors.length")===0,'valid lathe simulator setup was rejected');
 assert(run("RazryadCNC.validate({...RazryadCNC.defaults(),stockD:40,targetD:50}).errors.length")>0,'invalid external diameter was not rejected');
 assert(run("RazryadCNC.buildModel({...RazryadCNC.defaults(),stockD:60,targetD:40,depth:2}).totalPasses")===5,'layer count in lathe simulator is incorrect');
@@ -94,7 +104,10 @@ assert(run("RazryadV99.profileValidate({...RazryadV99.profileDefault(),maxRpm:0}
 assert(run("RazryadV99.shopStats({good:18,reject:2,target:25}).rejectRate")===10,'shop reject rate is incorrect');
 
 // V0.994 — плоский 2D emulator, каталог инструмента, диалект стойки
-assert(simSource.includes('function draw2D')&&simSource.includes('data-lsim-view="flat"'),'flat 2D emulator renderer or its toggle is missing');
+// V0.997 — переключатель вида стал парой подписанных кнопок 2D / 2.5D
+assert(simSource.includes('function draw2D')&&simSource.includes('data-lsim-mode="flat"')&&simSource.includes('data-lsim-mode="solid"'),'flat 2D emulator renderer or its mode switch is missing');
+assert(simSource.includes('function highlightGcode')&&simSource.includes('GK_THEMES')&&simSource.includes('data-lsim-codetheme="cimco"'),'CIMCO G-code syntax colouring is missing');
+assert(simSource.includes('function makeCutter')&&simSource.includes('cloneStock'),'incremental material cutter is missing');
 assert(simSource.includes('drawToolPreview')&&simSource.includes('data-tool-preview'),'tool preview is missing');
 assert(simSource.includes('data-lsim-dialect="fanuc"')&&simSource.includes("cfg.dialect==='fanuc'"),'Haas/Fanuc dialect switch is missing');
 assert(run('Object.keys(RazryadCNC.TOOL_LIBRARY).length')>=25,'tool catalog was not expanded');

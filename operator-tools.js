@@ -12,6 +12,7 @@ const WORK=[
 const WORK_LAYOUT_KEY='razryad-work-layout-v1';
 const WORK_EXTRA=[
  {id:'simx',route:'work:simx',n:'Эмулятор CNC',d:'2D-проверка программы и каждого T',icon:'▶',bg:'codes'},
+ {id:'millx',route:'work:millx',n:'Эмулятор ЧПУ · фрезерный',d:'Карта высот детали, разрез и циклы сверления',icon:'▦',bg:'codes'},
  {id:'modes',route:'calc:rez',n:'Режимы резания',d:'Материал, HRC, Vc, обороты и подача',icon:'S',bg:'calc'},
  {id:'threadcalc',route:'calc:thr',n:'Резьба',d:'Диаметры, шаг и цикл G76',icon:'M',bg:'calc'},
  {id:'profilex',route:'work:profilex',n:'Профиль станка',d:'Патрон, лимиты и карта инструментов',icon:'P',bg:'work'},
@@ -21,9 +22,10 @@ const WORK_EXTRA=[
  {id:'inner',route:'calc:id',n:'Контур внутренний',d:'Расточка, фаски и переходы отверстия',icon:'Ø',bg:'calc'}
 ];
 const workKey=x=>x.split?'split:'+x.id:(x.route||'work:'+x.id);
-const DEFAULT_WORK_LAYOUT=['work:simx',...WORK.map(workKey),'work:profilex'];
+const DEFAULT_WORK_LAYOUT=['work:simx','work:millx',...WORK.map(workKey),'work:profilex'];
 function workCatalog(){const a=[...WORK,...WORK_EXTRA],seen=new Set();return a.filter(x=>{const k=workKey(x);if(seen.has(k))return false;seen.add(k);return true;});}
 const WORK_SIM_MIGRATED='razryad-work-sim-top-v1';
+const WORK_MILL_MIGRATED='razryad-work-mill-added-v1';
 function workLayout(){const catalog=new Set(workCatalog().map(workKey)),saved=loadJSON(WORK_LAYOUT_KEY,DEFAULT_WORK_LAYOUT);
  let valid=(Array.isArray(saved)?saved:DEFAULT_WORK_LAYOUT).filter(k=>catalog.has(k));
  if(!valid.length)valid=[...DEFAULT_WORK_LAYOUT];
@@ -31,6 +33,15 @@ function workLayout(){const catalog=new Set(workCatalog().map(workKey)),saved=lo
  if(!localStorage.getItem(WORK_SIM_MIGRATED)){
   valid=['work:simx',...valid.filter(k=>k!=='work:simx')];
   try{localStorage.setItem(WORK_SIM_MIGRATED,'1');saveJSON(WORK_LAYOUT_KEY,valid.slice(0,12));}catch(e){}
+ }
+ /* фрезерный эмулятор добавляем один раз рядом с токарным: у кого раскладка уже
+    своя, карточка иначе никогда бы не появилась */
+ if(!localStorage.getItem(WORK_MILL_MIGRATED)){
+  if(!valid.includes('work:millx')){
+   const at=valid.indexOf('work:simx');
+   valid.splice(at<0?0:at+1,0,'work:millx');
+  }
+  try{localStorage.setItem(WORK_MILL_MIGRATED,'1');saveJSON(WORK_LAYOUT_KEY,valid.slice(0,12));}catch(e){}
  }
  return valid.slice(0,12);}
 function workItem(key){return workCatalog().find(x=>workKey(x)===key)||null;}
