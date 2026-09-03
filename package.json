@@ -1,4 +1,13 @@
 {
+	"name": "razryad",
+	"version": "0.999.0",
+	"private": true,
+	"license": "UNLICENSED",
+	"description": "РАЗРЯД — офлайн-пособия оператора ЧПУ и термиста",
+	"scripts": {
+		"test": "node tests/chpu-smoke.cjs && node tests/generator-smoke.cjs && node tests/termist-smoke.cjs && node tests/cnc-emulator-bridge-smoke.cjs && node tests/lathe-sim-machining.cjs && node tests/mill-sim-machining.cjs && node tests/stage-a-safety.cjs && node tests/stage-b-claims.cjs && node tests/stage-c-dxf.cjs && node tests/stage-c-offline.cjs && node tests/stage-c-store.cjs",
+		"test:safety": "node tests/stage-a-safety.cjs && node tests/stage-b-claims.cjs && node tests/stage-c-dxf.cjs && node tests/stage-c-offline.cjs && node tests/stage-c-store.cjs"
+	},
 	"dependencies": {
 		"pdfjs-dist": "3.11.174",
 		"qrcode-generator": "1.4.4",

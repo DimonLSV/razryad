@@ -207,7 +207,9 @@ function viewSetup(){const s=loadJSON('razryad-current-setup-v1',{checks:{}});re
 function saveSetup(){const old=loadJSON('razryad-current-setup-v1',{checks:{}}),s={checks:{...(old.checks||{})}};document.querySelectorAll('[data-setup]').forEach(x=>s[x.dataset.setup]=x.value);document.querySelectorAll('[data-check]').forEach(x=>s.checks[x.dataset.check]=x.checked);saveJSON('razryad-current-setup-v1',s);const n=$('#setupSaved');if(n)n.textContent='Сохранено · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});}
 
 function loadJSON(k,f){try{return JSON.parse(localStorage.getItem(k)||'null')||f}catch(e){return f}}
-function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+/* Пустой catch прятал переполнение памяти: оператор правил наладку, ошибки не
+   видел, а при следующем открытии получал старые данные. Отказ теперь виден. */
+function saveJSON(k,v){if(window.RazryadStore){if(RazryadStore.save(k,1,v))return true;if(typeof toast==='function')toast(RazryadStore.failureText());return false}try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
 function loadLocalScript(src,global){if(window[global])return Promise.resolve();return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
 async function ocrToInput(file,inputId,statusId){const status=$('#'+statusId);status.textContent='Подготовка локального OCR…';try{await loadLocalScript('./vendor/ocr/tesseract.min.js','Tesseract');const worker=await Tesseract.createWorker('rus+eng',1,{workerPath:'./vendor/ocr/worker.min.js',corePath:'./vendor/ocr/core',langPath:'./vendor/tessdata',logger:m=>{if(m.status==='recognizing text')status.textContent='OCR '+Math.round((m.progress||0)*100)+'%';}});const r=await worker.recognize(file);await worker.terminate();$('#'+inputId).value=String(r.data.text||'').replace(/\s+/g,' ').trim();status.textContent='Распознано локально · уверенность '+Math.round(r.data.confidence||0)+'%';}catch(e){status.textContent='OCR не запустился — введите текст вручную.';}}
 

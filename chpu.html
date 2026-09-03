@@ -2,7 +2,18 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'">
+<script data-boot-guard>(function(){var shown=false;
+function fail(what){if(shown)return;shown=true;
+ var d=document.createElement('div');d.setAttribute('role','alert');
+ d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#3a1512;color:#ffd9d3;border-top:2px solid #d93a2b;padding:12px 14px;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+ d.textContent='Приложение загрузилось не полностью: '+what+'. Обновите страницу; если не помогает — откройте при включённой сети, чтобы обновить офлайн-копию. Ваши записи на устройстве не пострадали.';
+ (document.body||document.documentElement).appendChild(d);}
+window.addEventListener('error',function(e){var t=e&&e.target;
+ if(t&&t!==window&&t.tagName){if(t.tagName==='SCRIPT'||t.tagName==='LINK')fail('не загрузился '+((t.src||t.href||'').split('/').pop()||t.tagName));return;}
+ fail((e&&e.message)||'ошибка скрипта');},true);
+window.addEventListener('unhandledrejection',function(e){fail((e&&e.reason&&e.reason.message)||'сбой фоновой операции');});
+})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0B0D">
 <link rel="manifest" href="./manifest-chpu.webmanifest">
@@ -265,6 +276,7 @@ header{background-image:linear-gradient(180deg,rgba(7,10,13,.36),rgba(11,11,13,.
 </style>
 </head>
 <body>
+<noscript><div style="background:#3a1512;color:#ffd9d3;border-bottom:2px solid #d93a2b;padding:14px 16px;font:15px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif">Пособие работает на JavaScript, а он отключён в браузере. Включите его в настройках браузера и обновите страницу — без него расчёты, справочник и эмулятор не запустятся.</div></noscript>
 <div class="stage"><div class="device">
 
   <div class="splash" id="splash"><div class="in">
@@ -4425,6 +4437,7 @@ fitH();
 try{ $('#vhead').textContent='Оператор ЧПУ · v'+VER; }catch(e){}
 (async()=>{ NOTES=await loadNotes(); if(!window.RazryadShellReady)render(); })();
 </script>
+<script src="./razryad-store.js?v=0999a"></script>
 <script src="./cnc-emulator-bridge.js?v=0999a"></script>
 <script src="./operator-tools.js?v=0999a"></script>
 <script src="./chpu-v99.js?v=0999a"></script>

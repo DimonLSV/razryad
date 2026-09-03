@@ -2,7 +2,18 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'">
+<script data-boot-guard>(function(){var shown=false;
+function fail(what){if(shown)return;shown=true;
+ var d=document.createElement('div');d.setAttribute('role','alert');
+ d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#3a1512;color:#ffd9d3;border-top:2px solid #d93a2b;padding:12px 14px;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+ d.textContent='Приложение загрузилось не полностью: '+what+'. Обновите страницу; если не помогает — откройте при включённой сети, чтобы обновить офлайн-копию. Ваши записи на устройстве не пострадали.';
+ (document.body||document.documentElement).appendChild(d);}
+window.addEventListener('error',function(e){var t=e&&e.target;
+ if(t&&t!==window&&t.tagName){if(t.tagName==='SCRIPT'||t.tagName==='LINK')fail('не загрузился '+((t.src||t.href||'').split('/').pop()||t.tagName));return;}
+ fail((e&&e.message)||'ошибка скрипта');},true);
+window.addEventListener('unhandledrejection',function(e){fail((e&&e.reason&&e.reason.message)||'сбой фоновой операции');});
+})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0B0D">
 <meta name="description" content="Фото, PDF или DXF в токарную программу Haas: наружный и внутренний G71/G70, G76, режимы по материалу и HRC, 2D-симуляция.">
@@ -48,6 +59,7 @@ input,select,textarea{width:100%;border:1px solid var(--line);background:var(--p
 <link rel="stylesheet" href="./v99.css">
 </head>
 <body>
+<noscript><div style="background:#3a1512;color:#ffd9d3;border-bottom:2px solid #d93a2b;padding:14px 16px;font:15px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif">Пособие работает на JavaScript, а он отключён в браузере. Включите его в настройках браузера и обновите страницу — без него расчёты, справочник и эмулятор не запустятся.</div></noscript>
 <div class="stage"><div class="device">
   <div class="topbar">
     <div class="brandrow">
@@ -224,9 +236,119 @@ $('#templates').onclick=e=>{const b=e.target.closest('.template');if(!b)return;$
 $('#fileInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(f.size>15*1024*1024){toast('Файл больше 15 МБ');return}state.source=f.name;$('#filename').textContent=f.name;$('#dropzone').classList.add('has');$('#fileResult').style.display='none';const ext=f.name.split('.').pop().toLowerCase();if(f.type.startsWith('image/')){const url=URL.createObjectURL(f);$('#preview').src=url;$('#preview').classList.add('on');await tryBrowserOcr(f)}else{$('#preview').classList.remove('on');if(ext==='dxf')await importDxf(f);else if(ext==='pdf')await importPdf(f);else $('#ocrMode').textContent='Введите размеры'}saveDraft()};
 async function tryBrowserOcr(file){$('#ocrMode').textContent='Локальный OCR';if('TextDetector' in window){try{const bmp=await createImageBitmap(file),detector=new TextDetector(),blocks=await detector.detect(bmp),text=blocks.map(x=>x.rawValue).join(' ');$('#ocrText').value=text;$('#fileResultText').textContent=`Найдено фрагментов: ${blocks.length}`;$('#fileResult').style.display='block';return}catch(e){}}$('#ocrMode').textContent='Ручная проверка';$('#fileResultText').textContent='Фото загружено — введите строку размеров';$('#fileResult').style.display='block'}
 async function importPdf(file){$('#ocrMode').textContent='PDF · текст';const buf=await file.arrayBuffer(),raw=new TextDecoder('latin1').decode(buf),chunks=[...raw.matchAll(/\(([^()]*)\)\s*Tj/g)].map(m=>m[1]).join(' ');const cleaned=chunks.replace(/\\[nrt]/g,' ').replace(/\\\d{3}/g,' ');$('#ocrText').value=cleaned;if(cleaned.trim()){$('#fileResultText').textContent='Из PDF извлечён текстовый слой';$('#fileResult').style.display='block'}else{$('#fileResultText').textContent='В PDF нет доступного текстового слоя — введите размеры';$('#fileResult').style.display='block'}}
-async function importDxf(file){const text=await file.text();try{const pts=parseDxf(text);if(pts.length<2)throw new Error('Нет LINE/LWPOLYLINE');state.template='free';state.operation='external';state.thread.enabled=false;state.freePoints=pts;state.segments=pointsToSegments(pts);$('#ocrText').value=pts.map(p=>`X${num(p.x)} Z${num(p.z)}`).join(' · ');$('#ocrMode').textContent='DXF · профиль';$('#fileResultText').textContent=`Импортировано точек: ${pts.length}. DXF X→Z, Y→радиус.`;$('#fileResult').style.display='block'}catch(e){$('#ocrMode').textContent='DXF · ошибка';$('#fileResultText').textContent='Не найден 2D-профиль LINE/LWPOLYLINE';$('#fileResult').style.display='block'}}
-function parseDxf(text){const rows=text.replace(/\r/g,'').split('\n'),pairs=[];for(let i=0;i<rows.length-1;i+=2)pairs.push([rows[i].trim(),rows[i+1].trim()]);const out=[];let entity='',cur={};function add(x,y){if(Number.isFinite(x)&&Number.isFinite(y))out.push({z:x,x:Math.abs(y)*2})}function flush(){if(entity==='LINE'){add(+cur.x1,+cur.y1);add(+cur.x2,+cur.y2)}cur={}}for(const [c,v] of pairs){if(c==='0'){flush();entity=v;continue}if(entity==='LINE'){if(c==='10')cur.x1=+v;if(c==='20')cur.y1=+v;if(c==='11')cur.x2=+v;if(c==='21')cur.y2=+v}else if(entity==='LWPOLYLINE'){if(c==='10'){if(cur.vx!==undefined)add(cur.vx,cur.vy||0);cur.vx=+v}else if(c==='20')cur.vy=+v}}if(entity==='LWPOLYLINE'&&cur.vx!==undefined)add(cur.vx,cur.vy||0);flush();const uniq=[];for(const p of out){if(!uniq.some(q=>Math.abs(q.z-p.z)<.001&&Math.abs(q.x-p.x)<.001))uniq.push(p)}if(!uniq.length)return[];const maxZ=Math.max(...uniq.map(p=>p.z));return uniq.map(p=>({z:p.z-maxZ,x:p.x})).sort((a,b)=>b.z-a.z).slice(0,30)}
-function pointsToSegments(pts){const a=[];for(let i=0;i<pts.length-1;i++){const l=Math.abs(pts[i+1].z-pts[i].z);if(l>.01)a.push({d:Math.max(pts[i].x,.1),l})}return a.slice(0,8).length?a.slice(0,8):[{d:30,l:40},{d:45,l:60}]}
+/* Генератор собран из трёх слоёв: инлайн ниже, generator-pro.js и generator-v99.js.
+   Каждый следующий переопределяет функции предыдущего. Если верхние слои не
+   загрузились, инлайн-версия выдаёт другую программу — без Fanuc-поста, канавок,
+   сверления и внутренней резьбы, — и раньше делала это молча. Отказать честно
+   безопаснее, чем отдать оператору не ту программу, которую показывает интерфейс. */
+function generatorReady(){
+ const missing=[];
+ if(!window.RazryadTolerance)missing.push('tolerance-fields.js');
+ if(!window.RazryadGeneratorPro)missing.push('generator-pro.js');
+ if(!window.RazryadGeneratorV99)missing.push('generator-v99.js');
+ if(!missing.length)return true;
+ const msg='Генератор загружен не полностью: '+missing.join(', ')+'. Программа не будет построена — обновите страницу. Если не помогает, откройте приложение при включённой сети, чтобы обновить офлайн-копию.';
+ state.gcode='';
+ $('#gcode').textContent='';
+ $$('.export').forEach(b=>b.disabled=true);
+ const box=$('#safetyCard');if(box)box.className='card warn';
+ const st=$('#safetyStatus');if(st)st.className='status bad';
+ const t=$('#safetyTitle');if(t)t.textContent='Экспорт заблокирован';
+ const x=$('#safetyText');if(x)x.textContent=msg;
+ toast('Генератор загружен не полностью — см. сообщение');
+ return false;
+}
+async function importDxf(file){const text=await file.text();
+ try{
+  const r=parseDxf(text);
+  state.template='free';state.operation='external';state.thread.enabled=false;
+  state.freePoints=r.points;state.segments=pointsToSegments(r.points);
+  $('#ocrText').value=r.points.map(p=>`X${num(p.x)} Z${num(p.z)}`).join(' · ');
+  $('#ocrMode').textContent='DXF · профиль';
+  $('#fileResultText').textContent=`Прочитано: Ø${num(r.dMin)}…Ø${num(r.dMax)} на длине ${num(r.length)} мм, точек ${r.points.length}. Единицы по файлу: ${r.unitsName}. Слои: ${r.layers.join(', ')||'без имени'}${r.skipped.length?`; пропущены ${r.skipped.join(', ')}`:''}. Ось вращения принята по Y=0 — сверьте диаметры с чертежом.`;
+ }catch(e){
+  $('#ocrMode').textContent='DXF · не принят';
+  $('#fileResultText').textContent=e.message;
+ }
+ $('#fileResult').style.display='block';
+}
+/* Единицы DXF по $INSUNITS. Раньше файл читался как миллиметровый всегда: дюймовый
+   чертёж давал профиль в 25.4 раза мельче, и никто об этом не узнавал. Файл без
+   объявленных единиц не принимаем — «безразмерный» чертёж ничем не отличается от
+   дюймового, а угадывать масштаб детали нельзя. */
+const DXF_UNITS={1:['дюймы',25.4],2:['футы',304.8],4:['миллиметры',1],5:['сантиметры',10],6:['метры',1000],
+ 8:['микродюймы',.0000254],9:['милы',.0254],10:['ярды',914.4],11:['ангстремы',1e-7],12:['нанометры',1e-6],13:['микроны',.001],14:['дециметры',100]};
+/* Слои оформления: рамка, штамп, размеры, штриховка, оси, тексты. Их линии — такие же
+   LINE, как и контур, и раньше они попадали в профиль наравне с деталью. */
+const DXF_SKIP=/^(0|DEFPOINTS|DIM|РАЗМЕР|HATCH|ШТРИХ|TEXT|ТЕКСТ|ОСИ?|AXIS|CENTER|ЦЕНТР|FRAME|РАМКА|ШТАМП|TITLE|BORDER|NOTES|ВЫНОС)/i;
+function parseDxf(text){
+ const rows=String(text).replace(/\r/g,'').split('\n');
+ /* Пары «код/значение» ищем с синхронизацией, а не жёстко через одну строку с начала
+    файла: BOM, комментарий 999 или лишний перевод строки сдвигали весь разбор. */
+ const pairs=[];
+ for(let i=0;i<rows.length-1;){
+  const code=rows[i].trim();
+  if(!/^-?\d+$/.test(code)){i++;continue;}
+  pairs.push([code,rows[i+1].trim()]);i+=2;
+ }
+ if(!pairs.length)throw new Error('Это не похоже на текстовый DXF. Двоичный DXF и DWG не читаются — пересохраните как ASCII DXF.');
+
+ let insunits=null;
+ for(let i=0;i<pairs.length-1;i++){
+  if(pairs[i][0]==='9'&&pairs[i][1]==='$INSUNITS'){
+   const nx=pairs.slice(i+1,i+4).find(p=>p[0]==='70');
+   if(nx)insunits=parseInt(nx[1],10);
+   break;
+  }
+ }
+ if(insunits==null)throw new Error('В файле не объявлены единицы ($INSUNITS). Пересохраните DXF с указанием миллиметров — читать чертёж наугад приложение не будет.');
+ if(insunits===0)throw new Error('DXF объявлен безразмерным ($INSUNITS = 0). Такой файл ничем не отличается от дюймового; пересохраните в миллиметрах.');
+ const u=DXF_UNITS[insunits];
+ if(!u)throw new Error(`Единицы DXF не распознаны ($INSUNITS = ${insunits}). Пересохраните в миллиметрах.`);
+ const [unitsName,k]=u;
+
+ const out=[],layers=new Set(),skipped=new Set();
+ let entity='',cur={},layer='';
+ const keep=()=>!DXF_SKIP.test(layer||'');
+ const add=(x,y)=>{if(Number.isFinite(x)&&Number.isFinite(y)&&keep()){out.push({z:x*k,y:y*k});layers.add(layer||'без имени');}};
+ const flush=()=>{
+  if(entity==='LINE'){add(+cur.x1,+cur.y1);add(+cur.x2,+cur.y2);}
+  else if(entity==='LWPOLYLINE'&&cur.vx!==undefined)add(cur.vx,cur.vy||0);
+  cur={};
+ };
+ for(const [c,v] of pairs){
+  if(c==='0'){flush();entity=v;layer='';continue;}
+  if(c==='8'){layer=v;if(!keep())skipped.add(v);continue;}
+  if(entity==='LINE'){if(c==='10')cur.x1=+v;else if(c==='20')cur.y1=+v;else if(c==='11')cur.x2=+v;else if(c==='21')cur.y2=+v;}
+  else if(entity==='LWPOLYLINE'){if(c==='10'){if(cur.vx!==undefined)add(cur.vx,cur.vy||0);cur.vx=+v;}else if(c==='20')cur.vy=+v;}
+ }
+ flush();
+ if(out.length<2)throw new Error(skipped.size
+  ? `Контур не найден: все линии лежат на слоях оформления (${[...skipped].join(', ')}). Вынесите профиль детали на отдельный слой.`
+  : 'Не найдено ни одной линии LINE или LWPOLYLINE. Дуги, сплайны, блоки и окружности приложение не разбирает.');
+
+ /* Радиус берётся как |Y|, то есть ось вращения обязана лежать на Y=0. Проверить это
+    вычислением нельзя: полупрофиль на Y 15…25 (Ø30…50) и контур на Y 115…125
+    (Ø230…250) — это одинаково законные детали, и отличить их может только человек.
+    Поэтому границы диаметров показываются оператору прямо в сообщении об импорте. */
+ const uniq=[];
+ for(const p of out){const q={z:p.z,x:Math.abs(p.y)*2};
+  if(!uniq.some(o=>Math.abs(o.z-q.z)<.001&&Math.abs(o.x-q.x)<.001))uniq.push(q);}
+ const maxZ=Math.max(...uniq.map(p=>p.z));
+ const points=uniq.map(p=>({z:p.z-maxZ,x:p.x})).sort((a,b)=>b.z-a.z);
+ if(points.length>30)throw new Error(`Контур из ${points.length} точек: приложение разбирает не больше 30. Упростите профиль или введите ступени вручную.`);
+ const ds=points.map(p=>p.x),dMin=Math.min(...ds),dMax=Math.max(...ds);
+ return{points,unitsName,layers:[...layers],skipped:[...skipped],dMin,dMax,length:Math.abs(Math.min(...points.map(p=>p.z)))};
+}
+function pointsToSegments(pts){
+ const a=[];
+ for(let i=0;i<pts.length-1;i++){const l=Math.abs(pts[i+1].z-pts[i].z);if(l>.01)a.push({d:Math.max(pts[i].x,.1),l});}
+ /* Раньше пустой разбор подменялся выдуманной деталью Ø30×40 + Ø45×60, и оператору
+    при этом сообщалось «Импортировано точек: N». Подставлять геометрию нельзя. */
+ if(!a.length)throw new Error('Из контура не вышло ни одной ступени: все точки лежат на одной координате Z. Проверьте, что импортирован профиль детали, а не вид с торца.');
+ if(a.length>8)throw new Error(`Ступеней в контуре ${a.length}, приложение ведёт не больше 8. Разбейте деталь или введите ступени вручную.`);
+ return a;
+}
 $('#demoOcr').onclick=()=>{$('#ocrText').value='Ø45 L60 Ø30 L40 R3';$('#ocrMode').textContent='Демо';toast('Пример заполнен')};
 $('#parseBtn').onclick=()=>{if(!state.freePoints){const text=$('#ocrText').value.replace(/,/g,'.'),ds=[...text.matchAll(/[Ø⌀DД]\s*(\d+(?:\.\d+)?)/gi)].map(m=>+m[1]),ls=[...text.matchAll(/(?:^|\s)L\s*(\d+(?:\.\d+)?)/gi)].map(m=>+m[1]),r=text.match(/R\s*(\d+(?:\.\d+)?)/i),thr=text.match(/M\s*(\d+(?:\.\d+)?)\s*[xх×]\s*(\d+(?:\.\d+)?)/i),hard=text.match(/HRC\s*(\d+(?:\.\d+)?)/i);if(ds.length){let outer=ds.slice();if(hasBore()&&ds.length>1){const boreD=Math.min(...ds);state.bore.finalD=boreD;state.bore.preD=Math.max(2,boreD-4);outer=ds.filter((d,i)=>d!==boreD||i!==ds.indexOf(boreD))}if(outer.length){state.segments=outer.map((d,i)=>({d,l:ls[i]||40})).slice(0,8);if(state.segments.length>1)state.segments.sort((a,b)=>a.d-b.d)}}if(r)state.radius=+r[1];if(thr){state.thread.enabled=true;state.thread.d=+thr[1];state.thread.pitch=+thr[2];state.thread.length=ls[0]||state.thread.length}if(hard)state.hrc=+hard[1]}go(3)};
 
@@ -244,7 +366,7 @@ function updateModes(){readSetup();const m=materials[state.material],r=recommend
 function updateMetrics(){const d=Math.max(.1,state.depth||1),f=Math.max(.01,state.feed||.1),outerPass=hasOuter()?Math.max(1,Math.ceil(Math.max(0,state.stockD-minD())/2/d)):0,boreDepth=d*.65,borePass=hasBore()?Math.max(1,Math.ceil(Math.max(0,state.bore.finalD-state.bore.preD)/2/boreDepth)):0,outerTime=hasOuter()?totalL()*outerPass/(f*Math.max(state.rpm,1)):0,bf=f*.72,boreTime=hasBore()?state.bore.depth*borePass/(bf*Math.max(state.boreRpm,1)):0,threadTime=state.thread.enabled?state.thread.length*8/(Math.max(.25,state.thread.pitch)*Math.max(state.threadRpm,1)):0,t=outerTime+boreTime+threadTime,wall=hasBore()?(minD()-state.bore.finalD)/2:null;$('#passesOut').textContent=`${outerPass+borePass}`;$('#timeOut').textContent=t<1?`${Math.max(1,Math.round(t*60))} с`:`${num(t,1)} мин`;$('#mrrOut').textContent=num(state.vc*d*f,1);$('#wallOut').textContent=wall==null?'—':`${num(wall,1)} мм`}
 function calcRpm(){state.vc=+$('#vc').value||0;state.feed=+$('#feed').value||0;state.depth=+$('#depth').value||0;const cap=state.maxRpm||2500;state.rpm=Math.min(cap,Math.round(1000*state.vc/(Math.PI*Math.max(maxD(),1))));state.boreRpm=Math.min(cap,Math.round(1000*state.vc/(Math.PI*Math.max(state.bore.finalD,1))));state.threadRpm=Math.min(800,state.rpm);$('#rpmOut').textContent=state.rpm||0;updateMetrics()}
 ['vc','feed','depth'].forEach(id=>$('#'+id).oninput=calcRpm);$('#aggression').oninput=e=>{const v=+e.target.value,sets=[{n:'Безопасный старт',h:'Первая деталь, неизвестная наладка или большой вылет.',k:.8},{n:'Рабочий режим',h:'После контроля размера, стружки и нагрузки шпинделя.',k:1},{n:'Повышенный',h:'Только по паспорту пластины и при жёсткой наладке.',k:1.15}],s=sets[v],r=state.baseRec||recommendation();$('#modeLabel').textContent=s.n;$('#modeHint').textContent=s.h;$('#vc').value=Math.round(r.vc*s.k);$('#feed').value=num(r.feed*(.9+.1*v),2);$('#depth').value=num(r.depth*(.85+.15*v),1);calcRpm()};
-$('#generateBtn').onclick=()=>{calcRpm();state.gcode=generateGcode();$('#gcode').textContent=state.gcode;$('#programName').textContent=`O${state.programNo}.NC`;$('#simConfirmed').checked=false;$$('.export').forEach(b=>b.disabled=true);checkSafety();go(6)};
+$('#generateBtn').onclick=()=>{if(!generatorReady())return;calcRpm();state.gcode=generateGcode();$('#gcode').textContent=state.gcode;$('#programName').textContent=`O${state.programNo}.NC`;$('#simConfirmed').checked=false;$$('.export').forEach(b=>b.disabled=true);checkSafety();go(6)};
 function contourPoints(){if(state.freePoints&&state.freePoints.length>1)return state.freePoints.map(p=>({x:+p.x,z:+p.z}));let z=0,pts=[];state.segments.forEach((s,i)=>{if(i===0)pts.push({x:+s.d,z:0});z-=+s.l;pts.push({x:+s.d,z});if(i<state.segments.length-1)pts.push({x:+state.segments[i+1].d,z})});return pts}
 function generateGcode(){readSetup();const pts=contourPoints(),safeX=Math.max(state.stockD,maxD())+4,lines=['%','O'+state.programNo+' (RAZRYAD FOTO-GCODE)','(PROVERIT GRAPHICS SINGLE BLOCK RAPID 5%)','(MATERIAL '+ncText(materials[state.material].name)+(materials[state.material].noHrc?'':' HRC '+state.hrc)+')','G21 G18 G40 G80 G99'];if(hasOuter()){const q=110+(pts.length-1)*10;lines.push('(--- NARUZHNAYA G71 G70 TYPE I ---)','G28 U0. W0.',state.tool+' (NARUZHNY PRAVY REZEC)','(NOSE R'+num(state.nose,1)+' V TABLITSE OFFSET)','G50 S'+Math.round(state.maxRpm),'G97 S'+Math.round(state.rpm)+' M03','G00 X'+num(safeX,1)+' Z2. M08','G71 P100 Q'+q+' U0.3 W0.1 D'+num(state.depth,1)+' F'+num(state.feed,2),'N100 G00 G42 X'+num(pts[0].x,3),'N110 G01 Z'+num(pts[0].z,3)+' F'+num(state.feed,2));pts.slice(1).forEach((p,j)=>{const i=j+1,n=110+i*10,isShoulder=i<pts.length-1&&Math.abs(pts[i-1].z-p.z)<.001&&Math.abs(pts[i+1].x-p.x)<.001,corner=isShoulder&&state.radius>0?' R'+num(state.radius,2):'';lines.push(`N${n} G01 X${num(p.x,3)} Z${num(p.z,3)}${corner} F${num(state.feed,2)}`)});lines.push('G70 P100 Q'+q,'G01 G40 X'+num(safeX,1)+' F'+num(state.feed,2),'G00 X'+num(safeX+10,1)+' Z10. M09')}if(hasBore()){const startX=Math.max(.5,state.bore.preD-2),endX=Math.max(.2,state.bore.preD-1),bd=Math.max(.2,state.depth*.65),bf=Math.max(.04,state.feed*.72);lines.push('(--- RASTOCHKA G71 ID / G70 TYPE I ---)','G28 U0. W0.',state.boreTool+' (RASTOCHNOY REZEC)','(ISKHODNOE OTV DIA '+num(state.bore.preD,2)+' / NOSE R'+num(state.boreNose,1)+')','G50 S'+Math.round(state.maxRpm),'G97 S'+Math.round(state.boreRpm)+' M03','G00 X'+num(startX,2)+' Z2. M08','G71 P200 Q230 U-0.2 W0.1 D'+num(bd,1)+' F'+num(bf,2),'N200 G41 G00 X'+num(state.bore.finalD,3),'N210 G01 Z0. F'+num(Math.max(.04,bf*.7),2),'N220 G01 Z-'+num(state.bore.depth,3),'N230 G01 G40 X'+num(endX,3),'G70 P200 Q230','G00 X'+num(startX,2)+' Z5. M09')}if(state.thread.enabled){const p=state.thread.pitch,h=.61343*p,first=Math.max(.05,.15*p),minor=state.thread.d-1.22687*p;lines.push('(--- NARUZHNAYA REZBA G76 ---)','G28 U0. W0.',state.threadTool+' (REZBOVOY 60 DEG)','(M'+num(state.thread.d,1)+' X '+num(p,2)+' / PROVERIT K I D)','G97 S'+Math.round(state.threadRpm)+' M03','G00 X'+num(state.thread.d+2,2)+' Z2. M08','G76 X'+num(minor,3)+' Z-'+num(state.thread.length,3)+' K'+num(h,3)+' D'+num(first,3)+' A60 F'+num(p,3)+' P1','G00 X'+num(state.thread.d+6,2)+' Z5. M09')}lines.push('G28 U0. W0.','M30','%');return lines.join('\n')}
 function checkSafety(){const gap=state.stickout-totalL(),issues=[],warn=[];if(state.stockD<maxD()+1)issues.push('заготовка меньше максимального диаметра детали');if(gap<8)issues.push(`до кулачков ${num(gap,1)} мм — нужно не менее 8 мм`);if(hasBore()){const wall=(minD()-state.bore.finalD)/2,ratio=state.bore.depth/Math.max(state.bore.finalD,1);if(wall<1)issues.push(`стенка после расточки только ${num(wall,1)} мм`);if(state.bore.through&&state.bore.depth<totalL()+1)issues.push('сквозная расточка не выходит за торец детали');if(!state.bore.through&&state.bore.depth>=totalL())issues.push('глухая расточка выходит насквозь');if(ratio>4)warn.push(`вылет расточного резца L/D≈${num(ratio,1)} — возможна вибрация`)}if(!materials[state.material].noHrc&&state.hrc>50&&state.insertGrade==='carbide')issues.push('выше 50 HRC выберите CBN/керамику или подтвердите режим у производителя');if(state.thread.enabled&&state.thread.d-1.22687*state.thread.pitch<=0)issues.push('расчётный внутренний диаметр резьбы меньше нуля');state.safe=!issues.length;$('#safetyStatus').className='status '+(state.safe?'ok':'bad');$('#safetyTitle').textContent=state.safe?(warn.length?'Проверки пройдены · есть предупреждение':'Базовые проверки пройдены'):'Нужна правка исходных данных';const base=`Заготовка Ø${num(state.stockD,1)} · запас до кулачков ${num(gap,1)} мм`;$('#safetyText').textContent=issues.length?issues.join(' · '):base+(warn.length?' · '+warn.join(' · '):'');$('#safetyCard').className='card '+(state.safe?'green':'warn')}
