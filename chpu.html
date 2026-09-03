@@ -2,12 +2,11 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0B0D">
 <link rel="manifest" href="./manifest-chpu.webmanifest">
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){var had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("./sw.js").then(function(r){if(r.waiting){r.waiting.postMessage("skip");}r.addEventListener("updatefound",function(){var n=r.installing;if(!n)return;n.addEventListener("statechange",function(){if(n.state==="installed"&&navigator.serviceWorker.controller){n.postMessage("skip");}});});}).catch(function(){});var reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(!had||reloading)return;reloading=true;location.reload();});});}</script>
-<script>if(location.protocol==='https:'&&navigator.onLine){var gc=document.createElement('script');gc.async=true;gc.src='https://gc.zgo.at/count.js';gc.dataset.goatcounter='https://razryad.goatcounter.com/count';document.head.appendChild(gc);}</script>
-
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1002,6 +1001,9 @@ function viewMore(){
       <div class="note warn" style="margin-top:9px">
         <b>Всё в приложении носит рекомендательный характер.</b> Это не нормативный документ и не истина в последней инстанции.
         Приложение сделано прежде всего для начинающих операторов — чтобы быстрее разобраться в кодах, циклах и геометрии контура.
+      </div>
+      <div class="note" style="margin-top:9px">
+        Что хранится на устройстве и что уходит наружу — в <a href="./privacy.html" style="color:var(--ember)">политике конфиденциальности</a>.
       </div>
       <div class="note" style="margin-top:9px">
         Перед запуском программы сверяйтесь с чертежом, руководством на вашу стойку и утверждённым техпроцессом.

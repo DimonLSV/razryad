@@ -151,7 +151,12 @@
       await loadScriptOnce('./vendor/pdf/pdf.min.js', 'pdfjsLib');
       pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdf/pdf.worker.min.js';
       const data = new Uint8Array(await file.arrayBuffer());
-      const pdf = await pdfjsLib.getDocument({ data }).promise;
+      /* isEvalSupported:false — штатная защита от CVE-2024-4367: без eval специально
+         собранный шрифт в PDF не может выполнить свой код при отрисовке страницы.
+         Чертежи приходят в цех почтой и мессенджерами, то есть файл здесь недоверенный.
+         Обновление самой pdf.js до ветки 4.x остаётся отдельной задачей: там только
+         ESM-сборка, и смену загрузчика нужно проверять в браузере. */
+      const pdf = await pdfjsLib.getDocument({ data, isEvalSupported: false }).promise;
       const page = await pdf.getPage(1);
       const viewport = page.getViewport({ scale: 2.4 });
       const canvas = document.createElement('canvas');
