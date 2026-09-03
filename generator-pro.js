@@ -627,6 +627,13 @@
   checkSafety = function () {
     coreCheckSafety();
     const issues = [], warn = [], gap = state.stickout - totalL(), holderGap = gap - state.holderReach;
+    // geometryIssue() до этого вызывалась только из обработчика галочки «Размеры сверены».
+    // Значит state.safe мог стать true на заведомо негодной геометрии — например при l:null,
+    // где totalL()=0, контур вырождается в точки на Z0, а все проверки зазоров проходят.
+    // В UI такой путь недостижим, но именно state.safe открывает экспорт (generator.html:252),
+    // поэтому решение о годности геометрии должно приниматься здесь, а не только в галочке.
+    const geom = geometryIssue();
+    if (geom) issues.push(geom);
     if (maxD() > state.machine.maxD) issues.push(`Ø${num(maxD())} больше рабочего Ø ${state.machine.name}`);
     if (totalL() > state.machine.maxZ) issues.push(`контур длиннее хода Z ${state.machine.maxZ} мм`);
     if (state.maxRpm > state.machine.maxRpm) issues.push(`G50 выше лимита ${state.machine.maxRpm} об/мин`);

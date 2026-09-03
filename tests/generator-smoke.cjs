@@ -207,4 +207,18 @@ assert(run('state.ocrFeatures[0].angle') === 30, 'Угол фаски долже
 p = parseOcr('Ø30 40 Ø45 60 C2x45');
 assert(run('state.ocrFeatures[0].angle') === 45, 'C2x45 должна давать 45°');
 
+// --- state.safe — это то, что открывает экспорт (generator.html:252). Он не должен становиться
+// true на геометрии, которую geometryIssue() отвергает. Раньше geometryIssue() спрашивали только
+// в обработчике галочки «Размеры сверены», поэтому прямой вызов checkSafety() на участках с
+// l:null давал зелёный свет: totalL()=0, контур вырождается в точки на Z0, зазоры «в норме».
+setupInputs('haas');
+setValue('stockD', '55'); setValue('stickout', '140');
+run("applyPreset('shaft'); state.segments=[{d:30,l:null,tol:null},{d:45,l:null,tol:null}]; state.features=[{type:'sharp',value:0,axial:6}]; state.vc=110;state.feed=.22;state.depth=1.8;state.rpm=800;state.boreRpm=900;state.threadRpm=600; readSetup(); state.gcode=generateGcode(); checkSafety();");
+assert(run('state.safe') === false, 'checkSafety() обязана отвергать геометрию с непроставленной длиной');
+assert(/длин/i.test(get('#safetyText').textContent), 'Причина отказа должна называть незаполненную длину: ' + get('#safetyText').textContent);
+
+// Обратная сторона: на годной геометрии checkSafety() по-прежнему пропускает.
+run("state.segments=[{d:30,l:40,tol:null},{d:45,l:60,tol:null}]; state.gcode=generateGcode(); checkSafety();");
+assert(run('state.safe') === true, 'Годная геометрия должна проходить проверку: ' + get('#safetyText').textContent);
+
 console.log('generator smoke tests: OK');
