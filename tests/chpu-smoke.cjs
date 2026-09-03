@@ -95,7 +95,7 @@ assert(run('RazryadTools.searchIndex().length')>100,'global navigation index is 
 assert(fs.readFileSync('generator.html','utf8').includes('ЭКСПЕРИМЕНТАЛЬНЫЙ РЕЖИМ «ФОТО → G-КОД»')&&fs.readFileSync('generator.html','utf8').includes('id="emulatorBtn"'),'Photo to G-code warning or emulator action is missing');
 assert(html.includes('if(!window.RazryadShellReady)render()')&&fs.readFileSync('operator-tools.js','utf8').includes('window.RazryadShellReady=true'),'late notes load can still reset an open screen');
 get('#qaCode').value='G96 S120 M03\nG00 X50 Z2\nG01 Z-40 F0.2';get('#qaMachine').value='4000';run('RazryadTools.analyzeProgram()');
-assert(get('#qaOutput').innerHTML.includes('G96 без предварительного G50'),'G-code checker missed G96 without G50');
+assert(get('#qaOutput').innerHTML.includes('G96 без ограничения оборотов G50'),'G-code checker missed G96 without G50');
 get('#isoCode').value='CNMG 120408-PM';run('RazryadTools.parseInsert()');
 assert(get('#isoResult').innerHTML.includes('0.8 мм'),'insert parser missed nose radius');
 get('#ctType').value='od';get('#ctNom').value='40';get('#ctLow').value='-0.02';get('#ctHigh').value='0.02';get('#ctActual').value='40.08';run('RazryadTools.calcInspection()');

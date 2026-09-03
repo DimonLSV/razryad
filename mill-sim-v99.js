@@ -397,6 +397,23 @@ function parseMillGcode(code,rawCfg){
   if(i<0||j<0||i>=mat.nx||j>=mat.ny)return -Infinity; /* вне заготовки металла нет */
   return mat.z[j*mat.nx+i];
  };
+ /* Фреза — это круг радиуса R, а не точка на оси. Опрос одной осевой линии пропускал
+    ровно тот случай, ради которого проверка и существует: ось идёт мимо заготовки или
+    по уже снятому пазу, а периферия режет нетронутую стенку. Берём максимум высоты по
+    диску инструмента — по кольцу и половинному радиусу, чтобы не обходить всю сетку.
+    Кольцо берём чуть внутри радиуса: паз, прорезанный этой же фрезой, имеет ширину
+    ровно 2R, и его стенки касаются периферии. Опрос строго по R давал ложную тревогу
+    на каждом отводе из реза. Плата за это — врезание мельче 0.1R не отмечается. */
+ const RING=[];for(let a=0;a<16;a++)RING.push([Math.cos(a*Math.PI/8),Math.sin(a*Math.PI/8)]);
+ const surfaceUnder=(x,y,R)=>{
+  let top=surfaceAt(x,y);
+  if(!(R>0))return top;
+  for(const d of RING)for(const f of [.9,.6]){
+   const h=surfaceAt(x+d[0]*R*f,y+d[1]*R*f);
+   if(h>top)top=h;
+  }
+  return top;
+ };
  const toPoint=(from,out,u)=>{const to={...from};
   if(abs){if(Number.isFinite(out.X))to.x=out.X*u;if(Number.isFinite(out.Y))to.y=out.Y*u;if(Number.isFinite(out.Z))to.z=out.Z*u;}
   else{if(Number.isFinite(out.X))to.x=from.x+out.X*u;if(Number.isFinite(out.Y))to.y=from.y+out.Y*u;if(Number.isFinite(out.Z))to.z=from.z+out.Z*u;}
@@ -421,9 +438,9 @@ function parseMillGcode(code,rawCfg){
   for(let i=0;i<pts.length;i++){
    const q=pts[i];
    if(q.z<mat.zBottom-.001){add('bad','Инструмент уходит ниже дна заготовки: под ней стол или тиски.',seg.line,seg);break;}
-   const surf=surfaceAt(q.x,q.y);
+   const surf=surfaceUnder(q.x,q.y,R);
    if(seg.rapid&&!seg.cycle&&Number.isFinite(surf)&&q.z<surf-.02){
-    add('bad','Быстрый ход G00 идёт сквозь неснятый металл.',seg.line,seg);break;}
+    add('bad','Быстрый ход G00 идёт сквозь неснятый металл: на этой высоте в металле оказывается периферия фрезы Ø'+(R*2).toFixed(1)+' мм.',seg.line,seg);break;}
    if(!seg.rapid&&spec.flute&&q.z<mat.zTop-spec.flute-.001){
     add('bad','Глубина больше режущей части '+spec.flute+' мм: в резе окажется хвостовик.',seg.line,seg);break;}
    if(!seg.rapid&&spec.holderD>spec.diameter&&Number.isFinite(surf)&&q.z<surf-.02&&spec.flute&&q.z<mat.zTop-spec.flute*.9){
@@ -485,10 +502,21 @@ function parseMillGcode(code,rawCfg){
 
   /* --- циклы сверления --- */
   const drillCycle=gs.find(g=>[81,82,83,73,84,85].includes(g));
+  /* Остальная группа 09. Раньше такой кадр проваливался в разбор обычного перемещения
+     и исполнялся модальным G-кодом предыдущей строки: цикл «снимал» металл диагональю,
+     карта высот портилась, и все последующие проверки шли по неверной заготовке. */
+  const unmodelled=drillCycle==null?gs.find(g=>[74,76,86,87,88,89].includes(g)):null;
+  if(unmodelled!=null){
+   add('bad','G'+unmodelled+' не моделируется: этот цикл приложение не разворачивает, поэтому кадр не исполняется и как перемещение. Проверьте участок на стойке.',line1);
+   cycle=null;return;
+  }
   if(drillCycle!=null){
    if(!['drill','tap'].includes(op))add('bad','G'+drillCycle+' требует назначить станции осевой инструмент.',line1);
-   const z=Number.isFinite(out.Z)?out.Z*unit:NaN;
-   const r=Number.isFinite(out.R)?out.R*unit:retract;
+   /* В G91 адрес R отсчитывается от текущего Z, а Z — от плоскости R. Раньше оба
+      читались как абсолютные, хотя X/Y того же кадра шли через toPoint и G91
+      учитывали: отверстие рисовалось не на той высоте и не той глубины. */
+   const r=Number.isFinite(out.R)?(abs?out.R*unit:pos.z+out.R*unit):retract;
+   const z=Number.isFinite(out.Z)?(abs?out.Z*unit:r+out.Z*unit):NaN;
    retract=r;
    if(!Number.isFinite(z)){add('bad','G'+drillCycle+': не задана глубина Z.',line1);return;}
    cycle={code:drillCycle,z,r,q:Number.isFinite(out.Q)?Math.abs(out.Q*unit):0,line:line1,clean};

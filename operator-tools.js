@@ -110,16 +110,61 @@ function viewAnalyzer(){return backCard()+`<div class="wrap"><div class="toolher
  <div class="card"><label class="fld"><span>Профиль станка</span><select id="qaMachine"><option value="6000">Haas ST-10 · 6000 об/мин</option><option value="4000" selected>Haas ST-20 · 4000 об/мин</option><option value="3400">Haas ST-30 · 3400 об/мин</option><option value="2500">Другой · 2500 об/мин</option></select></label><label class="fld"><span>G-код</span><textarea id="qaCode" style="min-height:180px;font-family:IBM Plex Mono" placeholder="Вставьте программу или выберите .NC"></textarea></label><div class="two"><button class="btn ghost" id="qaFileBtn">Открыть .NC</button><button class="btn" id="qaRun">Проверить</button></div><input type="file" id="qaFile" accept=".nc,.tap,.txt" hidden><div class="two" style="margin-top:9px"><button class="btn ghost" id="qaDemo">Пример программы</button><button class="btn" id="qaEmulator">Открыть в эмуляторе</button></div></div>
  <div id="qaOutput"></div>${CREDIT}</div>`;}
 
-function stripComments(s){return s.replace(/\([^)]*\)/g,' ').replace(/;.*$/gm,' ');}
+/* Комментарий в скобках не переходит на следующую строку. Класс [^)] в JS включает
+   перевод строки, поэтому одна незакрытая «(» съедала программу до следующей «)»:
+   проверки не видели ни одного кадра и выдавали зелёный вердикт на опасном коде.
+   Незакрытую скобку считаем комментарием до конца строки и сообщаем о ней. */
+function stripComments(s){
+ let unbalanced=0;
+ const out=String(s).split(/\r?\n/).map(line=>{
+  let res='',i=0;
+  while(i<line.length){
+   const ch=line[i];
+   if(ch===';')break;
+   if(ch==='('){const close=line.indexOf(')',i+1);if(close<0){unbalanced++;break;}res+=' ';i=close+1;continue;}
+   res+=ch;i++;
+  }
+  return res;
+ }).join('\n');
+ stripComments.unbalanced=unbalanced;
+ return out;
+}
 function analyzeProgram(){
  const raw=$('#qaCode').value.trim(),out=$('#qaOutput');if(!raw){toast('Вставьте G-код');return;}
  const code=stripComments(raw.toUpperCase()),lines=code.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),checks=[];
  const add=(type,title,text)=>checks.push({type,title,text});
  const has=x=>new RegExp(`(^|\\s)${x}(?=\\s|$)`).test(code.replace(/\n/g,' '));
- const i96=code.search(/\bG96\b/),i50=code.search(/\bG50\b/);
- if(i96>=0&&(i50<0||i50>i96))add('bad','G96 без предварительного G50','Постоянная скорость резания может разогнать шпиндель выше безопасного значения.');else if(i96>=0)add('okx','Ограничение перед G96 найдено','Проверьте, что значение S в G50 допустимо для заготовки и патрона.');
- const sVals=[...code.matchAll(/\bS\s*(\d+(?:\.\d+)?)/g)].map(m=>+m[1]),limit=+$('#qaMachine').value;if(sVals.length&&Math.max(...sVals)>limit)add('bad','Обороты выше профиля станка',`Найдено S${Math.max(...sVals)}, профиль ограничен ${limit} об/мин.`);
- const lastComp=Math.max(code.lastIndexOf('G41'),code.lastIndexOf('G42')),lastCancel=code.lastIndexOf('G40');if(lastComp>=0&&lastCancel<lastComp)add('bad','Не найден G40 после компенсации','G41/G42 остаётся активной к концу программы.');
+ if(stripComments.unbalanced)add('bad','Незакрытая скобка комментария',`Найдено незакрытых «(»: ${stripComments.unbalanced}. Кадры после такой скобки стойка может прочитать иначе — закройте комментарий, иначе проверки ниже опираются на неполный текст.`);
+ /* G50 без адреса S — это установка системы координат (обычная форма Fanuc 0i-T),
+    а не ограничение оборотов, и как ограничитель она не годится. */
+ const i96=code.search(/\bG96\b/),rawG50=code.search(/\bG50\b/),rpmLimit=+$('#qaMachine').value;
+ const clampM=/\bG50\b[^\n]*?\bS\s*(\d+(?:\.\d+)?)/.exec(code),i50=clampM?clampM.index:-1;
+ if(i96>=0&&(i50<0||i50>i96))add('bad','G96 без ограничения оборотов G50 S__',rawG50>=0&&rawG50<i96?'Найден G50 без адреса S — это установка координат, а не ограничитель. Постоянная скорость резания разгонит шпиндель у малого диаметра.':'Постоянная скорость резания может разогнать шпиндель выше безопасного значения.');
+ else if(i96>=0){const clamp=+clampM[1];if(rpmLimit&&clamp>rpmLimit)add('bad','Ограничение G50 выше профиля станка',`G50 S${clamp} при пределе ${rpmLimit} об/мин — ограничитель не защищает.`);else add('okx',`Ограничение перед G96 найдено: G50 S${clamp}`,'Проверьте, что значение допустимо для заготовки и патрона.');}
+ /* Под G96 адрес S задаёт скорость резания в м/мин, а не обороты: сравнивать её
+    с пределом шпинделя бессмысленно. Режим считаем построчно и берём только G97. */
+ let css=false,maxRpm=0,rpmLine=0;
+ lines.forEach((line,idx)=>{
+  if(/\bG96\b/.test(line))css=true;
+  if(/\bG97\b/.test(line))css=false;
+  if(/\bG50\b/.test(line))return;
+  const m=/\bS\s*(\d+(?:\.\d+)?)/.exec(line);
+  if(m&&!css&&+m[1]>maxRpm){maxRpm=+m[1];rpmLine=idx+1;}
+ });
+ if(maxRpm&&rpmLimit&&maxRpm>rpmLimit)add('bad','Обороты выше профиля станка',`Кадр ${rpmLine}: S${maxRpm} в режиме G97, профиль ограничен ${rpmLimit} об/мин.`);
+ /* Компенсация проверяется по ходу программы. «Последний G41 против последнего G40»
+    пропускал незакрытую компенсацию на первом инструменте, если её закрывал второй,
+    и матчился подстрокой внутри G41.1 и G410. */
+ let comp='',compLine=0,compBad=false;
+ lines.forEach((line,idx)=>{
+  const no=idx+1,on=/\bG0?4([12])(?![\d.])/.exec(line);
+  if(comp&&no>compLine&&(/\bT\s*\d{2,4}\b/.test(line)||/\bM0?6(?![\d.])/.test(line)||/\bM30\b/.test(line)||/\bG28\b/.test(line))&&!compBad){
+   compBad=true;add('bad','Компенсация не отменена перед сменой инструмента или возвратом',`${comp} включена в кадре ${compLine} и остаётся активной в кадре ${no}. Отмените G40 до T-слова, M06, G28 и M30.`);
+  }
+  if(/\bG0?40(?![\d.])/.test(line))comp='';
+  if(on){comp='G4'+on[1];compLine=no;}
+ });
+ if(comp&&!compBad)add('bad','Не найден G40 после компенсации',`${comp} из кадра ${compLine} остаётся активной к концу программы.`);
  const drill=/\bG8[1-9]\b/.test(code);if(drill&&code.lastIndexOf('G80')<Math.max(...[...code.matchAll(/\bG8[1-9]\b/g)].map(m=>m.index)))add('warnx','Цикл сверления не закрыт G80','Проверьте отмену постоянного цикла перед следующими перемещениями.');
  if(!/\bM0?3\b|\bM0?4\b/.test(code))add('warnx','Не найден запуск шпинделя','Проверьте M03/M04 и направление вращения.');
  if(!/\bM30\b/.test(code))add('warnx','Не найден M30','Программа может не завершаться и не сбрасывать модальные состояния ожидаемым образом.');
@@ -129,6 +174,7 @@ function analyzeProgram(){
  if(!checks.some(x=>x.type==='bad'))add('okx','Критические шаблонные ошибки не найдены','Это не доказывает безопасность геометрии — проверьте траекторию, ноль детали и патрон.');
  const points=parseToolPath(lines);out.innerHTML=`<div class="card"><div class="tag">Результат проверки</div><div class="analysis-list">${checks.map(x=>`<div class="analysis-item ${x.type}"><b>${x.title}</b><span>${x.text}</span></div>`).join('')}</div>${points.length>1?'<canvas id="qaCanvas" class="pathcanvas" width="720" height="420"></canvas>':'<div class="hint">Координаты X/Z для траектории не найдены.</div>'}</div>`;
  if(points.length>1)drawPath(points);
+ return checks; /* возвращаем разбор, чтобы проверки были воспроизводимы в тестах */
 }
 function parseToolPath(lines){let x=null,z=null,mode='G00',pts=[];for(const line of lines){const gm=line.match(/\bG0?([0-3])\b/);if(gm)mode='G0'+gm[1];const xm=line.match(/\bX\s*(-?\d+(?:\.\d+)?)/),zm=line.match(/\bZ\s*(-?\d+(?:\.\d+)?)/);if(xm)x=+xm[1];if(zm)z=+zm[1];if((xm||zm)&&x!==null&&z!==null)pts.push({x,z,rapid:mode==='G00'});}return pts.slice(0,500);}
 function drawPath(pts){const c=$('#qaCanvas'),ctx=c.getContext('2d'),W=c.width,H=c.height,p=48,xs=pts.map(q=>q.x),zs=pts.map(q=>q.z),xmin=Math.min(...xs),xmax=Math.max(...xs),zmin=Math.min(...zs),zmax=Math.max(...zs),sx=(W-p*2)/Math.max(1,zmax-zmin),sy=(H-p*2)/Math.max(1,xmax-xmin),px=z=>p+(z-zmin)*sx,py=x=>H-p-(x-xmin)*sy;ctx.fillStyle='#0D1014';ctx.fillRect(0,0,W,H);ctx.strokeStyle='#2B333D';for(let i=0;i<8;i++){ctx.beginPath();ctx.moveTo(p,i*(H/8));ctx.lineTo(W-p,i*(H/8));ctx.stroke();}for(let i=1;i<pts.length;i++){ctx.strokeStyle=pts[i].rapid?'#FF6B00':'#5FA8FF';ctx.lineWidth=pts[i].rapid?2:3;ctx.setLineDash(pts[i].rapid?[8,6]:[]);ctx.beginPath();ctx.moveTo(px(pts[i-1].z),py(pts[i-1].x));ctx.lineTo(px(pts[i].z),py(pts[i].x));ctx.stroke();}ctx.setLineDash([]);ctx.fillStyle='#C7CBD0';ctx.font='18px IBM Plex Mono';ctx.fillText('Z',W-30,H-18);ctx.fillText('X',16,28);}
