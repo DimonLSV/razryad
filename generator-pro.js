@@ -120,7 +120,10 @@
       });
       await worker.setParameters({
         preserve_interword_spaces: '1',
-        tessedit_char_whitelist: '0123456789.,-+xXхХ×Ø⌀DMRLCHSRTФАСГАЛТЕЛЬСКРУГЛЕНИЕHRC '
+        // Кириллические О Д М С Р и знаки ± ° ( ) / обязаны быть в списке: whitelist только
+        // запрещает символы, поэтому без них ± подавляется и Ø30±0.1 склеивается в Ø300.1,
+        // а метрическая резьба М24×1,5 кириллицей не распознаётся вовсе.
+        tessedit_char_whitelist: '0123456789.,-+±°/()xXхХ×Ø⌀OОDДMМRLCHSRTФАСГАЛТЕЛЬСКРУГЛЕНИЕHRC '
       });
       const result = await worker.recognize(file);
       await worker.terminate();
@@ -154,8 +157,10 @@
       /* isEvalSupported:false — штатная защита от CVE-2024-4367: без eval специально
          собранный шрифт в PDF не может выполнить свой код при отрисовке страницы.
          Чертежи приходят в цех почтой и мессенджерами, то есть файл здесь недоверенный.
-         Обновление самой pdf.js до ветки 4.x остаётся отдельной задачей: там только
-         ESM-сборка, и смену загрузчика нужно проверять в браузере. */
+         Вендорная копия pdf.js — 3.11.174, то есть уязвимая: флаг закрывает именно эту
+         CVE, но не заменяет обновление vendor/pdf/* до >= 4.2.67. Обновление остаётся
+         обязательным и отдельным — там только ESM-сборка, и смену загрузчика нужно
+         проверять в браузере. */
       const pdf = await pdfjsLib.getDocument({ data, isEvalSupported: false }).promise;
       const page = await pdf.getPage(1);
       const viewport = page.getViewport({ scale: 2.4 });
@@ -164,7 +169,22 @@
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
       $('#preview').src = URL.createObjectURL(blob); $('#preview').classList.add('on');
-      $('#fileResultText').textContent = `PDF: распознаётся страница 1 из ${pdf.numPages}`;
+
+      // Экспорт из КОМПАС или SolidWorks несёт размеры точным текстовым слоем. Растеризовать его
+      // и распознавать картинку — значит добровольно превращать точные данные в задачу OCR.
+      // Поэтому сначала текстовый слой, и только при его отсутствии — растр.
+      let layer = '';
+      try {
+        const content = await page.getTextContent();
+        layer = content.items.map(x => x.str).join(' ').replace(/\s+/g, ' ').trim();
+      } catch (_) { }
+      if (/\d/.test(layer)) {
+        $('#ocrText').value = layer;
+        $('#ocrMode').textContent = 'PDF · текстовый слой';
+        $('#fileResultText').textContent = `PDF: размеры взяты из текстового слоя страницы 1 из ${pdf.numPages} — распознавание не потребовалось`;
+        return;
+      }
+      $('#fileResultText').textContent = `PDF без текстового слоя: распознаётся страница 1 из ${pdf.numPages}`;
       await tryBrowserOcr(blob);
     } catch (err) {
       $('#ocrMode').textContent = 'PDF · ошибка';
@@ -172,39 +192,137 @@
     }
   };
 
+  // Приводит вывод OCR к каноничным символам. Возвращает обе строки: `keywords` сохраняет
+  // русские слова (ФАСКА / ГАЛТЕЛЬ / СКРУГЛЕНИЕ), `norm` пригоден для числового разбора.
+  // Без этого выноска С2×45° или Р3, набранная кириллицей — а именно так её и читает rus-модель —
+  // не совпадает с /C/ и /R/ и теряется молча.
+  function normalizeOcr(src) {
+    const keywords = String(src || '').replace(/\s+/g, ' ').trim();
+    const norm = keywords
+      .replace(/(\d)\s*,\s*(\d)/g, '$1.$2')   // десятичная запятая, но не разделитель перечисления
+      .replace(/[Фф](?=\s*\d)/g, 'Ø')         // самый частый вывод Tesseract для знака диаметра
+      .replace(/[ОоOo](?=\s*\d)/g, 'Ø')       // перед размером O/О — это Ø, а не ноль
+      .replace(/[Хх]/g, 'x')
+      .replace(/[Сс](?=\s*\d)/g, 'C')
+      .replace(/[Рр](?=\s*\d)/g, 'R')
+      .replace(/[Мм](?=\s*\d)/g, 'M')
+      .replace(/[Дд](?=\s*\d)/g, 'D');
+    return { keywords, norm };
+  }
+
+  // Ø с необязательным полем допуска: h6 / H7 / js6 / ±0.1 / +0.2/-0.1.
+  // Допуск обязан быть съеден одним матчем, иначе "Ø30±0.1" разбирается как диаметр 300.1.
+  // Буквенное поле пишется слитно с размером (ГОСТ 25346), поэтому пробел перед ним запрещён —
+  // иначе "Ø45 L60" даёт допуск "L60" и съедает длину.
+  // Кроме Ø принимается D в начале слова: так диаметр набирают руками в строке OCR
+  // (кириллическая Д приводится к D в normalizeOcr).
+  const RE_DIA = /(?:[Ø⌀]|\bD)\s*(\d+(?:\.\d+)?)((?:[a-km-zA-KM-Z][sS]?\d{1,2})|(?:\s*±\s*\d+(?:\.\d+)?)|(?:\s*[+\-]\s*\d+(?:\.\d+)?\s*\/\s*[+\-]\s*\d+(?:\.\d+)?))?/g;
+
   function parseEnhancedOcr() {
     if (state.freePoints) { go(3); return; }
-    const text = $('#ocrText').value.replace(/,/g, '.').replace(/[ОO](?=\d)/g, '0');
-    const ds = [...text.matchAll(/[Ø⌀DД]\s*(\d+(?:\.\d+)?)/gi)].map(m => +m[1]);
-    const ls = [...text.matchAll(/(?:^|\s)L\s*(\d+(?:\.\d+)?)/gi)].map(m => +m[1]);
-    const thread = text.match(/M\s*(\d+(?:\.\d+)?)\s*[xх×]\s*(\d+(?:\.\d+)?)/i);
-    const hard = text.match(/HRC\s*(\d+(?:\.\d+)?)/i);
+    const { keywords, norm } = normalizeOcr($('#ocrText').value);
+
+    const dias = [...norm.matchAll(RE_DIA)].map(m => ({ d: +m[1], tol: (m[2] || '').trim() || null, raw: m[0].trim() }));
+    const thread = norm.match(/M\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/i);
+    const hard = norm.match(/HRC\s*(\d+(?:\.\d+)?)/i);
+
     const features = [];
-    for (const m of text.matchAll(/(?:C|ФАС(?:КА|КИ)?)\s*(\d+(?:\.\d+)?)\s*(?:[xх×]\s*45)?/gi)) features.push({ type: 'chamfer', value: +m[1], axial: +m[1], raw: m[0] });
-    for (const m of text.matchAll(/SR\s*(\d+(?:\.\d+)?)/gi)) features.push({ type: 'sphere', value: +m[1], axial: +m[1], raw: m[0] });
-    for (const m of text.matchAll(/S\s*[Ø⌀]\s*(\d+(?:\.\d+)?)/gi)) features.push({ type: 'sphere', value: +m[1] / 2, axial: +m[1] / 2, raw: m[0] });
-    const withoutSphere = text.replace(/SR\s*\d+(?:\.\d+)?/gi, ' ').replace(/S\s*[Ø⌀]\s*\d+(?:\.\d+)?/gi, ' ');
-    for (const m of withoutSphere.matchAll(/R\s*(\d+(?:\.\d+)?)/gi)) features.push({ type: /ГАЛТЕЛ/i.test(text) ? 'fillet' : 'round', value: +m[1], axial: +m[1] * 1.2, raw: m[0] });
-    if (ds.length) {
-      let outer = ds.slice();
-      if (hasBore() && ds.length > 1) {
-        const boreD = Math.min(...ds);
-        state.bore.finalD = boreD; state.bore.preD = Math.max(2, boreD - 4);
-        outer.splice(ds.indexOf(boreD), 1);
+    // Ведущий разделитель обязателен: без него C из "HRC 32" читается как фаска C32.
+    for (const m of keywords.matchAll(/(?:^|[^0-9A-Za-zА-Яа-яЁё])(?:C|С|ФАС(?:КА|КИ)?)\s*(\d+(?:[.,]\d+)?)\s*(?:[xXхХ×]\s*(\d{1,2}))?/gi)) {
+      const v = +String(m[1]).replace(',', '.'), ang = +m[2];
+      features.push({ type: 'chamfer', value: v, axial: v, angle: ang > 5 && ang < 85 ? ang : 45, raw: m[0].trim() });
+    }
+    for (const m of norm.matchAll(/SR\s*(\d+(?:\.\d+)?)/gi)) features.push({ type: 'sphere', value: +m[1], axial: +m[1], raw: m[0].trim() });
+    for (const m of norm.matchAll(/S\s*[Ø⌀]\s*(\d+(?:\.\d+)?)/gi)) features.push({ type: 'sphere', value: +m[1] / 2, axial: +m[1] / 2, raw: m[0].trim() });
+    const withoutSphere = norm.replace(/SR\s*\d+(?:\.\d+)?/gi, ' ').replace(/S\s*[Ø⌀]\s*\d+(?:\.\d+)?/gi, ' ');
+    for (const m of withoutSphere.matchAll(/(?:^|[^0-9A-Za-zА-Яа-яЁё])R\s*(\d+(?:\.\d+)?)/gi)) features.push({ type: /ГАЛТЕЛ/i.test(keywords) ? 'fillet' : 'round', value: +m[1], axial: +m[1] * 1.2, raw: m[0].trim() });
+
+    // Линейные размеры. По ГОСТ 2.307 они печатаются голыми числами — буквы L на чертеже нет,
+    // поэтому кандидатами считается всё, что осталось после вычёркивания опознанных обозначений.
+    let rest = norm;
+    for (const re of [RE_DIA, /M\s*\d+(?:\.\d+)?\s*[x×]\s*\d+(?:\.\d+)?/gi, /HRC\s*\d+(?:\.\d+)?/gi,
+                      /SR\s*\d+(?:\.\d+)?/gi, /S\s*[Ø⌀]\s*\d+(?:\.\d+)?/gi,
+                      /[CR]\s*\d+(?:\.\d+)?(?:\s*[x×]\s*45)?/gi, /\b1\s*:\s*\d+/g]) rest = rest.replace(re, ' ');
+    const explicitL = [...norm.matchAll(/(?:^|\s)L\s*(\d+(?:\.\d+)?)/gi)].map(m => +m[1]);
+    const bareL = [...rest.matchAll(/(?:^|\s)(\d+(?:\.\d+)?)(?=\s|$)/g)].map(m => +m[1]).filter(v => v > 0 && v < 5000);
+    const ls = explicitL.length ? explicitL : bareL;
+
+    if (dias.length) {
+      let outer = dias.slice();
+      if (hasBore() && dias.length > 1) {
+        const boreAt = outer.reduce((best, x, i) => x.d < outer[best].d ? i : best, 0);
+        state.bore.finalD = outer[boreAt].d; state.bore.preD = Math.max(2, outer[boreAt].d - 4);
+        state.bore.tol = outer[boreAt].tol;
+        outer.splice(boreAt, 1);
       }
       if (outer.length) {
-        state.segments = outer.map((d, i) => ({ d, l: ls[i] || 40 })).slice(0, 8);
-        if (state.segments.length > 1) state.segments.sort((a, b) => a.d - b.d);
+        outer = outer.slice(0, 8);
+        // Привязка длины к ступени по индексу верна только когда длин ровно столько же, сколько
+        // ступеней. OCR отдаёт токены в порядке растрового чтения, а не вдоль оси Z, поэтому при
+        // любом другом соотношении числа уходят в пул кандидатов, а поля остаются пустыми:
+        // geometryIssue() не пустит дальше, пока оператор не проставит их с чертежа.
+        // Прежний литерал `|| 40` выдавал придуманное число, неотличимое от прочитанного.
+        const paired = ls.length === outer.length;
+        state.segments = outer.map((x, i) => ({ d: x.d, l: paired ? ls[i] : null, tol: x.tol }));
+        state.ocrLengths = paired ? [] : ls.slice();
+        // Сортировки по возрастанию Ø здесь нет намеренно: она молча переставляла ступени вдоль Z
+        // и глушила geometryIssue(), которая как раз обязана сказать «одним G71 Type I не точится».
       }
     }
+    // Ни одного диаметра — значит state.segments остались от applyPreset(). Раньше go(3)
+    // выполнялся молча и оператор видел числа шаблона как распознанные.
+    state.dimsFromPreset = !dias.length;
+    if (state.dimsFromPreset) toast('Ни одного диаметра не распознано — на следующем шаге показаны числа шаблона, а не чертежа');
     state.ocrFeatures = features;
+    // Без единого диаметра привязывать длины не к чему, а всё найденное — почти наверняка мусор
+    // из основной надписи (номер ГОСТ, марка стали, масштаб). Пул в этом случае не показываем.
+    if (!dias.length) state.ocrLengths = [];
     state.features = [];
     syncFeatures();
     if (features.length === 1 && state.features.length === 1) state.features[0] = { ...features[0] };
-    if (thread) { state.thread.enabled = true; state.thread.d = +thread[1]; state.thread.pitch = +thread[2]; state.thread.length = ls[0] || state.thread.length; }
+    if (thread) { state.thread.enabled = true; state.thread.d = +thread[1]; state.thread.pitch = +thread[2]; }
     if (hard) state.hrc = +hard[1];
     go(3);
   }
+
+  // Сброс результатов предыдущего чертежа. Раньше freePoints обнулялся только в applyPreset(),
+  // то есть по клику на шаблон, поэтому связка «DXF, потом фото» молча выбрасывала фотографию
+  // на строке `if (state.freePoints) { go(3); return; }` и работала по профилю из DXF.
+  function resetRecognition() {
+    state.freePoints = null;
+    state.ocrFeatures = [];
+    state.ocrLengths = [];
+    state.dimsFromPreset = false;
+    if ($('#ocrConfidence')) $('#ocrConfidence').style.display = 'none';
+    if ($('#ocrTokens')) $('#ocrTokens').innerHTML = '';
+  }
+
+  // pointsToSegments (generator.html:228) при неудаче возвращает выдуманную деталь
+  // [{d:30,l:40},{d:45,l:60}] — причём оператору уже показано «DXF · профиль, импортировано
+  // точек N». Перехватываем: пустой результат должен оставаться пустым.
+  const corePointsToSegments = pointsToSegments;
+  pointsToSegments = function (pts) {
+    const a = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const l = Math.abs(pts[i + 1].z - pts[i].z);
+      if (l > .01) a.push({ d: Math.max(pts[i].x, .1), l });
+    }
+    return a.slice(0, 8);
+  };
+
+  const coreImportDxf = importDxf;
+  importDxf = async function (file) {
+    await coreImportDxf(file);
+    if (state.freePoints && !state.segments.length) {
+      state.freePoints = null;
+      $('#ocrMode').textContent = 'DXF · профиль не собран';
+      $('#fileResultText').textContent = 'Точки прочитаны, но участков контура из них не вышло. Подставлять типовую деталь вместо чертежа нельзя — введите размеры вручную или загрузите другой файл.';
+      toast('Из DXF не собрался контур — деталь не подставлена');
+    }
+  };
+
+  const coreFileChange = $('#fileInput').onchange;
+  $('#fileInput').onchange = async e => { if (e.target.files && e.target.files[0]) resetRecognition(); return coreFileChange.call($('#fileInput'), e); };
 
   $('#parseBtn').onclick = parseEnhancedOcr;
   $$('[data-ocr-example]').forEach(b => b.onclick = () => { $('#ocrText').value = b.dataset.ocrExample; $('#ocrMode').textContent = 'Пример формы'; toast('Пример перенесён в строку OCR'); });
@@ -214,6 +332,25 @@
     return ({ sharp: 'Переход без фаски', chamfer: 'Фаска C×45°', fillet: 'Галтель R', round: 'Скругление R', sphere: 'Сферический участок SR' })[type] || type;
   }
 
+  // Числа, прочитанные с чертежа, но не привязанные к ступеням: показываем их списком, чтобы
+  // оператор не перечитывал чертёж заново. Привязку делает он сам — автоматически привязать
+  // их нельзя, порядок токенов OCR не совпадает с порядком поверхностей вдоль оси.
+  function renderLoosePool() {
+    const pool = state.ocrLengths || [];
+    if (!pool.length) return '';
+    return `<div class="card feature-card"><div class="eyebrow">Линейные размеры с чертежа — не привязаны</div><div class="tokens">${pool.map(v => `<span class="token">${num(v)}</span>`).join('')}</div><div class="compact-note" style="margin-top:8px">Числа прочитаны, но какой ступени принадлежит каждое — с фотографии не определяется. Проставьте длины по чертежу; поля с пустой длиной дальше не пропускаются.</div></div>`;
+  }
+
+  // Показывает, по какому размеру пойдёт резец при указанном поле допуска.
+  // Оператор должен видеть и номинал с чертежа, и размер настройки — они разные.
+  function tolNote(s) {
+    if (!s || !s.tol) return '';
+    const T = window.RazryadTolerance, p = T && T.parse(s.tol, +s.d || 0);
+    if (!p) return `<div class="card warn" style="margin:0 0 2px"><div class="compact-note">Допуск <b style="color:var(--paper)">${esc(s.tol)}</b> с чертежа не разобран — точим по номиналу Ø${num(s.d)}. Проверьте предельные размеры сами.</div></div>`;
+    const target = (+s.d || 0) + p.mid;
+    return `<div class="compact-note">Допуск <b style="color:var(--paper)">${esc(s.tol)}</b>: ${num((+s.d || 0) + p.ei, 3)} … ${num((+s.d || 0) + p.es, 3)} мм. Точим в середину поля — <b style="color:var(--paper)">Ø${num(target, 3)}</b>. Номинал Ø${num(s.d)} остаётся размером чертежа.</div>`;
+  }
+
   function renderRecognizedFeatures() {
     if (!state.ocrFeatures.length) return '';
     return `<div class="card feature-card"><div class="eyebrow">Найдено на фото</div><div class="tokens">${state.ocrFeatures.map((f, i) => `<span class="token">${esc(f.raw || featureLabel(f.type) + f.value)}</span>`).join('')}</div><div class="compact-note" style="margin-top:8px">Сверьте выноску на чертеже и назначьте форму нужному переходу ниже. Автоматическая привязка не выполняется.</div></div>`;
@@ -221,7 +358,7 @@
 
   function transitionHtml(i) {
     const f = state.features[i] || { type: 'sharp', value: 0, axial: 6 };
-    return `<div class="card feature-card"><div class="flabel"><span>Переход ${i + 1} → ${i + 2}</span><span>Ø${num(state.segments[i].d)} → Ø${num(state.segments[i + 1].d)}</span></div><div class="feature-row"><label class="fld"><span>Форма по выноске</span><select data-feature="${i}" data-fkey="type"><option value="sharp" ${f.type === 'sharp' ? 'selected' : ''}>Острая</option><option value="chamfer" ${f.type === 'chamfer' ? 'selected' : ''}>Фаска C×45°</option><option value="fillet" ${f.type === 'fillet' ? 'selected' : ''}>Галтель R</option><option value="round" ${f.type === 'round' ? 'selected' : ''}>Скругление R</option><option value="sphere" ${f.type === 'sphere' ? 'selected' : ''}>Сфера SR</option></select></label><label class="fld"><span>${f.type === 'chamfer' ? 'Размер C' : f.type === 'sphere' ? 'Радиус SR' : 'Радиус R'}</span><div class="unit"><input type="number" data-feature="${i}" data-fkey="value" value="${num(f.value || 0)}" step="0.1" ${f.type === 'sharp' ? 'disabled' : ''}><i>мм</i></div></label></div>${f.type === 'sphere' ? `<label class="fld" style="margin:0"><span>Длина сферического участка по Z</span><div class="unit"><input type="number" data-feature="${i}" data-fkey="axial" value="${num(f.axial || f.value)}" step="0.1"><i>мм</i></div></label>` : ''}<div class="compact-note">${f.type === 'sphere' ? 'Сфера аппроксимируется короткими G01-хордами с контролем допуска — одинаково для Haas и Fanuc.' : f.type === 'chamfer' ? 'Фаска строится явными координатами, без зависимости от C-кода стойки.' : 'R выводится в контуре цикла; проверьте направление дуги в GRAPHICS.'}</div></div>`;
+    return `<div class="card feature-card"><div class="flabel"><span>Переход ${i + 1} → ${i + 2}</span><span>Ø${num(state.segments[i].d)} → Ø${num(state.segments[i + 1].d)}</span></div><div class="feature-row"><label class="fld"><span>Форма по выноске</span><select data-feature="${i}" data-fkey="type"><option value="sharp" ${f.type === 'sharp' ? 'selected' : ''}>Острая</option><option value="chamfer" ${f.type === 'chamfer' ? 'selected' : ''}>Фаска C×45°</option><option value="fillet" ${f.type === 'fillet' ? 'selected' : ''}>Галтель R</option><option value="round" ${f.type === 'round' ? 'selected' : ''}>Скругление R</option><option value="sphere" ${f.type === 'sphere' ? 'selected' : ''}>Сфера SR</option></select></label><label class="fld"><span>${f.type === 'chamfer' ? 'Размер C' : f.type === 'sphere' ? 'Радиус SR' : 'Радиус R'}</span><div class="unit"><input type="number" data-feature="${i}" data-fkey="value" value="${num(f.value || 0)}" step="0.1" ${f.type === 'sharp' ? 'disabled' : ''}><i>мм</i></div></label></div>${f.type === 'sphere' ? `<label class="fld" style="margin:0"><span>Длина сферического участка по Z</span><div class="unit"><input type="number" data-feature="${i}" data-fkey="axial" value="${num(f.axial || f.value)}" step="0.1"><i>мм</i></div></label>` : ''}${f.type === 'chamfer' ? `<label class="fld" style="margin:0"><span>Угол фаски к оси</span><div class="unit"><input type="number" data-feature="${i}" data-fkey="angle" value="${num(f.angle || 45)}" step="1" min="6" max="84"><i>град</i></div></label>` : ''}<div class="compact-note">${f.type === 'sphere' ? 'Сфера аппроксимируется короткими G01-хордами с контролем допуска — одинаково для Haas и Fanuc.' : f.type === 'chamfer' ? `Фаска строится явными координатами, без зависимости от C-кода стойки. При ${num(f.angle || 45)}° катет по X равен ${num(2 * (+f.value || 0) / Math.tan((+f.angle || 45) * Math.PI / 180), 3)} мм.` : 'R выводится в контуре цикла; проверьте направление дуги в GRAPHICS.'}</div></div>`;
   }
 
   function opCard(key, title, subtitle, body) {
@@ -234,8 +371,8 @@
     const names = { shaft: 'Ступень', bushing: 'Втулка', flange: 'Фланец', ring: 'Кольцо', threaded: 'Резьбовой участок', fitting: 'Штуцер', grooved: 'Вал с канавкой', borethread: 'Втулка', spherical: 'Сфера/шейка', free: 'Точка/участок' };
     const form = $('#dimensionForm');
     $$('#operationSeg button').forEach(b => b.classList.toggle('on', b.dataset.op === state.operation));
-    let outer = renderRecognizedFeatures();
-    outer += state.segments.map((s, i) => `<div class="card"><div class="segment"><div class="segno">${i + 1}</div><div><div class="flabel"><span>${hasOuter() ? (names[state.template] || 'Участок') : 'Габарит заготовки'} ${i + 1}</span><span>${i === 0 ? 'у торца' : i === state.segments.length - 1 ? 'к патрону' : ''}</span></div><div class="two"><label class="fld"><span>Диаметр</span><div class="unit"><input type="number" data-seg="${i}" data-key="d" value="${num(s.d)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Длина</span><div class="unit"><input type="number" data-seg="${i}" data-key="l" value="${num(s.l)}" step="0.1"><i>мм</i></div></label></div></div></div></div>${hasOuter() && i < state.segments.length - 1 ? transitionHtml(i) : ''}`).join('');
+    let outer = (state.dimsFromPreset ? `<div class="card warn"><div class="notice"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5m0 3v.1"/></svg><div><b>С чертежа не прочитан ни один диаметр.</b><div class="muted">Значения ниже взяты из шаблона детали, а не с фотографии. Введите размеры по чертежу вручную — подтверждать шаблонные числа нельзя.</div></div></div></div>` : '') + renderLoosePool() + renderRecognizedFeatures();
+    outer += state.segments.map((s, i) => `<div class="card"><div class="segment"><div class="segno">${i + 1}</div><div><div class="flabel"><span>${hasOuter() ? (names[state.template] || 'Участок') : 'Габарит заготовки'} ${i + 1}</span><span>${i === 0 ? 'у торца' : i === state.segments.length - 1 ? 'к патрону' : ''}</span></div><div class="two"><label class="fld"><span>Диаметр</span><div class="unit"><input type="number" data-seg="${i}" data-key="d" value="${num(s.d)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Длина${s.l == null ? ' · не найдена на чертеже' : ''}</span><div class="unit"><input type="number" data-seg="${i}" data-key="l" value="${s.l == null ? '' : num(s.l)}" placeholder="введите с чертежа" step="0.1"><i>мм</i></div></label></div>${tolNote(s)}</div></div></div>${hasOuter() && i < state.segments.length - 1 ? transitionHtml(i) : ''}`).join('');
     const bore = hasBore() ? `<div class="card subop"><div class="eyebrow">Расточка G71 / G70</div><div class="two"><label class="fld"><span>Исходное отверстие</span><div class="unit"><input type="number" data-bore="preD" value="${num(state.bore.preD)}" step="0.1"><i>⌀ мм</i></div></label><label class="fld"><span>Готовое отверстие</span><div class="unit"><input type="number" data-bore="finalD" value="${num(state.bore.finalD)}" step="0.1"><i>⌀ мм</i></div></label></div><div class="two"><label class="fld"><span>Глубина по Z</span><div class="unit"><input type="number" data-bore="depth" value="${num(state.bore.depth)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Дно отверстия</span><select id="boreKind"><option value="blind" ${state.bore.through ? '' : 'selected'}>Глухое</option><option value="through" ${state.bore.through ? 'selected' : ''}>Сквозное</option></select></label></div><div class="compact-note">Исходное отверстие должно быть готово до внутреннего G71. U в цикле расточки выводится со знаком минус.</div></div>` : '';
     const thread = `<div class="card"><div class="confirm"><input type="checkbox" id="threadEnabled" ${state.thread.enabled ? 'checked' : ''}><label for="threadEnabled"><b>Наружная резьба G76</b><br><span class="muted">Метрическая 60°, отдельный резьбовой инструмент.</span></label></div>${state.thread.enabled ? `<div style="margin-top:12px"><div class="two"><label class="fld"><span>Наружный ⌀</span><div class="unit"><input type="number" data-thread="d" value="${num(state.thread.d)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Шаг F</span><div class="unit"><input type="number" data-thread="pitch" value="${num(state.thread.pitch)}" step="0.1"><i>мм</i></div></label></div><label class="fld" style="margin:0"><span>Длина</span><div class="unit"><input type="number" data-thread="length" value="${num(state.thread.length)}" step="0.1"><i>мм</i></div></label></div>` : ''}</div>`;
     const ops = `<div class="eyebrow" style="margin-top:16px">Дополнительные операции</div>` +
@@ -246,7 +383,7 @@
       opCard('idThread', 'Внутренняя резьба G76', 'После сверления/расточки до внутреннего диаметра резьбы', `<div class="two"><label class="fld"><span>Номинальный ⌀ M</span><input type="number" data-extra="idThread" data-xkey="d" value="${num(state.extraOps.idThread.d)}"></label><label class="fld"><span>Шаг</span><input type="number" data-extra="idThread" data-xkey="pitch" value="${num(state.extraOps.idThread.pitch)}" step="0.1"></label></div><label class="fld" style="margin:0"><span>Длина резьбы</span><input type="number" data-extra="idThread" data-xkey="length" value="${num(state.extraOps.idThread.length)}"></label>`);
     form.innerHTML = outer + bore + thread + ops;
     $('#swapSegments').style.display = hasOuter() && state.segments.length > 1 ? 'block' : 'none';
-    form.querySelectorAll('[data-seg]').forEach(inp => inp.oninput = () => { state.segments[+inp.dataset.seg][inp.dataset.key] = Math.max(0, +inp.value || 0); syncFeatures(); dirtyDims(); });
+    form.querySelectorAll('[data-seg]').forEach(inp => inp.oninput = () => { state.segments[+inp.dataset.seg][inp.dataset.key] = String(inp.value).trim() === '' ? null : Math.max(0, +inp.value || 0); syncFeatures(); dirtyDims(); });
     form.querySelectorAll('[data-bore]').forEach(inp => inp.oninput = () => { state.bore[inp.dataset.bore] = Math.max(0, +inp.value || 0); dirtyDims(); });
     form.querySelectorAll('[data-thread]').forEach(inp => inp.oninput = () => { state.thread[inp.dataset.thread] = Math.max(0, +inp.value || 0); dirtyDims(); });
     form.querySelectorAll('[data-feature]').forEach(inp => inp.onchange = inp.oninput = () => { const f = state.features[+inp.dataset.feature]; f[inp.dataset.fkey] = inp.dataset.fkey === 'type' ? inp.value : Math.max(0, +inp.value || 0); renderDimensions(); });
@@ -267,6 +404,9 @@
 
   const coreGeometryIssue = geometryIssue;
   geometryIssue = function () {
+    // Пустой контур базовая проверка пропускает: .some() на пустом массиве даёт false.
+    if (!state.segments.length) return 'Контур пуст: ни одного участка не прочитано. Введите размеры с чертежа.';
+    if (state.segments.some(s => s.l == null)) return 'У части участков не найдена длина. Проставьте её по чертежу — подставлять значение по умолчанию нельзя.';
     const savedRadius = state.radius; state.radius = 0;
     const base = coreGeometryIssue(); state.radius = savedRadius;
     if (base) return base;
@@ -319,27 +459,71 @@
     return best ? best.pts : [p1];
   }
 
+  // Размер настройки: при указанном поле допуска точим в СЕРЕДИНУ поля, а не по номиналу.
+  // Ø45h6 -> 44.992. Номинал остаётся в state.segments[i].d и показывается оператору как есть.
+  function targetD(seg) {
+    if (!seg) return 0;
+    const nominal = +seg.d || 0;
+    return window.RazryadTolerance ? window.RazryadTolerance.midTarget(nominal, seg.tol) : nominal;
+  }
+
+  // Угол фаски к оси в градусах. По умолчанию 45°; иное значение приходит с чертежа (C2×30°).
+  function chamferAngle(f) {
+    const a = +(f && f.angle);
+    return a > 5 && a < 85 ? a : 45;
+  }
+
+  // Кадры-комментарии о полях допуска: оператор на стойке должен видеть, что контур построен
+  // не по номиналу чертежа, а по середине поля, и какие предельные размеры он обязан выдержать.
+  // Поле допуска в комментарий NC. ncText() здесь применять НЕЛЬЗЯ: он приводит строку к верхнему
+  // регистру, а регистр в обозначении и есть смысл — h6 это вал, H6 это отверстие.
+  function ncTol(s) {
+    return String(s == null ? '' : s).replace(/±/g, '+/-').replace(/[^A-Za-z0-9+\-./]/g, '');
+  }
+
+  function tolComments() {
+    const T = window.RazryadTolerance;
+    if (!T) return [];
+    const out = [];
+    state.segments.forEach((s, i) => {
+      if (!s.tol) return;
+      const p = T.parse(s.tol, +s.d || 0), n = +s.d || 0;
+      if (!p) { out.push(`(UCHASTOK ${i + 1} DIA ${num(n, 3)} DOPUSK ${ncTol(s.tol)} NE RAZOBRAN / TOCHIM PO NOMINALU)`); return; }
+      out.push(`(UCHASTOK ${i + 1} DIA ${num(n, 3)} ${ncTol(s.tol)} = ${num(n + p.ei, 3)}..${num(n + p.es, 3)} / NASTROYKA ${num(n + p.mid, 3)})`);
+    });
+    if (state.bore && state.bore.tol && hasBore()) {
+      const n = +state.bore.finalD || 0, p = T.parse(state.bore.tol, n);
+      if (p) out.push(`(OTVERSTIE DIA ${num(n, 3)} ${ncTol(state.bore.tol)} = ${num(n + p.ei, 3)}..${num(n + p.es, 3)} / NASTROYKA ${num(n + p.mid, 3)})`);
+    }
+    if (out.length) out.push('(RAZMER NASTROYKI = SEREDINA POLYA DOPUSKA / PROVERIT PERVUYU DETAL)');
+    return out;
+  }
+
   function buildProfile() {
     if (state.freePoints && state.freePoints.length > 1) return state.freePoints.map(p => ({ x: +p.x, z: +p.z }));
+    if (!state.segments.length) return [];
     syncFeatures();
     let z = 0;
-    const pts = [{ x: +state.segments[0].d, z: 0 }];
+    const pts = [{ x: targetD(state.segments[0]), z: 0 }];
     state.segments.forEach((seg, i) => {
       const cornerZ = z - +seg.l, next = state.segments[i + 1], f = state.features[i];
-      if (!next) { pts.push({ x: +seg.d, z: cornerZ }); z = cornerZ; return; }
+      const dSeg = targetD(seg), dNext = next ? targetD(next) : 0;
+      if (!next) { pts.push({ x: dSeg, z: cornerZ }); z = cornerZ; return; }
       if (f && f.type === 'chamfer' && f.value > 0) {
-        const c = Math.min(+f.value, +seg.l * .8, Math.abs(+next.d - +seg.d) / 2 * .8);
-        pts.push({ x: +seg.d, z: cornerZ + c });
-        pts.push({ x: +seg.d + Math.sign(+next.d - +seg.d) * 2 * c, z: cornerZ, chamfer: c });
-        pts.push({ x: +next.d, z: cornerZ });
+        const c = Math.min(+f.value, +seg.l * .8, Math.abs(dNext - dSeg) / 2 * .8);
+        // Катет по X зависит от угла фаски: при 45° это 2c, при 30° — 2c/tan(30°).
+        const legX = 2 * c / Math.tan(chamferAngle(f) * Math.PI / 180);
+        pts.push({ x: dSeg, z: cornerZ + c });
+        pts.push({ x: dSeg + Math.sign(dNext - dSeg) * legX, z: cornerZ, chamfer: c });
+        pts.push({ x: dNext, z: cornerZ });
       } else if (f && f.type === 'sphere' && f.value > 0) {
         const axial = Math.min(+f.axial || +f.value, +seg.l);
-        const start = { x: +seg.d, z: cornerZ + axial }, end = { x: +next.d, z: cornerZ };
+        const start = { x: dSeg, z: cornerZ + axial }, end = { x: dNext, z: cornerZ };
         pts.push(start);
         pts.push(...minorArcSamples(start, end, +f.value, state.sphereTolerance));
       } else {
-        pts.push({ x: +seg.d, z: cornerZ });
-        pts.push({ x: +next.d, z: cornerZ, corner: f && (f.type === 'fillet' || f.type === 'round') ? +f.value : 0, cornerType: f ? f.type : 'sharp' });
+        pts.push({ x: dSeg, z: cornerZ });
+        pts.push({ x: dNext, z: cornerZ, corner: f && (f.type === 'fillet' || f.type === 'round') ? +f.value : 0, cornerType: f ? f.type : 'sharp' });
       }
       z = cornerZ;
     });
@@ -417,7 +601,7 @@
   generateGcode = function () {
     readSetup();
     const pts = buildProfile(), safeX = Math.max(state.stockD, maxD()) + 4;
-    const lines = ['%', 'O' + state.programNo + ' (RAZRYAD FOTO-GCODE V0980)', '(PROVERIT GRAPHICS SINGLE BLOCK RAPID 5%)', `(POST ${state.post === 'haas' ? 'HAAS NGC' : 'FANUC 0I TWO BLOCK'})`, `(MACHINE ${ncText(state.machine.name)})`, '(MATERIAL ' + ncText(materials[state.material].name) + (materials[state.material].noHrc ? '' : ' HRC ' + state.hrc) + ')', 'G21 G18 G40 G80 G99'];
+    const lines = ['%', 'O' + state.programNo + ' (RAZRYAD FOTO-GCODE V0980)', '(PROVERIT GRAPHICS SINGLE BLOCK RAPID 5%)', `(POST ${state.post === 'haas' ? 'HAAS NGC' : 'FANUC 0I TWO BLOCK'})`, `(MACHINE ${ncText(state.machine.name)})`, '(MATERIAL ' + ncText(materials[state.material].name) + (materials[state.material].noHrc ? '' : ' HRC ' + state.hrc) + ')', ...tolComments(), 'G21 G18 G40 G80 G99'];
     if (hasOuter()) {
       const firstN = 100, startN = 110, q = startN + (pts.length - 1) * 10;
       lines.push('(--- NARUZHNAYA G71 G70 TYPE I ---)', 'G28 U0. W0.', state.tool + ' (NARUZHNY PRAVY REZEC)', `(INSERT ${ncText((INSERTS[state.insertKey] || INSERTS.cnmg08).code)} / NOSE R${num(state.nose, 1)})`, 'G50 S' + Math.round(state.maxRpm), 'G97 S' + Math.round(state.rpm) + ' M03', 'G00 X' + num(safeX, 1) + ' Z2. M08');
@@ -431,7 +615,7 @@
       const startX = Math.max(.5, state.bore.preD - 2), endX = Math.max(.2, state.bore.preD - 1), bd = Math.max(.2, state.depth * .65), bf = Math.max(.04, state.feed * .72);
       lines.push('(--- RASTOCHKA G71 ID / G70 TYPE I ---)', 'G28 U0. W0.', state.boreTool + ' (RASTOCHNOY REZEC)', `(ISKHODNOE OTV DIA ${num(state.bore.preD, 2)} / NOSE R${num(state.boreNose, 1)})`, 'G50 S' + Math.round(state.maxRpm), 'G97 S' + Math.round(state.boreRpm) + ' M03', 'G00 X' + num(startX, 2) + ' Z2. M08');
       cycleG71(lines, 200, 230, bd, -.2, .1, bf);
-      lines.push('N200 G41 G00 X' + num(state.bore.finalD, 3), 'N210 G01 Z0. F' + num(Math.max(.04, bf * .7), 3), 'N220 G01 Z-' + num(state.bore.depth, 3), 'N230 G01 G40 X' + num(endX, 3), 'G70 P200 Q230', 'G00 X' + num(startX, 2) + ' Z5. M09');
+      lines.push('N200 G41 G00 X' + num(targetD({ d: state.bore.finalD, tol: state.bore.tol }), 3), 'N210 G01 Z0. F' + num(Math.max(.04, bf * .7), 3), 'N220 G01 Z-' + num(state.bore.depth, 3), 'N230 G01 G40 X' + num(endX, 3), 'G70 P200 Q230', 'G00 X' + num(startX, 2) + ' Z5. M09');
     }
     if (state.thread.enabled) appendThread(lines, 'od');
     appendExtraOps(lines);
