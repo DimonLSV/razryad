@@ -1,0 +1,140 @@
+{
+ "_": "Провенанс вендорных библиотек. Сборки нет, файлы кладутся в vendor/ руками, поэтому версия в package.json ничего не доказывает. Здесь записано, что именно лежит в репозитории: контрольные суммы позволяют ответить, какая версия ушла в APK оператору, когда выйдет очередная CVE. Проверка: npm run vendor:check",
+ "files": [
+  {
+   "path": "vendor/ocr/core/tesseract-core-lstm.wasm",
+   "bytes": 2859424,
+   "sha256": "5db58ea4d1bd4256be81e8ae3b4fa226c4625dfba1850b1b3308dbf3700e9929",
+   "package": "tesseract.js-core",
+   "version": "5.1.1",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core-lstm.wasm"
+  },
+  {
+   "path": "vendor/ocr/core/tesseract-core-lstm.wasm.js",
+   "bytes": 3938277,
+   "sha256": "8f04aa0cc81e7bde33f80e92fa01a7a665f0b4884d098acf5de9c7104a11dfaa",
+   "package": "tesseract.js-core",
+   "version": "5.1.1",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core-lstm.wasm.js"
+  },
+  {
+   "path": "vendor/ocr/core/tesseract-core-simd-lstm.wasm",
+   "bytes": 2859709,
+   "sha256": "66b601224a0c4a8977bc9d92dd39841189f9ca22cc4122fcd7208cdb0961eeef",
+   "package": "tesseract.js-core",
+   "version": "5.1.1",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core-simd-lstm.wasm"
+  },
+  {
+   "path": "vendor/ocr/core/tesseract-core-simd-lstm.wasm.js",
+   "bytes": 3938657,
+   "sha256": "ce20eda9533cbed1e6c2b4276fbae1e0adc61b6754b5513084be601787b457cf",
+   "package": "tesseract.js-core",
+   "version": "5.1.1",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core-simd-lstm.wasm.js"
+  },
+  {
+   "path": "vendor/ocr/core/tesseract-core-simd.wasm",
+   "bytes": 3457317,
+   "sha256": "baa2f54ef5af43ada4605fd7ae999bde3c6ecc96bfe0d0410b0b4f4a5f9c8b91",
+   "package": "tesseract.js-core",
+   "version": "5.1.1",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core-simd.wasm"
+  },
+  {
+   "path": "vendor/ocr/core/tesseract-core-simd.wasm.js",
+   "bytes": 4735153,
+   "sha256": "63f232c4f7a97b04e52eb940202700b2c6239783a75d0ff0553274fac530cd5c",
+   "package": "tesseract.js-core",
+   "version": "5.1.1",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core-simd.wasm.js"
+  },
+  {
+   "path": "vendor/ocr/core/tesseract-core.wasm",
+   "bytes": 3457035,
+   "sha256": "b47a852b19181ae0999f9d970c368cd351135a320ea978b35bd38602d8bcc0bc",
+   "package": "tesseract.js-core",
+   "version": "5.1.1",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core.wasm"
+  },
+  {
+   "path": "vendor/ocr/core/tesseract-core.wasm.js",
+   "bytes": 4734777,
+   "sha256": "2b8c8c92b8788807061fb4bb16c5acdf000c149e100255f879f78d2c58ca9969",
+   "package": "tesseract.js-core",
+   "version": "5.1.1",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core.wasm.js"
+  },
+  {
+   "path": "vendor/ocr/tesseract.min.js",
+   "bytes": 66695,
+   "sha256": "a8e29918d098b2b06e1012bdaeffb4aec0445c5d5654709023e0bd1f442a80e8",
+   "package": "tesseract.js",
+   "version": "5.1.1",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"
+  },
+  {
+   "path": "vendor/ocr/worker.min.js",
+   "bytes": 123724,
+   "sha256": "aca1229639fc9907d86f96e825955a2b7c5716d17f3bc3acd71f9c7ab66181fc",
+   "package": "tesseract.js",
+   "version": "5.1.1",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js"
+  },
+  {
+   "path": "vendor/pdf/pdf.min.js",
+   "bytes": 320004,
+   "sha256": "5b5799e6f8c680663207ac5b42ee14eed2a406fa7af48f50c154f0c0b1566946",
+   "package": "pdfjs-dist",
+   "version": "3.11.174",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"
+  },
+  {
+   "path": "vendor/pdf/pdf.worker.min.js",
+   "bytes": 1087212,
+   "sha256": "feabdf309770ed24bba31a5467836cdc8cf639c705af27d52b585b041bb8527b",
+   "package": "pdfjs-dist",
+   "version": "3.11.174",
+   "license": "Apache-2.0",
+   "source": "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"
+  },
+  {
+   "path": "vendor/qrcode/qrcode.js",
+   "bytes": 56694,
+   "sha256": "18ae399f81182bc9de916e9c77b195df20cc58d6f2d55a62b085a299f1bf1780",
+   "package": "qrcode-generator",
+   "version": "1.4.4",
+   "license": "MIT",
+   "source": "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"
+  },
+  {
+   "path": "vendor/tessdata/eng.traineddata.gz",
+   "bytes": 10923060,
+   "sha256": "ed350f3752f81ee8f38769edc14d92d997dababe23b565c59879372cc46a2468",
+   "package": "tessdata_fast (eng)",
+   "version": "4.1.0",
+   "license": "Apache-2.0",
+   "source": "https://github.com/tesseract-ocr/tessdata_fast/raw/main/eng.traineddata"
+  },
+  {
+   "path": "vendor/tessdata/rus.traineddata.gz",
+   "bytes": 8634337,
+   "sha256": "63a48ae166be2bb9862839b6f75e11afbac5e3be5bd5fa9a155ea43d5cdf9575",
+   "package": "tessdata_fast (rus)",
+   "version": "4.1.0",
+   "license": "Apache-2.0",
+   "source": "https://github.com/tesseract-ocr/tessdata_fast/raw/main/rus.traineddata"
+  }
+ ]
+}
