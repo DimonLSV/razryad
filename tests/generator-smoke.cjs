@@ -221,4 +221,36 @@ assert(/длин/i.test(get('#safetyText').textContent), 'Причина отк�
 run("state.segments=[{d:30,l:40,tol:null},{d:45,l:60,tol:null}]; state.gcode=generateGcode(); checkSafety();");
 assert(run('state.safe') === true, 'Годная геометрия должна проходить проверку: ' + get('#safetyText').textContent);
 
+// --- Конусы: у участка появился d2 — диаметр на дальнем конце. null = цилиндр.
+gcode = gcodeFor("applyPreset('shaft'); state.segments=[{d:30,d2:45,l:40,tol:null},{d:60,l:50,tol:null}]; state.features=[{type:'sharp',value:0,axial:6}];");
+assert(gcode.includes('X45.000 Z-40.000'), 'Конус должен давать наклонный кадр к Ø45 на Z-40: ' + gcode.match(/N120[^\n]*/));
+assert(gcode.includes('X60.000 Z-40.000'), 'После конуса должен идти уступ до Ø60');
+
+// maxD()/minD() в generator.html знают только про d. Без учёта d2 конус Ø30->Ø60 давал бы
+// maxD()=30, а от него считается safeX — быстрый подвод пришёлся бы внутрь тела детали.
+run("state.segments=[{d:30,d2:60,l:40,tol:null}]; state.features=[];");
+assert(run('maxD()') === 60, 'maxD() обязана видеть дальний конец конуса: ' + run('maxD()'));
+assert(run('minD()') === 30, 'minD() обязана видеть оба конца конуса: ' + run('minD()'));
+
+// G71 Type I требует контур, растущий от торца к патрону. Сужение внутри участка и разрыв
+// на стыке базовая проверка в generator.html не видит — она сравнивает только начальные диаметры.
+run("state.segments=[{d:45,d2:30,l:40,tol:null},{d:60,l:50,tol:null}]; state.features=[{type:'sharp',value:0,axial:6}];");
+assert(/сужается к патрону/.test(run('geometryIssue()')), 'Сужающийся конус должен отвергаться: ' + run('geometryIssue()'));
+run("state.segments=[{d:30,d2:50,l:40,tol:null},{d:40,l:50,tol:null}]; state.features=[{type:'sharp',value:0,axial:6}];");
+assert(/контур убывает/.test(run('geometryIssue()')), 'Разрыв на стыке конуса должен отвергаться: ' + run('geometryIssue()'));
+
+// Поле допуска смещает оба конца конуса одинаково, иначе изменился бы угол конуса.
+gcode = gcodeFor("applyPreset('shaft'); state.segments=[{d:30,d2:45,l:40,tol:'h6'},{d:60,l:50,tol:null}]; state.features=[{type:'sharp',value:0,axial:6}];");
+assert(gcode.includes('X29.994'), 'Малый конец конуса со смещением по h6: ' + gcode.match(/N100[^\n]*/));
+assert(gcode.includes('X44.993'), 'Большой конец смещён на ту же величину: ' + gcode.match(/N120[^\n]*/));
+
+// Фаска в конце конуса начинается на диаметре, интерполированном по длине, а не на d.
+gcode = gcodeFor("applyPreset('shaft'); state.segments=[{d:30,d2:45,l:40,tol:null},{d:60,l:50,tol:null}]; state.features=[{type:'chamfer',value:2,axial:2,angle:45}];");
+assert(gcode.includes('X44.250 Z-38.000'), 'Начало фаски на конусе интерполируется по длине: ' + gcode.match(/N120[^\n]*/));
+
+// Регрессия: цилиндры без d2 строятся ровно как раньше.
+gcode = gcodeFor("applyPreset('shaft'); state.segments=[{d:30,l:40,tol:null},{d:45,l:60,tol:null}]; state.features=[{type:'sharp',value:0,axial:6}];");
+assert(gcode.includes('X30.000 Z-40.000') && gcode.includes('X45.000 Z-40.000') && gcode.includes('X45.000 Z-100.000'),
+  'Цилиндрический контур не должен измениться от появления конусов');
+
 console.log('generator smoke tests: OK');

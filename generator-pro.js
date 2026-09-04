@@ -341,6 +341,16 @@
     return `<div class="card feature-card"><div class="eyebrow">Линейные размеры с чертежа — не привязаны</div><div class="tokens">${pool.map(v => `<span class="token">${num(v)}</span>`).join('')}</div><div class="compact-note" style="margin-top:8px">Числа прочитаны, но какой ступени принадлежит каждое — с фотографии не определяется. Проставьте длины по чертежу; поля с пустой длиной дальше не пропускаются.</div></div>`;
   }
 
+  // Уклон конуса в привычных чертёжных величинах: конусность 1:K и угол при вершине.
+  function taperNote(s) {
+    if (!s || s.d2 == null) return '';
+    const d = +s.d || 0, d2 = +s.d2 || 0, l = +s.l || 0, dd = d2 - d;
+    if (!l || Math.abs(dd) < 1e-9) return `<div class="compact-note">Диаметры концов совпадают — участок цилиндрический.</div>`;
+    const ratio = l / Math.abs(dd), angle = Math.atan2(Math.abs(dd) / 2, l) * 180 / Math.PI;
+    const tolWarn = s.tol ? ` Поле допуска <b style="color:var(--paper)">${esc(s.tol)}</b> смещает оба конца конуса одинаково, чтобы не изменился угол; допуск на сам угол (АТ по ГОСТ 8908) приложение не рассчитывает — проверьте его отдельно.` : '';
+    return `<div class="compact-note">Конус Ø${num(d)} → Ø${num(d2)} на длине ${num(l)}: конусность 1:${num(ratio, 2)}, угол к оси ${num(angle, 2)}°, полный угол ${num(angle * 2, 2)}°. Сверьте с чертежом — конусность и угол там могут быть заданы вместо диаметров.${tolWarn}</div>`;
+  }
+
   // Показывает, по какому размеру пойдёт резец при указанном поле допуска.
   // Оператор должен видеть и номинал с чертежа, и размер настройки — они разные.
   function tolNote(s) {
@@ -372,7 +382,7 @@
     const form = $('#dimensionForm');
     $$('#operationSeg button').forEach(b => b.classList.toggle('on', b.dataset.op === state.operation));
     let outer = (state.dimsFromPreset ? `<div class="card warn"><div class="notice"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5m0 3v.1"/></svg><div><b>С чертежа не прочитан ни один диаметр.</b><div class="muted">Значения ниже взяты из шаблона детали, а не с фотографии. Введите размеры по чертежу вручную — подтверждать шаблонные числа нельзя.</div></div></div></div>` : '') + renderLoosePool() + renderRecognizedFeatures();
-    outer += state.segments.map((s, i) => `<div class="card"><div class="segment"><div class="segno">${i + 1}</div><div><div class="flabel"><span>${hasOuter() ? (names[state.template] || 'Участок') : 'Габарит заготовки'} ${i + 1}</span><span>${i === 0 ? 'у торца' : i === state.segments.length - 1 ? 'к патрону' : ''}</span></div><div class="two"><label class="fld"><span>Диаметр</span><div class="unit"><input type="number" data-seg="${i}" data-key="d" value="${num(s.d)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Длина${s.l == null ? ' · не найдена на чертеже' : ''}</span><div class="unit"><input type="number" data-seg="${i}" data-key="l" value="${s.l == null ? '' : num(s.l)}" placeholder="введите с чертежа" step="0.1"><i>мм</i></div></label></div>${tolNote(s)}</div></div></div>${hasOuter() && i < state.segments.length - 1 ? transitionHtml(i) : ''}`).join('');
+    outer += state.segments.map((s, i) => `<div class="card"><div class="segment"><div class="segno">${i + 1}</div><div><div class="flabel"><span>${hasOuter() ? (names[state.template] || 'Участок') : 'Габарит заготовки'} ${i + 1}</span><span>${i === 0 ? 'у торца' : i === state.segments.length - 1 ? 'к патрону' : ''}</span></div><div class="two"><label class="fld"><span>Диаметр</span><div class="unit"><input type="number" data-seg="${i}" data-key="d" value="${num(s.d)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Длина${s.l == null ? ' · не найдена на чертеже' : ''}</span><div class="unit"><input type="number" data-seg="${i}" data-key="l" value="${s.l == null ? '' : num(s.l)}" placeholder="введите с чертежа" step="0.1"><i>мм</i></div></label></div><label class="fld" style="margin:0"><span>Ø на дальнем конце${s.d2 == null ? ' · пусто = цилиндр' : ' · конус'}</span><div class="unit"><input type="number" data-seg="${i}" data-key="d2" value="${s.d2 == null ? '' : num(s.d2)}" placeholder="цилиндр" step="0.1"><i>мм</i></div></label>${taperNote(s)}${tolNote(s)}</div></div></div>${hasOuter() && i < state.segments.length - 1 ? transitionHtml(i) : ''}`).join('');
     const bore = hasBore() ? `<div class="card subop"><div class="eyebrow">Расточка G71 / G70</div><div class="two"><label class="fld"><span>Исходное отверстие</span><div class="unit"><input type="number" data-bore="preD" value="${num(state.bore.preD)}" step="0.1"><i>⌀ мм</i></div></label><label class="fld"><span>Готовое отверстие</span><div class="unit"><input type="number" data-bore="finalD" value="${num(state.bore.finalD)}" step="0.1"><i>⌀ мм</i></div></label></div><div class="two"><label class="fld"><span>Глубина по Z</span><div class="unit"><input type="number" data-bore="depth" value="${num(state.bore.depth)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Дно отверстия</span><select id="boreKind"><option value="blind" ${state.bore.through ? '' : 'selected'}>Глухое</option><option value="through" ${state.bore.through ? 'selected' : ''}>Сквозное</option></select></label></div><div class="compact-note">Исходное отверстие должно быть готово до внутреннего G71. U в цикле расточки выводится со знаком минус.</div></div>` : '';
     const thread = `<div class="card"><div class="confirm"><input type="checkbox" id="threadEnabled" ${state.thread.enabled ? 'checked' : ''}><label for="threadEnabled"><b>Наружная резьба G76</b><br><span class="muted">Метрическая 60°, отдельный резьбовой инструмент.</span></label></div>${state.thread.enabled ? `<div style="margin-top:12px"><div class="two"><label class="fld"><span>Наружный ⌀</span><div class="unit"><input type="number" data-thread="d" value="${num(state.thread.d)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Шаг F</span><div class="unit"><input type="number" data-thread="pitch" value="${num(state.thread.pitch)}" step="0.1"><i>мм</i></div></label></div><label class="fld" style="margin:0"><span>Длина</span><div class="unit"><input type="number" data-thread="length" value="${num(state.thread.length)}" step="0.1"><i>мм</i></div></label></div>` : ''}</div>`;
     const ops = `<div class="eyebrow" style="margin-top:16px">Дополнительные операции</div>` +
@@ -407,6 +417,17 @@
     // Пустой контур базовая проверка пропускает: .some() на пустом массиве даёт false.
     if (!state.segments.length) return 'Контур пуст: ни одного участка не прочитано. Введите размеры с чертежа.';
     if (state.segments.some(s => s.l == null)) return 'У части участков не найдена длина. Проставьте её по чертежу — подставлять значение по умолчанию нельзя.';
+    // Конусы. Базовая проверка в generator.html сравнивает только начальные диаметры участков,
+    // поэтому сужение внутри самого участка и стык «конец конуса → начало следующего» она не видит.
+    for (let i = 0; i < state.segments.length; i++) {
+      const s = state.segments[i];
+      if (s.d2 == null) continue;
+      if (!(+s.d2 > 0)) return `Участок ${i + 1}: диаметр на дальнем конце конуса должен быть больше нуля.`;
+      if (!hasOuter()) continue;
+      if (+s.d2 < +s.d) return `Участок ${i + 1}: конус сужается к патрону (Ø${num(s.d)} → Ø${num(s.d2)}). G71 Type I требует контур, который только растёт от торца к патрону.`;
+      const next = state.segments[i + 1];
+      if (next && +next.d < +s.d2) return `Участок ${i + 1}: конус заканчивается на Ø${num(s.d2)}, а участок ${i + 2} начинается с Ø${num(next.d)} — контур убывает.`;
+    }
     const savedRadius = state.radius; state.radius = 0;
     const base = coreGeometryIssue(); state.radius = savedRadius;
     if (base) return base;
@@ -459,12 +480,37 @@
     return best ? best.pts : [p1];
   }
 
+  // Участок может быть конусом: d — диаметр у торца участка, d2 — у дальнего конца (к патрону).
+  // d2 === null означает цилиндр. maxD()/minD() в generator.html знают только про d, поэтому
+  // без этих обёрток конус 45 -> 60 давал бы maxD() = 45, а от него считается safeX
+  // (generator-pro.js, generateGcode) — быстрый подвод пришёлся бы внутрь тела детали.
+  const coreMaxD = maxD;
+  maxD = function () { return Math.max(coreMaxD(), ...state.segments.map(s => +s.d2 || 0)); };
+  const coreMinD = minD;
+  minD = function () {
+    const ds = state.segments.reduce((a, s) => { if (+s.d > 0) a.push(+s.d); if (s.d2 != null && +s.d2 > 0) a.push(+s.d2); return a; }, []);
+    return ds.length ? Math.min(...ds) : coreMinD();
+  };
+
+  // Диаметр дальнего конца участка с учётом поля допуска. Смещение к середине поля применяется
+  // к обоим концам: допуск на чертеже относится к поверхности целиком, а не к одному её краю.
+  function targetD2(seg) {
+    if (!seg || seg.d2 == null) return null;
+    return (+seg.d2 || 0) + (targetD(seg) - (+seg.d || 0));
+  }
+
   // Размер настройки: при указанном поле допуска точим в СЕРЕДИНУ поля, а не по номиналу.
   // Ø45h6 -> 44.992. Номинал остаётся в state.segments[i].d и показывается оператору как есть.
   function targetD(seg) {
     if (!seg) return 0;
     const nominal = +seg.d || 0;
     return window.RazryadTolerance ? window.RazryadTolerance.midTarget(nominal, seg.tol) : nominal;
+  }
+
+  // Диаметр на высоте h над дальним концом участка при линейном конусе.
+  // h = 0 даёт dEnd, h = len даёт dStart.
+  function dStartToEnd(dStart, dEnd, len, h) {
+    return dStart + (dEnd - dStart) * ((len - Math.min(Math.max(h, 0), len)) / len);
   }
 
   // Угол фаски к оси в градусах. По умолчанию 45°; иное значение приходит с чертежа (C2×30°).
@@ -508,21 +554,27 @@
     state.segments.forEach((seg, i) => {
       const cornerZ = z - +seg.l, next = state.segments[i + 1], f = state.features[i];
       const dSeg = targetD(seg), dNext = next ? targetD(next) : 0;
-      if (!next) { pts.push({ x: dSeg, z: cornerZ }); z = cornerZ; return; }
+      // Конус: диаметр меняется по длине участка. dEnd — у дальнего конца, dAt(h) — на высоте h
+      // над этим концом (нужно там, где фаска или сфера начинаются не на самом уступе).
+      const dEnd = targetD2(seg) != null ? targetD2(seg) : dSeg;
+      const segLen = Math.max(1e-6, +seg.l || 0);
+      const dAt = h => dStartToEnd(dSeg, dEnd, segLen, h);
+      if (!next) { pts.push({ x: dEnd, z: cornerZ }); z = cornerZ; return; }
       if (f && f.type === 'chamfer' && f.value > 0) {
-        const c = Math.min(+f.value, +seg.l * .8, Math.abs(dNext - dSeg) / 2 * .8);
+        const c = Math.min(+f.value, +seg.l * .8, Math.abs(dNext - dEnd) / 2 * .8);
         // Катет по X зависит от угла фаски: при 45° это 2c, при 30° — 2c/tan(30°).
         const legX = 2 * c / Math.tan(chamferAngle(f) * Math.PI / 180);
-        pts.push({ x: dSeg, z: cornerZ + c });
-        pts.push({ x: dSeg + Math.sign(dNext - dSeg) * legX, z: cornerZ, chamfer: c });
+        const dChamferStart = dAt(c);
+        pts.push({ x: dChamferStart, z: cornerZ + c });
+        pts.push({ x: dChamferStart + Math.sign(dNext - dEnd) * legX, z: cornerZ, chamfer: c });
         pts.push({ x: dNext, z: cornerZ });
       } else if (f && f.type === 'sphere' && f.value > 0) {
         const axial = Math.min(+f.axial || +f.value, +seg.l);
-        const start = { x: dSeg, z: cornerZ + axial }, end = { x: dNext, z: cornerZ };
+        const start = { x: dAt(axial), z: cornerZ + axial }, end = { x: dNext, z: cornerZ };
         pts.push(start);
         pts.push(...minorArcSamples(start, end, +f.value, state.sphereTolerance));
       } else {
-        pts.push({ x: dSeg, z: cornerZ });
+        pts.push({ x: dEnd, z: cornerZ });
         pts.push({ x: dNext, z: cornerZ, corner: f && (f.type === 'fillet' || f.type === 'round') ? +f.value : 0, cornerType: f ? f.type : 'sharp' });
       }
       z = cornerZ;
