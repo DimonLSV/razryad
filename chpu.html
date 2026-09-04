@@ -3549,12 +3549,12 @@ function calcContent(calcF){
   if(calcF==='thr') return `<div class="wrap">
     <div class="card"><div class="tag">Метрическая резьба с крупным шагом</div>
       <div class="tscroll" style="margin-top:9px"><table><thead><tr>
-        <th>Резьба</th><th>Шаг</th><th>⌀ вала под резьбу</th><th>Сверло под гайку</th><th>h профиля</th></tr></thead><tbody>
+        <th>Резьба</th><th>Шаг</th><th>⌀ вала под резьбу</th><th>Сверло под гайку</th><th>h нар. 0,6134·P</th><th>h внутр. 0,5413·P</th></tr></thead><tbody>
         ${MTHR.map(r=>{const P=r[1];return `<tr><td style="font-family:Oswald;font-size:14px">М${r[0]}</td>
           <td class="num">${nf(P,2)}</td><td class="num">${nf(r[0]-0.1*P,2)}</td>
-          <td class="num">${nf(r[0]-P,2)}</td><td class="num">${nf(0.6134*P,3)}</td></tr>`;}).join('')}
+          <td class="num">${nf(r[0]-P,2)}</td><td class="num">${nf(0.6134*P,3)}</td><td class="num">${nf(0.5413*P,3)}</td></tr>`;}).join('')}
       </tbody></table></div>
-      <div class="hint">⌀ вала под наружную резьбу берут на 0,1–0,2 шага меньше номинала — витку нужно место для выдавливания. Сверло под метчик = номинал минус шаг.</div>
+      <div class="hint">⌀ вала под наружную резьбу берут на 0,1–0,2 шага меньше номинала — витку нужно место для выдавливания. Сверло под метчик = номинал минус шаг. Высота профиля у наружной и внутренней резьбы разная: h₃ = 0,6134·P для вала, H₁ = 0,5413·P для гайки. Раньше в таблице стояла только наружная, и если взять её при растачивании резьбы, средний диаметр уходит за поле допуска.</div>
     </div>
     <div class="card"><div class="tag">Программа нарезания</div>
       <div class="ct" style="margin-top:7px">Проходы по √, готовые кадры G76 для Haas и Fanuc — в генераторе резьбовой программы.</div>
@@ -3889,19 +3889,26 @@ const GT=[
     prev=di; }
   const d1=h/Math.sqrt(n);
   const sbeg=Math.round(P*10)/10;
+  /* Обороты раньше были константой 600/800 независимо от диаметра и шага. Все прочие
+     значения кадра считались из ввода, а S — нет: для М52 это выходило около 130 м/мин
+     на зажатой детали, для М3 — около 7 м/мин. Считаем из осторожной Vc и ограничиваем
+     сверху: резьба идёт с постоянным шагом, и разгонять шпиндель здесь нечем. */
+  const vcThread=inner?70:90;                       /* м/мин, безопасный старт по HSS/твердосплаву */
+  const sRaw=1000*vcThread/(Math.PI*Math.max(1,D));
+  const sCap=Math.max(120,Math.min(inner?900:1200,Math.round(sRaw/10)*10));
   const code=
 `(МЕТРИЧЕСКАЯ М${nf(D,2)}x${nf(P,2)} ${inner?'ВНУТРЕННЯЯ':'НАРУЖНАЯ'})
 (высота профиля ${nf(h,3)} на радиус, ${n} проходов)
 ${rows}
 (FANUC)
-G97 S${inner?600:800} M03
+G97 S${sCap} M03 (Vc~${vcThread} m/min pri D${nf(D,1)} - SVERIT S KATALOGOM PLASTINY)
 G00 X${nf(Xstart+(inner?-2:2),3)} Z${nf(2*P,3)}
 G76 P0110${'60'} Q${Math.round(Math.max(0.05,d1/4)*1000)} R0.05
 G76 X${nf(Xend,3)} Z-${nf(v.L,3)} P${Math.round(h*1000)} Q${Math.round(d1*1000)} F${nf(P,3)}
 G00 X200. Z200.
 
 (HAAS)
-G97 S${inner?600:800} M03
+G97 S${sCap} M03 (Vc~${vcThread} m/min pri D${nf(D,1)} - SVERIT S KATALOGOM PLASTINY)
 G00 X${nf(Xstart+(inner?-2:2),3)} Z${nf(2*P,3)}
 G76 X${nf(Xend,3)} Z-${nf(v.L,3)} K${nf(h,3)} D${nf(d1,3)} F${nf(P,3)} A60 P1
 G00 X200. Z200.`;
@@ -4353,8 +4360,15 @@ function bind(){
     ['mD','mRz'].forEach(i=>$('#'+i).oninput=c); c(); }
   const eD=$('#eD');
   if(eD){ const c=()=>{const D=+eD.value||1,ap=+$('#eA').value||0;
-    const de=2*Math.sqrt(Math.max(ap*(D-ap),0));
-    $('#mOut2').innerHTML=nf(de,2)+'<small>мм эффективный ⌀ ('+nf(de/D*100,0)+' % от номинала)</small>';};
+    /* Формула хорды 2·√(ap·(D−ap)) верна только пока фреза врезана не глубже своего
+       радиуса. За серединой шара она начинает убывать и при ap = D даёт ноль, тогда
+       как в резе уже работает полный диаметр. Ошибка всегда занижала эффективный ⌀,
+       то есть всегда завышала обороты: D=10, ap=9.5 давало 4.36 мм и обороты в
+       2.3 раза выше нужных. Глубже радиуса диаметр в резе равен номинальному. */
+    if(!(D>0)||!(ap>0)){ $('#mOut2').innerHTML='—<small style="font-size:13px">задайте ⌀ фрезы и глубину</small>'; return; }
+    if(ap>D){ $('#mOut2').innerHTML='—<small style="font-size:13px">глубина больше ⌀ фрезы: сферой такой уступ не снять</small>'; return; }
+    const de=ap>=D/2?D:2*Math.sqrt(ap*(D-ap));
+    $('#mOut2').innerHTML=nf(de,2)+'<small>мм эффективный ⌀ ('+nf(de/D*100,0)+' % от номинала)'+(ap>=D/2?' · глубже радиуса работает полный ⌀':'')+'</small>';};
     ['eD','eA'].forEach(i=>$('#'+i).oninput=c); c(); }
   const aD=$('#aD');
   if(aD){ const c=()=>{const D=+aD.value||1,R=+$('#aR').value||1,F=+$('#aF').value||0,t=$('#aT').value;
