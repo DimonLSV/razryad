@@ -5,7 +5,7 @@
 	"license": "UNLICENSED",
 	"description": "РАЗРЯД — офлайн-пособия оператора ЧПУ и термиста",
 	"scripts": {
-		"test": "node tests/chpu-smoke.cjs && node tests/generator-smoke.cjs && node tests/termist-smoke.cjs && node tests/cnc-emulator-bridge-smoke.cjs && node tests/lathe-sim-machining.cjs && node tests/mill-sim-machining.cjs && node tests/stage-a-safety.cjs && node tests/stage-b-claims.cjs && node tests/stage-c-dxf.cjs && node tests/stage-c-offline.cjs && node tests/stage-c-store.cjs && node tests/stage-e-calc.cjs && node tests/vendor-provenance.cjs",
+		"test": "node tests/chpu-smoke.cjs && node tests/generator-smoke.cjs && node tests/termist-smoke.cjs && node tests/cnc-emulator-bridge-smoke.cjs && node tests/lathe-sim-machining.cjs && node tests/mill-sim-machining.cjs && node tests/stage-a-safety.cjs && node tests/stage-b-claims.cjs && node tests/stage-c-dxf.cjs && node tests/stage-c-offline.cjs && node tests/stage-c-store.cjs && node tests/stage-e-calc.cjs && node tests/vendor-provenance.cjs && node tests/ci-installed.cjs",
 		"test:safety": "node tests/stage-a-safety.cjs && node tests/stage-b-claims.cjs && node tests/stage-c-dxf.cjs && node tests/stage-c-offline.cjs && node tests/stage-c-store.cjs && node tests/stage-e-calc.cjs",
 		"vendor:check": "node tests/vendor-provenance.cjs"
 	},
