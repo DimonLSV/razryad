@@ -18,8 +18,11 @@ function paint(){const cv=$('#lsimCanvas');if(!cv)return;
  const ax=document.querySelector('.lsim-axis');if(ax)ax.style.display=viewState.flat===false?'':'none';
  if(viewState.flat===false)drawLathe(cv,simState,false,Date.now());else draw2D(cv,simState,Date.now());}
 function saveView(){try{localStorage.setItem(VIEW_STORE,JSON.stringify(viewState))}catch(_){}}
-function loadToolStore(){try{return JSON.parse(localStorage.getItem(TOOL_STORE)||'{}')||{}}catch(_){return{}}}
-function saveToolStore(v){try{localStorage.setItem(TOOL_STORE,JSON.stringify(v||{}))}catch(_){}}
+/* Карточки инструмента задают геометрию, которую эмулятор рисует и печатает.
+   Запись несовместимой версии сбрасывается, а не догружается частично: лучше
+   попросить подтвердить инструмент заново, чем показать не тот, что в головке. */
+function loadToolStore(){if(window.RazryadStore)return RazryadStore.load(TOOL_STORE,RazryadStore.V.latheTools,{})||{};try{return JSON.parse(localStorage.getItem(TOOL_STORE)||'{}')||{}}catch(_){return{}}}
+function saveToolStore(v){if(window.RazryadStore){if(!RazryadStore.save(TOOL_STORE,RazryadStore.V.latheTools,v||{})&&typeof toast==='function')toast(RazryadStore.failureText());return}try{localStorage.setItem(TOOL_STORE,JSON.stringify(v||{}))}catch(_){}}
 const h=v=>(window.RazryadSimCore||{}).h(v);
 const n=v=>(window.RazryadSimCore||{}).n(v);
 /* Насколько резцу позволено уйти за ось при подрезке торца: X-0,5…X-2 — штатная

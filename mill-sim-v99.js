@@ -28,8 +28,8 @@ function loadView(){const base={showRapid:true,showPath:true,showDots:false,show
  showGrid:true,showSection:true,sectionAxis:'x',sectionAt:0,codeTheme:'cimco',autoStock:true,zoom:1,panX:0,panY:0};
  try{return{...base,...(JSON.parse(localStorage.getItem(VIEW_STORE)||'null')||{})}}catch(_){return base}}
 function saveView(){try{localStorage.setItem(VIEW_STORE,JSON.stringify(viewState))}catch(_){}}
-function loadToolStore(){try{return JSON.parse(localStorage.getItem(TOOL_STORE)||'{}')||{}}catch(_){return{}}}
-function saveToolStore(v){try{localStorage.setItem(TOOL_STORE,JSON.stringify(v||{}))}catch(_){}}
+function loadToolStore(){if(window.RazryadStore)return RazryadStore.load(TOOL_STORE,RazryadStore.V.millTools,{})||{};try{return JSON.parse(localStorage.getItem(TOOL_STORE)||'{}')||{}}catch(_){return{}}}
+function saveToolStore(v){if(window.RazryadStore){if(!RazryadStore.save(TOOL_STORE,RazryadStore.V.millTools,v||{})&&typeof toast==='function')toast(RazryadStore.failureText());return}try{localStorage.setItem(TOOL_STORE,JSON.stringify(v||{}))}catch(_){}}
 function h(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function n(v){const x=Number(v);return Number.isFinite(x)?x:0;}
 

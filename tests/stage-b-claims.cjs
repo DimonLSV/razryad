@@ -90,3 +90,24 @@ const ALL_PAGES=APP_PAGES.concat(['index.html']);
 }
 
 console.log(`этап B — соответствие заявлений коду: OK (${n} проверок)`);
+
+/* --- этап D: честность дистрибуции и документов --- */
+{
+ const i=read('index.html');
+ assert(/APK отстал от веб-версии/.test(i),'D: APK 0.945 без OCR и эмулятора по-прежнему рекламируется списком функций веб-версии');
+ assert(/веб 0\.999/.test(i),'D: номер веб-версии на титульной не совпадает с кодом');
+}
+{
+ const plan=read('V099-PROJECT-PLAN.md');
+ for(const f of ['mill-sim-v99.js','cnc-sim-core.js','razryad-store.js','tolerance-fields.js'])
+  assert(plan.includes(f),`D: ${f} отсутствует в составе проекта — развёртывание по этой таблице даст неработающее приложение`);
+ assert(/V0\.997 — цеховой пилот: не выполнен/.test(plan),'D: пропуск цехового пилота не отмечен в плане');
+ assert(/# РАЗРЯД V0\.999/.test(plan),'D: заголовок плана отстал от версии кода');
+}
+{
+ const ds=read('DATA-SAFETY.md');
+ assert(/Voice or sound recordings/.test(ds)&&/App interactions/.test(ds),'D: в декларации Data Safety не объявлены аудио и аналитика');
+ assert(/allowBackup/.test(ds),'D: не отмечена проверка allowBackup перед подачей в Play');
+}
+
+console.log(`этап D — процесс и дистрибуция: OK`);

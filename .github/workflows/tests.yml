@@ -1,0 +1,64 @@
+name: Тесты
+
+# Наборы существовали и проходили, но не защищали ни один коммит: каталога .github
+# в проекте не было. Теперь любая правка, которая вернёт закрытый дефект, падает
+# здесь, а не у оператора возле станка.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: npm test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Зависимости не ставятся: библиотеки лежат в vendor/, а тесты запускаются
+      # на чистом Node без пакетов. Установка тут только замедлила бы прогон.
+      - name: Прогон всех наборов
+        run: npm test
+
+  syntax:
+    name: Синтаксис
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Сборки нет, поэтому опечатка в любом файле доезжает до браузера как есть.
+      - name: Проверка собственных скриптов
+        run: |
+          for f in *.js; do
+            case "$f" in
+              *.min.js) continue ;;
+            esac
+            node --check "$f" || exit 1
+          done
+          echo "все скрипты разбираются"
+
+      - name: Проверка инлайн-скриптов страниц
+        run: |
+          node -e '
+            const fs = require("fs");
+            let bad = 0;
+            for (const f of ["index.html","chpu.html","generator.html","termist.html","privacy.html"]) {
+              const html = fs.readFileSync(f, "utf8");
+              const scripts = [...html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim());
+              scripts.forEach((src, i) => {
+                try { new Function(src); }
+                catch (e) { console.error(f + " — инлайн-скрипт " + (i + 1) + ": " + e.message); bad++; }
+              });
+            }
+            if (bad) process.exit(1);
+            console.log("инлайн-скрипты всех страниц разбираются");
+          '
