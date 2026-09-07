@@ -21,20 +21,41 @@
     custom: { name: 'Другой токарный станок', maxRpm: 2500, maxD: 300, maxZ: 500, chuck: 200, holder: 25 }
   };
 
+  // Канавок может быть несколько: вал с двумя стопорными кольцами по ГОСТ 13942 — рядовая деталь.
+  // Раньше extraOps был объектом и вмещал ровно по одной канавке каждого вида: вторая просто не
+  // попадала в программу, и ни одна проверка на это не жаловалась.
+  const GROOVE_LIMIT = 6;
+  const GROOVE_TITLE = { od: 'Наружная канавка G75', id: 'Внутренняя канавка G75', face: 'Торцевая канавка G74' };
+  function defaultGroove(side) {
+    return side === 'face'
+      ? { side: 'face', startD: 22, endD: 42, depth: 5, peck: .8, step: 2 }
+      : { side, z: 22, width: 5, finalD: side === 'id' ? 34 : 26, peck: side === 'id' ? .8 : 1, step: 2 };
+  }
   function defaultExtraOps() {
     return {
-      odGroove: { enabled: false, z: 22, width: 5, finalD: 26, peck: 1, step: 2 },
-      idGroove: { enabled: false, z: 22, width: 5, finalD: 34, peck: .8, step: 2 },
-      faceGroove: { enabled: false, startD: 22, endD: 42, depth: 5, peck: .8, step: 2 },
+      grooves: [],
       drill: { enabled: false, cycle: 'G83', diameter: 12, depth: 50, peck: 5 },
       idThread: { enabled: false, d: 30, pitch: 1.5, length: 25 }
     };
+  }
+  // Приведение старой формы (по одной канавке каждого вида) к списку — для состояния,
+  // сохранённого прежними версиями приложения.
+  function normalizeExtraOps(o) {
+    const base = defaultExtraOps();
+    if (!o || typeof o !== 'object') return base;
+    if (Array.isArray(o.grooves)) return { ...base, ...o, grooves: o.grooves.slice(0, GROOVE_LIMIT) };
+    const grooves = [];
+    [['odGroove', 'od'], ['idGroove', 'id'], ['faceGroove', 'face']].forEach(([key, side]) => {
+      const g = o[key];
+      if (g && g.enabled) grooves.push({ ...defaultGroove(side), ...g, side });
+    });
+    return { ...base, drill: o.drill || base.drill, idThread: o.idThread || base.idThread, grooves };
   }
 
   function initProState() {
     state.features = Array.isArray(state.features) ? state.features : [];
     state.ocrFeatures = Array.isArray(state.ocrFeatures) ? state.ocrFeatures : [];
-    state.extraOps = state.extraOps || defaultExtraOps();
+    state.extraOps = normalizeExtraOps(state.extraOps);
     state.post = state.post || 'haas';
     state.machineKey = state.machineKey || 'st20';
     state.machine = state.machine || { ...MACHINES[state.machineKey] };
@@ -65,7 +86,7 @@
     if (key === 'shaft') state.features = [{ type: 'fillet', value: 3, axial: 6 }];
     if (key === 'flange') state.features = [{ type: 'fillet', value: 2, axial: 6 }];
     if (key === 'threaded' || key === 'fitting') state.features = [{ type: 'fillet', value: key === 'fitting' ? 1.5 : 2, axial: 5 }];
-    if (key === 'grooved') state.extraOps.odGroove.enabled = true;
+    if (key === 'grooved') state.extraOps.grooves = [defaultGroove('od')];
     if (key === 'borethread') {
       state.extraOps.idThread.enabled = true;
       state.extraOps.idThread.d = 30;
@@ -387,9 +408,7 @@
     const thread = `<div class="card"><div class="confirm"><input type="checkbox" id="threadEnabled" ${state.thread.enabled ? 'checked' : ''}><label for="threadEnabled"><b>Наружная резьба G76</b><br><span class="muted">Метрическая 60°, отдельный резьбовой инструмент.</span></label></div>${state.thread.enabled ? `<div style="margin-top:12px"><div class="two"><label class="fld"><span>Наружный ⌀</span><div class="unit"><input type="number" data-thread="d" value="${num(state.thread.d)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Шаг F</span><div class="unit"><input type="number" data-thread="pitch" value="${num(state.thread.pitch)}" step="0.1"><i>мм</i></div></label></div><label class="fld" style="margin:0"><span>Длина</span><div class="unit"><input type="number" data-thread="length" value="${num(state.thread.length)}" step="0.1"><i>мм</i></div></label></div>` : ''}</div>`;
     const ops = `<div class="eyebrow" style="margin-top:16px">Дополнительные операции</div>` +
       opCard('drill', 'Сверление по оси', 'G83 с полным выводом или скоростной G74', `<div class="two"><label class="fld"><span>Цикл</span><select data-extra="drill" data-xkey="cycle"><option value="G83" ${state.extraOps.drill.cycle === 'G83' ? 'selected' : ''}>G83 · глубокое</option><option value="G74" ${state.extraOps.drill.cycle === 'G74' ? 'selected' : ''}>G74 · скоростное</option></select></label><label class="fld"><span>Сверло</span><div class="unit"><input type="number" data-extra="drill" data-xkey="diameter" value="${num(state.extraOps.drill.diameter)}"><i>⌀ мм</i></div></label></div><div class="two"><label class="fld"><span>Глубина</span><div class="unit"><input type="number" data-extra="drill" data-xkey="depth" value="${num(state.extraOps.drill.depth)}"><i>мм</i></div></label><label class="fld"><span>Шаг врезания</span><div class="unit"><input type="number" data-extra="drill" data-xkey="peck" value="${num(state.extraOps.drill.peck)}"><i>мм</i></div></label></div>`) +
-      opCard('odGroove', 'Наружная канавка G75', 'Одиночная или широкая канавка с дроблением', grooveFields('odGroove', 'Готовый ⌀')) +
-      opCard('idGroove', 'Внутренняя канавка G75', 'Канавочный резец внутри отверстия', grooveFields('idGroove', 'Готовый ⌀')) +
-      opCard('faceGroove', 'Торцевая канавка G74', 'Переход по X и врезание по Z', `<div class="two"><label class="fld"><span>Начальный ⌀</span><input type="number" data-extra="faceGroove" data-xkey="startD" value="${num(state.extraOps.faceGroove.startD)}"></label><label class="fld"><span>Конечный ⌀</span><input type="number" data-extra="faceGroove" data-xkey="endD" value="${num(state.extraOps.faceGroove.endD)}"></label></div><div class="two"><label class="fld"><span>Глубина Z</span><input type="number" data-extra="faceGroove" data-xkey="depth" value="${num(state.extraOps.faceGroove.depth)}"></label><label class="fld"><span>K · врезание</span><input type="number" data-extra="faceGroove" data-xkey="peck" value="${num(state.extraOps.faceGroove.peck)}"></label></div>`) +
+      groovesBlock() +
       opCard('idThread', 'Внутренняя резьба G76', 'После сверления/расточки до внутреннего диаметра резьбы', `<div class="two"><label class="fld"><span>Номинальный ⌀ M</span><input type="number" data-extra="idThread" data-xkey="d" value="${num(state.extraOps.idThread.d)}"></label><label class="fld"><span>Шаг</span><input type="number" data-extra="idThread" data-xkey="pitch" value="${num(state.extraOps.idThread.pitch)}" step="0.1"></label></div><label class="fld" style="margin:0"><span>Длина резьбы</span><input type="number" data-extra="idThread" data-xkey="length" value="${num(state.extraOps.idThread.length)}"></label>`);
     form.innerHTML = outer + bore + thread + ops;
     $('#swapSegments').style.display = hasOuter() && state.segments.length > 1 ? 'block' : 'none';
@@ -397,12 +416,36 @@
     form.querySelectorAll('[data-bore]').forEach(inp => inp.oninput = () => { state.bore[inp.dataset.bore] = Math.max(0, +inp.value || 0); dirtyDims(); });
     form.querySelectorAll('[data-thread]').forEach(inp => inp.oninput = () => { state.thread[inp.dataset.thread] = Math.max(0, +inp.value || 0); dirtyDims(); });
     form.querySelectorAll('[data-feature]').forEach(inp => inp.onchange = inp.oninput = () => { const f = state.features[+inp.dataset.feature]; f[inp.dataset.fkey] = inp.dataset.fkey === 'type' ? inp.value : Math.max(0, +inp.value || 0); renderDimensions(); });
+    form.querySelectorAll('[data-groove-add]').forEach(b => b.onclick = () => {
+      if ((state.extraOps.grooves || []).length >= GROOVE_LIMIT) { toast(`Больше ${GROOVE_LIMIT} канавок приложение не собирает`); return; }
+      state.extraOps.grooves.push(defaultGroove(b.dataset.grooveAdd)); dirtyDims(); renderDimensions();
+    });
+    form.querySelectorAll('[data-groove-del]').forEach(b => b.onclick = () => { state.extraOps.grooves.splice(+b.dataset.grooveDel, 1); dirtyDims(); renderDimensions(); });
+    form.querySelectorAll('[data-groove]').forEach(inp => inp.oninput = () => { state.extraOps.grooves[+inp.dataset.groove][inp.dataset.gkey] = Math.max(0, +inp.value || 0); dirtyDims(); });
     form.querySelectorAll('[data-op-toggle]').forEach(inp => inp.onchange = () => { state.extraOps[inp.dataset.opToggle].enabled = inp.checked; renderDimensions(); });
     form.querySelectorAll('[data-extra]').forEach(inp => inp.oninput = inp.onchange = () => { const op = state.extraOps[inp.dataset.extra]; op[inp.dataset.xkey] = inp.tagName === 'SELECT' ? inp.value : Math.max(0, +inp.value || 0); dirtyDims(); });
     if ($('#boreKind')) $('#boreKind').onchange = e => { state.bore.through = e.target.value === 'through'; dirtyDims(); };
     $('#threadEnabled').onchange = e => { state.thread.enabled = e.target.checked; renderDimensions(); };
     dirtyDims();
   };
+
+  // Карточка одной канавки. Индекс в data-groove — позиция в state.extraOps.grooves.
+  function grooveCard(g, i) {
+    const fld = (key, label, unit) => `<label class="fld"><span>${label}</span><div class="unit"><input type="number" data-groove="${i}" data-gkey="${key}" value="${num(g[key])}" step="0.1"><i>${unit}</i></div></label>`;
+    const body = g.side === 'face'
+      ? `<div class="two">${fld('startD', 'Начальный ⌀', 'мм')}${fld('endD', 'Конечный ⌀', 'мм')}</div><div class="two">${fld('depth', 'Глубина Z', 'мм')}${fld('peck', 'K · врезание', 'мм')}</div>`
+      : `<div class="two">${fld('z', 'Положение от торца', 'мм')}${fld('width', 'Ширина', 'мм')}</div><div class="two">${fld('finalD', 'Готовый ⌀', 'мм')}${fld('peck', 'I · врезание', 'мм')}</div>`;
+    return `<div class="card op-card enabled"><div class="op-title"><div><b>${i + 1}. ${GROOVE_TITLE[g.side]}</b><div class="compact-note">${g.side === 'face' ? 'Переход по X и врезание по Z' : g.side === 'id' ? 'Канавочный резец внутри отверстия' : 'Одиночная или широкая канавка с дроблением'}</div></div><button class="btn secondary mini" type="button" data-groove-del="${i}">Удалить</button></div><div style="margin-top:11px">${body}</div></div>`;
+  }
+
+  function groovesBlock() {
+    const gs = state.extraOps.grooves || [];
+    const add = gs.length >= GROOVE_LIMIT
+      ? `<div class="compact-note">Больше ${GROOVE_LIMIT} канавок в одной программе приложение не собирает.</div>`
+      : `<div class="inline-actions">${['od', 'id', 'face'].map(s => `<button class="btn secondary mini" type="button" data-groove-add="${s}">+ ${GROOVE_TITLE[s].replace(/ G7[45]$/, '')}</button>`).join('')}</div>`;
+    return gs.map(grooveCard).join('')
+      + `<div class="card"><div class="eyebrow">Канавки</div>${add}<div class="compact-note" style="margin-top:8px">Все канавки режутся одним инструментом ${esc(state.grooveTool || 'T0404')}. Если наружной, внутренней и торцевой нужны разные резцы, поправьте номера T на стойке.</div></div>`;
+  }
 
   function grooveFields(key, diameterLabel) {
     const op = state.extraOps[key];
@@ -446,8 +489,33 @@
     }
     const o = state.extraOps;
     if (o.drill.enabled && (o.drill.depth <= 0 || o.drill.peck <= 0)) return 'Для сверления введите глубину и шаг врезания.';
-    if (o.odGroove.enabled && (o.odGroove.finalD <= 0 || o.odGroove.finalD >= maxD())) return 'Готовый диаметр наружной канавки должен быть меньше диаметра детали.';
-    if (o.idGroove.enabled && (!hasBore() || o.idGroove.finalD <= state.bore.finalD)) return 'Для внутренней канавки нужна расточка, а диаметр канавки должен быть больше отверстия.';
+    // Каждая канавка проверяется отдельно и называется по номеру: иначе оператор не поймёт,
+    // какую из нескольких править.
+    for (let i = 0; i < (o.grooves || []).length; i++) {
+      const g = o.grooves[i], no = `Канавка ${i + 1}`;
+      if (g.side === 'od') {
+        if (!(g.width > 0)) return `${no}: введите ширину.`;
+        if (!(g.finalD > 0) || g.finalD >= maxD()) return `${no}: готовый диаметр должен быть больше нуля и меньше Ø${num(maxD())}.`;
+        if (g.z + g.width > totalL()) return `${no}: выходит за длину детали ${num(totalL())} мм.`;
+      } else if (g.side === 'id') {
+        if (!hasBore()) return `${no}: внутренняя канавка требует включённой расточки.`;
+        if (!(g.width > 0)) return `${no}: введите ширину.`;
+        if (g.finalD <= state.bore.finalD) return `${no}: диаметр должен быть больше отверстия Ø${num(state.bore.finalD)}.`;
+        if (g.z + g.width > state.bore.depth) return `${no}: выходит за глубину расточки ${num(state.bore.depth)} мм.`;
+      } else {
+        if (g.endD <= g.startD) return `${no}: конечный диаметр торцевой канавки должен быть больше начального.`;
+        if (!(g.depth > 0)) return `${no}: введите глубину.`;
+        if (g.endD > maxD()) return `${no}: конечный диаметр больше диаметра детали Ø${num(maxD())}.`;
+      }
+    }
+    // Перекрытие наружных канавок между собой: два стопорных кольца, наложенных друг на друга,
+    // дадут одну широкую канавку вместо двух, и на чертеже это не сойдётся.
+    const od = (o.grooves || []).map((g, i) => ({ ...g, i })).filter(g => g.side === 'od' || g.side === 'id');
+    for (let a = 0; a < od.length; a++) for (let b = a + 1; b < od.length; b++) {
+      if (od[a].side !== od[b].side) continue;
+      const s1 = od[a].z, e1 = od[a].z + od[a].width, s2 = od[b].z, e2 = od[b].z + od[b].width;
+      if (s1 < e2 && s2 < e1) return `Канавки ${od[a].i + 1} и ${od[b].i + 1} перекрываются по Z.`;
+    }
     if (o.idThread.enabled) {
       if (!hasBore()) return 'Для внутренней резьбы включите расточку.';
       if (o.idThread.d <= state.bore.preD || o.idThread.length > state.bore.depth) return 'Проверьте диаметр и длину внутренней резьбы относительно отверстия.';
@@ -638,15 +706,30 @@
       else lines.push(`G83 Z-${num(o.drill.depth, 3)} Q${num(o.drill.peck, 3)} R1. F${num(f, 3)}`, 'G80');
       lines.push('G00 Z5. M09');
     }
-    if (o.odGroove.enabled) {
-      lines.push('(--- NARUZHNAYA KANAVKA G75 ---)', 'G28 U0. W0.', state.grooveTool, `G97 S${Math.round(Math.min(state.rpm, 900))} M03`, `G00 X${num(Math.max(state.stockD, maxD()) + 2, 2)} Z-${num(o.odGroove.z, 3)} M08`, `G75 X${num(o.odGroove.finalD, 3)} Z-${num(o.odGroove.z + o.odGroove.width, 3)} I${num(o.odGroove.peck, 3)} K${num(o.odGroove.step, 3)} F${num(f, 3)}`, 'G00 X' + num(state.stockD + 5, 2) + ' Z5. M09');
-    }
-    if (o.idGroove.enabled) {
-      lines.push('(--- VNUTRENNYAYA KANAVKA G75 ---)', 'G28 U0. W0.', state.grooveTool, `G97 S${Math.round(Math.min(state.boreRpm, 800))} M03`, `G00 X${num(Math.max(.5, state.bore.finalD - 2), 2)} Z-${num(o.idGroove.z, 3)} M08`, `G75 X${num(o.idGroove.finalD, 3)} Z-${num(o.idGroove.z + o.idGroove.width, 3)} I${num(o.idGroove.peck, 3)} K${num(o.idGroove.step, 3)} F${num(f, 3)}`, 'G00 X' + num(Math.max(.5, state.bore.preD - 2), 2) + ' Z5. M09');
-    }
-    if (o.faceGroove.enabled) {
-      lines.push('(--- TORTSEVAYA KANAVKA G74 ---)', 'G28 U0. W0.', state.grooveTool, `G97 S${Math.round(Math.min(state.rpm, 900))} M03`, `G00 X${num(o.faceGroove.startD, 2)} Z1. M08`, `G74 X${num(o.faceGroove.endD, 3)} Z-${num(o.faceGroove.depth, 3)} I${num(o.faceGroove.step, 3)} K${num(o.faceGroove.peck, 3)} F${num(f, 3)}`, 'G00 X' + num(state.stockD + 5, 2) + ' Z5. M09');
-    }
+    // Канавки выводятся списком, в порядке, заданном оператором. У каждой свой заголовок с
+    // номером, чтобы на стойке было видно, какая именно исполняется.
+    (o.grooves || []).forEach((g, i) => {
+      const no = `${i + 1}/${o.grooves.length}`;
+      if (g.side === 'face') {
+        lines.push(`(--- KANAVKA ${no} TORTSEVAYA G74 ---)`, 'G28 U0. W0.', state.grooveTool,
+          `G97 S${Math.round(Math.min(state.rpm, 900))} M03`,
+          `G00 X${num(g.startD, 2)} Z1. M08`,
+          `G74 X${num(g.endD, 3)} Z-${num(g.depth, 3)} I${num(g.step, 3)} K${num(g.peck, 3)} F${num(f, 3)}`,
+          `G00 X${num(state.stockD + 5, 2)} Z5. M09`);
+      } else if (g.side === 'id') {
+        lines.push(`(--- KANAVKA ${no} VNUTRENNYAYA G75 ---)`, 'G28 U0. W0.', state.grooveTool,
+          `G97 S${Math.round(Math.min(state.boreRpm, 800))} M03`,
+          `G00 X${num(Math.max(.5, state.bore.finalD - 2), 2)} Z-${num(g.z, 3)} M08`,
+          `G75 X${num(g.finalD, 3)} Z-${num(g.z + g.width, 3)} I${num(g.peck, 3)} K${num(g.step, 3)} F${num(f, 3)}`,
+          `G00 X${num(Math.max(.5, state.bore.preD - 2), 2)} Z5. M09`);
+      } else {
+        lines.push(`(--- KANAVKA ${no} NARUZHNAYA G75 ---)`, 'G28 U0. W0.', state.grooveTool,
+          `G97 S${Math.round(Math.min(state.rpm, 900))} M03`,
+          `G00 X${num(Math.max(state.stockD, maxD()) + 2, 2)} Z-${num(g.z, 3)} M08`,
+          `G75 X${num(g.finalD, 3)} Z-${num(g.z + g.width, 3)} I${num(g.peck, 3)} K${num(g.step, 3)} F${num(f, 3)}`,
+          `G00 X${num(state.stockD + 5, 2)} Z5. M09`);
+      }
+    });
     if (o.idThread.enabled) appendThread(lines, 'id');
   }
 
@@ -710,7 +793,10 @@
     if (state.chuckD < state.stockD) issues.push('наружный диаметр кулачков меньше диаметра заготовки');
     if (state.jawGrip < Math.max(8, state.stockD * .12)) warn.push(`длина зажима ${num(state.jawGrip)} мм мала для Ø${num(state.stockD)}`);
     if (state.extraOps.drill.enabled && state.extraOps.drill.depth / Math.max(1, state.extraOps.drill.diameter) > 5) warn.push('сверление глубже 5D: контролируйте СОЖ и удаление стружки');
-    if (state.extraOps.faceGroove.enabled && state.extraOps.faceGroove.endD <= state.extraOps.faceGroove.startD) issues.push('конечный Ø торцевой канавки должен быть больше начального');
+    (state.extraOps.grooves || []).forEach((g, i) => {
+      if (g.side === 'face' && g.endD <= g.startD) issues.push(`канавка ${i + 1}: конечный Ø торцевой канавки должен быть больше начального`);
+      if (g.side !== 'face' && g.peck > 0 && g.width > 0 && g.peck > g.width) warn.push(`канавка ${i + 1}: врезание I больше ширины канавки`);
+    });
     if (issues.length) {
       state.safe = false;
       $('#safetyStatus').className = 'status bad'; $('#safetyTitle').textContent = 'Найдена возможная коллизия';
@@ -729,7 +815,11 @@
     ctx.fillStyle = 'rgba(255,93,22,.16)'; ctx.fillRect(W - 145, 46, 35, H - 92);
     ctx.strokeStyle = '#ff7a3c'; ctx.setLineDash([6, 5]); ctx.strokeRect(W - 145, 46, 35, H - 92); ctx.setLineDash([]);
     ctx.fillStyle = '#ffb084'; ctx.font = '14px Consolas'; ctx.fillText('ЗОНА ДЕРЖАВКИ', W - 205, H - 18);
-    const active = Object.entries(state.extraOps).filter(([, v]) => v.enabled).map(([k]) => ({ drill: 'G83/G74', odGroove: 'G75 OD', idGroove: 'G75 ID', faceGroove: 'G74 FACE', idThread: 'G76 ID' })[k]);
+    const active = [
+      state.extraOps.drill.enabled ? 'G83/G74' : null,
+      state.extraOps.idThread.enabled ? 'G76 ID' : null,
+      ...(state.extraOps.grooves || []).map(g => ({ od: 'G75 OD', id: 'G75 ID', face: 'G74 FACE' })[g.side])
+    ].filter(Boolean);
     if (active.length) { ctx.fillStyle = '#f2f2f4'; ctx.font = '15px Consolas'; ctx.fillText(active.join(' · '), 18, 26); }
     ctx.restore();
   };
@@ -782,5 +872,5 @@
      кэша, ответ index.html вместо .js), страница продолжала работать на старой
      версии и молча выдавала другую программу. Теперь экспорт по этой метке
      проверяет, что работает именно тот генератор, который показан оператору. */
-  window.RazryadGeneratorPro = { version: 'v0.980' };
+  window.RazryadGeneratorPro = { version: 'v0.980', normalizeExtraOps, defaultGroove, GROOVE_LIMIT };
 })();

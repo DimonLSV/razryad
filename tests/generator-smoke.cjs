@@ -90,11 +90,13 @@ assert(gcode.includes('SFERA SR RAZBITA NA KHORDY'), 'Sphere chord notice is mis
 assert((gcode.match(/N\d+ G01 X/g) || []).length > 7, 'Sphere was not split into contour chords');
 
 setupInputs('haas');
-run(`applyPreset('borethread'); state.vc=75; state.feed=.16; state.depth=1.2; state.rpm=650; state.boreRpm=900; state.threadRpm=450; state.extraOps.drill.enabled=true; state.extraOps.drill.cycle='G83'; state.extraOps.odGroove.enabled=true; state.extraOps.odGroove.finalD=38;`);
+run(`applyPreset('borethread'); state.vc=75; state.feed=.16; state.depth=1.2; state.rpm=650; state.boreRpm=900; state.threadRpm=450; state.extraOps.drill.enabled=true; state.extraOps.drill.cycle='G83'; state.extraOps.grooves=[{side:'od',z:22,width:5,finalD:38,peck:1,step:2}];`);
 gcode = run('generateGcode()');
 assert(gcode.includes('RASTOCHKA G71 ID'), 'ID roughing cycle is missing');
 assert(gcode.includes('G83 Z-'), 'G83 drill cycle is missing');
-assert(gcode.includes('KANAVKA G75'), 'G75 groove cycle is missing');
+// Заголовок канавки теперь содержит её номер: канавок может быть несколько, и на стойке
+// должно быть видно, какая именно исполняется.
+assert(/KANAVKA 1\/1 NARUZHNAYA G75/.test(gcode), 'G75 groove cycle is missing');
 assert(gcode.includes('VNUTRENNYAYA REZBA G76'), 'Internal G76 is missing');
 assert(!/[А-Яа-яЁё]/.test(gcode), 'NC output contains Cyrillic');
 
@@ -280,5 +282,51 @@ gcode = gcodeFor("applyPreset('bushing'); state.operation='both'; state.segments
 assert(/N\d+ G00 G41 X/.test(gcode), 'Наружная компенсация из профиля должна попадать в кадр: ' + gcode.match(/N\d+ G00 G4[12][^\n]*/));
 assert(/N\d+ G42 G00 X/.test(gcode), 'Внутренняя компенсация из профиля должна попадать в кадр: ' + gcode.match(/N\d+ G4[12] G00[^\n]*/));
 run("state.extComp='G42'; state.idComp='G41';");
+
+// --- Несколько канавок в одной программе. Раньше extraOps был объектом и вмещал ровно по одной
+// канавке каждого вида: вторая молча не попадала в программу, деталь уходила на сборку без
+// второго кольцевого паза, и ни одна проверка на это не жаловалась.
+gcode = gcodeFor("applyPreset('shaft'); state.segments=[{d:40,l:80,tol:null}]; state.features=[];"
+  + " state.extraOps.grooves=[{side:'od',z:15,width:3,finalD:34,peck:1,step:2},"
+  + "{side:'od',z:60,width:3,finalD:34,peck:1,step:2}];");
+let g75 = gcode.match(/^G75 X/gm) || [];
+assert(g75.length === 2, 'Две канавки должны дать два цикла G75, получено ' + g75.length);
+assert(/KANAVKA 1\/2 NARUZHNAYA/.test(gcode) && /KANAVKA 2\/2 NARUZHNAYA/.test(gcode), 'Канавки должны быть пронумерованы: ' + (gcode.match(/KANAVKA[^\n]*/g) || []));
+assert(gcode.includes('Z-15.000') && gcode.includes('Z-60.000'), 'Обе канавки должны стоять на своих Z');
+
+// Три канавки разных видов — каждая своим циклом.
+gcode = gcodeFor("applyPreset('bushing'); state.operation='both'; state.segments=[{d:60,l:60,tol:null}]; state.features=[];"
+  + " state.bore={preD:26,finalD:30,depth:50,through:false,tol:null};"
+  + " state.extraOps.grooves=[{side:'od',z:20,width:4,finalD:52,peck:1,step:2},"
+  + "{side:'id',z:20,width:4,finalD:34,peck:.8,step:2},"
+  + "{side:'face',startD:36,endD:50,depth:4,peck:.8,step:2}];");
+assert((gcode.match(/^G75 X/gm) || []).length === 2, 'Наружная и внутренняя канавки — два G75');
+assert((gcode.match(/^G74 X/gm) || []).length === 1, 'Торцевая канавка — один G74');
+assert(!/[А-Яа-яЁё]/.test(gcode), 'NC output contains Cyrillic');
+
+// Проверки по каждой канавке отдельно, с номером в тексте.
+run("applyPreset('shaft'); state.segments=[{d:40,l:80,tol:null}]; state.features=[];"
+  + " state.extraOps.grooves=[{side:'od',z:15,width:3,finalD:34,peck:1,step:2},"
+  + "{side:'od',z:16,width:3,finalD:34,peck:1,step:2}];");
+assert(/перекрываются по Z/.test(run('geometryIssue()')), 'Перекрывающиеся канавки должны отвергаться: ' + run('geometryIssue()'));
+run("state.extraOps.grooves=[{side:'od',z:15,width:3,finalD:44,peck:1,step:2}];");
+assert(/Канавка 1/.test(run('geometryIssue()')), 'Канавка глубже детали должна отвергаться с номером: ' + run('geometryIssue()'));
+run("state.extraOps.grooves=[{side:'id',z:15,width:3,finalD:44,peck:1,step:2}];");
+assert(/расточки/.test(run('geometryIssue()')), 'Внутренняя канавка без расточки должна отвергаться: ' + run('geometryIssue()'));
+
+// Состояние, сохранённое старой версией (по одной канавке каждого вида), должно мигрировать.
+run("state.extraOps=RazryadGeneratorPro.normalizeExtraOps({"
+  + "odGroove:{enabled:true,z:22,width:5,finalD:26,peck:1,step:2},"
+  + "idGroove:{enabled:false,z:22,width:5,finalD:34,peck:.8,step:2},"
+  + "faceGroove:{enabled:true,startD:22,endD:42,depth:5,peck:.8,step:2},"
+  + "drill:{enabled:true,cycle:'G83',diameter:12,depth:50,peck:5},"
+  + "idThread:{enabled:false,d:30,pitch:1.5,length:25}});");
+assert(run('state.extraOps.grooves.length') === 2, 'Из старой формы должны получиться две включённые канавки: ' + run('JSON.stringify(state.extraOps.grooves)'));
+assert(run("state.extraOps.grooves.map(g=>g.side).join(',')") === 'od,face', 'Виды канавок при миграции должны сохраниться');
+assert(run('state.extraOps.drill.enabled') === true, 'Сверление при миграции должно сохраниться');
+// Выключенные в старой форме канавки не должны воскресать.
+assert(run("RazryadGeneratorPro.normalizeExtraOps({odGroove:{enabled:false,z:1,width:1,finalD:1}}).grooves.length") === 0, 'Выключенная канавка не должна мигрировать');
+// Уже новая форма проходит без изменений.
+assert(run("RazryadGeneratorPro.normalizeExtraOps({grooves:[{side:'od',z:1,width:1,finalD:1}]}).grooves.length") === 1, 'Новая форма должна проходить без потерь');
 
 console.log('generator smoke tests: OK');
