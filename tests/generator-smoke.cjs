@@ -199,7 +199,9 @@ assert(gcode.includes('X36.928 Z-40.000'), 'Фаска 30° должна дав�
 
 // Расточка тоже точится в середину поля.
 gcode = gcodeFor("applyPreset('bushing'); state.operation='both'; state.segments=[{d:60,l:50}]; state.features=[]; state.bore={preD:26,finalD:30,depth:45,through:false,tol:'H7'};");
-assert(gcode.includes('N200 G41 G00 X30.011'), 'Расточка H7 должна идти по 30.011: ' + gcode.match(/N200[^\n]*/));
+// Номер кадра здесь намеренно не проверяется: он раздаётся динамически, чтобы диапазоны
+// наружного контура и расточки не пересекались.
+assert(/N\d+ G4[12] G00 X30\.011/.test(gcode), 'Расточка H7 должна идти по 30.011: ' + gcode.match(/N\d+ G4[12] G00[^\n]*/));
 
 // Угол фаски читается с чертежа: C2x30.
 p = parseOcr('Ø30 40 Ø45 60 C2x30');
@@ -252,5 +254,31 @@ assert(gcode.includes('X44.250 Z-38.000'), 'Начало фаски на кон�
 gcode = gcodeFor("applyPreset('shaft'); state.segments=[{d:30,l:40,tol:null},{d:45,l:60,tol:null}]; state.features=[{type:'sharp',value:0,axial:6}];");
 assert(gcode.includes('X30.000 Z-40.000') && gcode.includes('X45.000 Z-40.000') && gcode.includes('X45.000 Z-100.000'),
   'Цилиндрический контур не должен измениться от появления конусов');
+
+// --- Номера кадров двух контуров в одной программе не имеют права пересекаться.
+// G71 P..Q.. ищет кадр ПО НОМЕРУ. Сфера даёт до 33 точек, наружный контур доходил до N430,
+// а расточка жёстко просила P200 Q230 — и находила чужой кадр внутри наружного профиля.
+// Расточная оправка в отверстии Ø18 получала при этом диаметры наружного профиля.
+function frameNumbers(code) {
+  return code.split('\n').map(l => (l.match(/^N(\d+)/) || [])[1]).filter(Boolean).map(Number);
+}
+gcode = gcodeFor("applyPreset('spherical'); state.operation='both'; state.bore={preD:12,finalD:18,depth:30,through:false,tol:null}; state.sphereTolerance=0.005;");
+let frames = frameNumbers(gcode);
+let dups = frames.filter((n, i) => frames.indexOf(n) !== i);
+assert(frames.length > 30, 'Сфера должна давать длинный контур, иначе проверка бессмысленна: ' + frames.length);
+assert(dups.length === 0, 'Номера кадров наружного контура и расточки пересеклись: ' + [...new Set(dups)].join(' '));
+
+// Диапазоны P..Q обоих циклов не должны накладываться.
+const ranges = [...gcode.matchAll(/G71 P(\d+) Q(\d+)/g)].map(m => [+m[1], +m[2]]);
+assert(ranges.length === 2, 'Ожидались два цикла G71 — наружный и расточка: ' + JSON.stringify(ranges));
+assert(ranges[0][1] < ranges[1][0], 'Диапазон расточки должен начинаться после конца наружного: ' + JSON.stringify(ranges));
+
+// Сторона коррекции берётся из профиля станка напрямую, без правки готового NC регулярками,
+// привязанными к номерам кадров.
+run("state.extComp='G41'; state.idComp='G42';");
+gcode = gcodeFor("applyPreset('bushing'); state.operation='both'; state.segments=[{d:60,l:50}]; state.features=[]; state.bore={preD:26,finalD:30,depth:45,through:false,tol:null};");
+assert(/N\d+ G00 G41 X/.test(gcode), 'Наружная компенсация из профиля должна попадать в кадр: ' + gcode.match(/N\d+ G00 G4[12][^\n]*/));
+assert(/N\d+ G42 G00 X/.test(gcode), 'Внутренняя компенсация из профиля должна попадать в кадр: ' + gcode.match(/N\d+ G4[12] G00[^\n]*/));
+run("state.extComp='G42'; state.idComp='G41';");
 
 console.log('generator smoke tests: OK');

@@ -650,15 +650,31 @@
     if (o.idThread.enabled) appendThread(lines, 'id');
   }
 
+  // Раздатчик номеров кадров. G71 P..Q.. ищет кадр ПО НОМЕРУ, поэтому два контура в одной
+  // программе не имеют права занимать пересекающиеся диапазоны. Раньше наружный контур жёстко
+  // начинался с N100, а расточка — с N200; сфера даёт до 33 точек контура, наружный доходил до
+  // N430, и расточка P200 Q230 находила чужой кадр внутри наружного профиля. Расточная оправка
+  // в отверстии Ø18 получала при этом диаметры наружного профиля.
+  const nAlloc = {
+    next: 100,
+    take(blocks) {
+      const first = this.next, last = first + (blocks - 1) * 10;
+      this.next = Math.ceil((last + 100) / 100) * 100;  // следующий диапазон с зазором, кратно 100
+      return first;
+    },
+    reset() { this.next = 100; }
+  };
+
   generateGcode = function () {
     readSetup();
+    nAlloc.reset();
     const pts = buildProfile(), safeX = Math.max(state.stockD, maxD()) + 4;
     const lines = ['%', 'O' + state.programNo + ' (RAZRYAD FOTO-GCODE V0980)', '(PROVERIT GRAPHICS SINGLE BLOCK RAPID 5%)', `(POST ${state.post === 'haas' ? 'HAAS NGC' : 'FANUC 0I TWO BLOCK'})`, `(MACHINE ${ncText(state.machine.name)})`, '(MATERIAL ' + ncText(materials[state.material].name) + (materials[state.material].noHrc ? '' : ' HRC ' + state.hrc) + ')', ...tolComments(), 'G21 G18 G40 G80 G99'];
     if (hasOuter()) {
-      const firstN = 100, startN = 110, q = startN + (pts.length - 1) * 10;
+      const firstN = nAlloc.take(pts.length + 1), startN = firstN + 10, q = startN + (pts.length - 1) * 10;
       lines.push('(--- NARUZHNAYA G71 G70 TYPE I ---)', 'G28 U0. W0.', state.tool + ' (NARUZHNY PRAVY REZEC)', `(INSERT ${ncText((INSERTS[state.insertKey] || INSERTS.cnmg08).code)} / NOSE R${num(state.nose, 1)})`, 'G50 S' + Math.round(state.maxRpm), 'G97 S' + Math.round(state.rpm) + ' M03', 'G00 X' + num(safeX, 1) + ' Z2. M08');
       cycleG71(lines, firstN, q, state.depth, .3, .1, state.feed);
-      lines.push(`N${firstN} G00 G42 X${num(pts[0].x, 3)}`, `N${startN} G01 Z${num(pts[0].z, 3)} F${num(state.feed, 3)}`);
+      lines.push(`N${firstN} G00 ${state.extComp || 'G42'} X${num(pts[0].x, 3)}`, `N${startN} G01 Z${num(pts[0].z, 3)} F${num(state.feed, 3)}`);
       pts.slice(1).forEach((p, j) => lines.push(`N${startN + (j + 1) * 10} G01 X${num(p.x, 3)} Z${num(p.z, 3)}${p.corner > 0 ? ' R' + num(p.corner, 3) : ''} F${num(state.feed, 3)}`));
       if (state.features.some(f => f.type === 'sphere')) lines.push('(SFERA SR RAZBITA NA KHORDY / PROVERIT PROFIL SHABLONOM)');
       lines.push(`G70 P${firstN} Q${q}`, 'G01 G40 X' + num(safeX, 1) + ' F' + num(state.feed, 3), 'G00 X' + num(safeX + 10, 1) + ' Z10. M09');
@@ -666,8 +682,9 @@
     if (hasBore()) {
       const startX = Math.max(.5, state.bore.preD - 2), endX = Math.max(.2, state.bore.preD - 1), bd = Math.max(.2, state.depth * .65), bf = Math.max(.04, state.feed * .72);
       lines.push('(--- RASTOCHKA G71 ID / G70 TYPE I ---)', 'G28 U0. W0.', state.boreTool + ' (RASTOCHNOY REZEC)', `(ISKHODNOE OTV DIA ${num(state.bore.preD, 2)} / NOSE R${num(state.boreNose, 1)})`, 'G50 S' + Math.round(state.maxRpm), 'G97 S' + Math.round(state.boreRpm) + ' M03', 'G00 X' + num(startX, 2) + ' Z2. M08');
-      cycleG71(lines, 200, 230, bd, -.2, .1, bf);
-      lines.push('N200 G41 G00 X' + num(targetD({ d: state.bore.finalD, tol: state.bore.tol }), 3), 'N210 G01 Z0. F' + num(Math.max(.04, bf * .7), 3), 'N220 G01 Z-' + num(state.bore.depth, 3), 'N230 G01 G40 X' + num(endX, 3), 'G70 P200 Q230', 'G00 X' + num(startX, 2) + ' Z5. M09');
+      const bp = nAlloc.take(4), bq = bp + 30;
+      cycleG71(lines, bp, bq, bd, -.2, .1, bf);
+      lines.push(`N${bp} ${state.idComp || 'G41'} G00 X` + num(targetD({ d: state.bore.finalD, tol: state.bore.tol }), 3), `N${bp + 10} G01 Z0. F` + num(Math.max(.04, bf * .7), 3), `N${bp + 20} G01 Z-` + num(state.bore.depth, 3), `N${bq} G01 G40 X` + num(endX, 3), `G70 P${bp} Q${bq}`, 'G00 X' + num(startX, 2) + ' Z5. M09');
     }
     if (state.thread.enabled) appendThread(lines, 'od');
     appendExtraOps(lines);
