@@ -725,7 +725,15 @@ const spec=segment.toolSpec||stationSpec(segment.toolStation),op=segment.operati
   if(gs.includes(28)||gs.includes(53))add('warn','G28/G53 показан только как программная линия: машинный ноль и реальная безопасная позиция проверяются на стойке.',r.line);
   if(Number.isFinite(out.S)&&spindleMode==='G97'&&p.maxRpm&&out.S>p.maxRpm)add('bad',`S${out.S} выше лимита профиля станка S${p.maxRpm}.`,r.line);
   if(gs.includes(71)&&!Number.isFinite(out.P)&&!Number.isFinite(out.Q)){if(Number.isFinite(out.U))g71Depth=micron(out.U,unit,wordOf(r,'U'),r,'U');if(Number.isFinite(out.D))g71Depth=micron(out.D,unit,wordOf(r,'D'),r,'D');if(Number.isFinite(out.R))g71Retract=micron(out.R,unit,wordOf(r,'R'),r,'R');if(!g71Depth)add('bad','Первый кадр G71 должен задать глубину U/D.',r.line);return;}
-  if(gs.includes(71)&&Number.isFinite(out.P)&&Number.isFinite(out.Q)){const contour=contourFor(r,spec);if(!contour.length)return;const pts=[];contour.forEach((s,i)=>{(s.points||[s.from,s.to]).forEach((q,j)=>{if(i||j)pts.push({...q});else pts.push({...q});});});let zDir=0,nonMonotonic=false;for(let i=1;i<pts.length;i++){const dz=pts[i].z-pts[i-1].z;if(Math.abs(dz)<1e-6)continue;const d=Math.sign(dz);if(zDir&&d!==zDir)nonMonotonic=true;zDir=zDir||d;}if(nonMonotonic){add('bad','G71 Type II с обратным ходом Z заблокирован: требуется монотонный контур Type I.',r.line);return;}const allowance=micron(out.U,unit,wordOf(r,'U'),r,'U'),depth=Number.isFinite(out.D)?micron(out.D,unit,wordOf(r,'D'),r,'D'):(g71Depth||cfg.depth),stepX=Math.max(.02,depth*2),
+  if(gs.includes(71)&&Number.isFinite(out.P)&&Number.isFinite(out.Q)){const contour=contourFor(r,spec);if(!contour.length)return;const pts=[];
+  /* Монотонность проверяется по ЗАПРОГРАММИРОВАННОМУ контуру, а не по скомпенсированному пути.
+     makeSegment кладёт в points путь, уже смещённый на радиус вершины, а исходные точки — в
+     programmedPoints. Смещение направлено перпендикулярно движению, поэтому на стыке подвода по X
+     с ходом по Z в смещённом пути появляется короткий обратный ход по Z, которого в контуре нет.
+     Из-за этого проверка помечала как Type II любую программу с G41/G42 в кадре P — то есть
+     любую программу генератора «Фото → G-код», где коррекция задаётся намеренно и правильно
+     (на черновом G71 она игнорируется, применяется на чистовом G70). */
+  contour.forEach(s=>{(s.programmedPoints||s.points||[s.programmedFrom||s.from,s.programmedTo||s.to]).forEach(q=>{pts.push({...q});});});let zDir=0,nonMonotonic=false;for(let i=1;i<pts.length;i++){const dz=pts[i].z-pts[i-1].z;if(Math.abs(dz)<1e-6)continue;const d=Math.sign(dz);if(zDir&&d!==zDir)nonMonotonic=true;zDir=zDir||d;}if(nonMonotonic){add('bad','G71 Type II с обратным ходом Z заблокирован: требуется монотонный контур Type I.',r.line);return;}const allowance=micron(out.U,unit,wordOf(r,'U'),r,'U'),depth=Number.isFinite(out.D)?micron(out.D,unit,wordOf(r,'D'),r,'D'):(g71Depth||cfg.depth),stepX=Math.max(.02,depth*2),
    /* сторону снятия определяет геометрия: если старт снаружи контура — наружная обработка,
       если внутри — расточка. Тип инструмента при этом только сверяется. */
    maxCx=Math.max(...pts.map(q=>q.x)),minCx=Math.min(...pts.map(q=>q.x)),
