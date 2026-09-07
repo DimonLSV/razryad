@@ -329,4 +329,57 @@ assert(run("RazryadGeneratorPro.normalizeExtraOps({odGroove:{enabled:false,z:1,w
 // Уже новая форма проходит без изменений.
 assert(run("RazryadGeneratorPro.normalizeExtraOps({grooves:[{side:'od',z:1,width:1,finalD:1}]}).grooves.length") === 1, 'Новая форма должна проходить без потерь');
 
+// --- Ступенчатая расточка. Внутренний контур был захардкожен четырьмя кадрами, поэтому втулка
+// с буртом под подшипник (Ø30 на 20 мм, дальше Ø22) не выражалась вовсе: оператор получал
+// сквозную Ø30 на всю глубину и сажал подшипник в дыру без упора.
+gcode = gcodeFor("applyPreset('bushing'); state.operation='both'; state.segments=[{d:60,l:70,tol:null}]; state.features=[];"
+  + " state.bore={preD:20,through:false,steps:[{d:30,depth:20,tol:null},{d:22,depth:60,tol:null}]};");
+let bore = gcode.split('\n').filter(l => /^N\d+ (G4[12] )?G0[01]/.test(l)).slice(-6);
+assert(/G01 X30\.000/.test(gcode) || /G4[12] G00 X30\.000/.test(gcode), 'Первая ступень Ø30 должна быть в контуре: ' + bore.join(' | '));
+assert(gcode.includes('G01 Z-20.000'), 'Первая ступень должна заканчиваться на Z-20: ' + bore.join(' | '));
+assert(gcode.includes('G01 X22.000'), 'Переход на вторую ступень Ø22 отсутствует: ' + bore.join(' | '));
+assert(gcode.includes('G01 Z-60.000'), 'Вторая ступень должна доходить до Z-60: ' + bore.join(' | '));
+// Контур обязан остаться Type I: диаметр только убывает, Z только растёт по модулю.
+{
+  const pq = gcode.match(/G71 P(\d+) Q(\d+) U-/);
+  assert(pq, 'Внутренний цикл G71 с отрицательным U отсутствует');
+  const body = gcode.split('\n').filter(l => { const m = l.match(/^N(\d+)/); return m && +m[1] >= +pq[1] && +m[1] <= +pq[2]; });
+  const xs = body.map(l => (l.match(/X(-?[\d.]+)/) || [])[1]).filter(Boolean).map(Number);
+  for (let i = 1; i < xs.length - 1; i++) assert(xs[i] <= xs[i - 1] + 1e-9, 'Диаметр расточки должен только убывать: ' + xs.join(' -> '));
+}
+
+// Одна ступень даёт ровно те же четыре кадра, что и раньше.
+gcode = gcodeFor("applyPreset('bushing'); state.operation='both'; state.segments=[{d:60,l:70,tol:null}]; state.features=[];"
+  + " state.bore={preD:26,finalD:30,depth:45,through:false,tol:null};");
+{
+  const pq = gcode.match(/G71 P(\d+) Q(\d+) U-/);
+  const body = gcode.split('\n').filter(l => { const m = l.match(/^N(\d+)/); return m && +m[1] >= +pq[1] && +m[1] <= +pq[2]; });
+  assert(body.length === 4, 'Гладкое отверстие должно давать 4 кадра контура, получено ' + body.length + ': ' + body.join(' | '));
+}
+
+// Отверстие, расширяющееся вглубь — поднутрение, прямым резцом не берётся.
+run("applyPreset('bushing'); state.operation='both'; state.segments=[{d:60,l:70,tol:null}]; state.features=[];"
+  + " state.bore={preD:20,through:false,steps:[{d:22,depth:20,tol:null},{d:30,depth:60,tol:null}]};");
+assert(/поднутрение/.test(run('geometryIssue()')), 'Расширяющееся вглубь отверстие должно отвергаться: ' + run('geometryIssue()'));
+// Ступень не глубже предыдущей — тоже отказ.
+run("state.bore={preD:20,through:false,steps:[{d:30,depth:40,tol:null},{d:22,depth:20,tol:null}]};");
+assert(/глубина/.test(run('geometryIssue()')), 'Ступень не глубже предыдущей должна отвергаться: ' + run('geometryIssue()'));
+// Ступень не больше исходного отверстия — снимать нечего.
+run("state.bore={preD:30,through:false,steps:[{d:30,depth:40,tol:null}]};");
+assert(/снимать нечего/.test(run('geometryIssue()')), 'Ø, равный исходному отверстию, должен отвергаться: ' + run('geometryIssue()'));
+
+// Зеркала finalD/depth должны отражать ступени: их читают базовые проверки в generator.html.
+run("state.bore={preD:20,through:false,steps:[{d:30,depth:20,tol:'H7'},{d:22,depth:60,tol:null}]}; RazryadGeneratorPro.syncBoreMirror();");
+assert(run('state.bore.finalD') === 30, 'finalD должен быть диаметром у торца: ' + run('state.bore.finalD'));
+assert(run('state.bore.depth') === 60, 'depth должен быть полной глубиной: ' + run('state.bore.depth'));
+assert(run("RazryadGeneratorPro.boreDAt(10)") === 30 && run("RazryadGeneratorPro.boreDAt(40)") === 22,
+  'boreDAt должен давать диаметр на своей глубине');
+
+// Допуск на каждой ступени попадает в комментарии отдельной строкой.
+gcode = gcodeFor("applyPreset('bushing'); state.operation='both'; state.segments=[{d:60,l:70,tol:null}]; state.features=[];"
+  + " state.bore={preD:20,through:false,steps:[{d:30,depth:20,tol:'H7'},{d:22,depth:60,tol:'H8'}]};");
+assert(/OTVERSTIE 1 DIA 30\.000 H7/.test(gcode), 'Допуск первой ступени отсутствует: ' + (gcode.match(/OTVERSTIE[^\n]*/g) || []));
+assert(/OTVERSTIE 2 DIA 22\.000 H8/.test(gcode), 'Допуск второй ступени отсутствует: ' + (gcode.match(/OTVERSTIE[^\n]*/g) || []));
+assert(!/[А-Яа-яЁё]/.test(gcode), 'NC output contains Cyrillic');
+
 console.log('generator smoke tests: OK');

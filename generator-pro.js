@@ -274,6 +274,7 @@
         const boreAt = outer.reduce((best, x, i) => x.d < outer[best].d ? i : best, 0);
         state.bore.finalD = outer[boreAt].d; state.bore.preD = Math.max(2, outer[boreAt].d - 4);
         state.bore.tol = outer[boreAt].tol;
+        state.bore.steps = null;   // ступени пересоберутся из прочитанного диаметра
         outer.splice(boreAt, 1);
       }
       if (outer.length) {
@@ -404,7 +405,7 @@
     $$('#operationSeg button').forEach(b => b.classList.toggle('on', b.dataset.op === state.operation));
     let outer = (state.dimsFromPreset ? `<div class="card warn"><div class="notice"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5m0 3v.1"/></svg><div><b>С чертежа не прочитан ни один диаметр.</b><div class="muted">Значения ниже взяты из шаблона детали, а не с фотографии. Введите размеры по чертежу вручную — подтверждать шаблонные числа нельзя.</div></div></div></div>` : '') + renderLoosePool() + renderRecognizedFeatures();
     outer += state.segments.map((s, i) => `<div class="card"><div class="segment"><div class="segno">${i + 1}</div><div><div class="flabel"><span>${hasOuter() ? (names[state.template] || 'Участок') : 'Габарит заготовки'} ${i + 1}</span><span>${i === 0 ? 'у торца' : i === state.segments.length - 1 ? 'к патрону' : ''}</span></div><div class="two"><label class="fld"><span>Диаметр</span><div class="unit"><input type="number" data-seg="${i}" data-key="d" value="${num(s.d)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Длина${s.l == null ? ' · не найдена на чертеже' : ''}</span><div class="unit"><input type="number" data-seg="${i}" data-key="l" value="${s.l == null ? '' : num(s.l)}" placeholder="введите с чертежа" step="0.1"><i>мм</i></div></label></div><label class="fld" style="margin:0"><span>Ø на дальнем конце${s.d2 == null ? ' · пусто = цилиндр' : ' · конус'}</span><div class="unit"><input type="number" data-seg="${i}" data-key="d2" value="${s.d2 == null ? '' : num(s.d2)}" placeholder="цилиндр" step="0.1"><i>мм</i></div></label>${taperNote(s)}${tolNote(s)}</div></div></div>${hasOuter() && i < state.segments.length - 1 ? transitionHtml(i) : ''}`).join('');
-    const bore = hasBore() ? `<div class="card subop"><div class="eyebrow">Расточка G71 / G70</div><div class="two"><label class="fld"><span>Исходное отверстие</span><div class="unit"><input type="number" data-bore="preD" value="${num(state.bore.preD)}" step="0.1"><i>⌀ мм</i></div></label><label class="fld"><span>Готовое отверстие</span><div class="unit"><input type="number" data-bore="finalD" value="${num(state.bore.finalD)}" step="0.1"><i>⌀ мм</i></div></label></div><div class="two"><label class="fld"><span>Глубина по Z</span><div class="unit"><input type="number" data-bore="depth" value="${num(state.bore.depth)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Дно отверстия</span><select id="boreKind"><option value="blind" ${state.bore.through ? '' : 'selected'}>Глухое</option><option value="through" ${state.bore.through ? 'selected' : ''}>Сквозное</option></select></label></div><div class="compact-note">Исходное отверстие должно быть готово до внутреннего G71. U в цикле расточки выводится со знаком минус.</div></div>` : '';
+    const bore = hasBore() ? boreBlock() : '';
     const thread = `<div class="card"><div class="confirm"><input type="checkbox" id="threadEnabled" ${state.thread.enabled ? 'checked' : ''}><label for="threadEnabled"><b>Наружная резьба G76</b><br><span class="muted">Метрическая 60°, отдельный резьбовой инструмент.</span></label></div>${state.thread.enabled ? `<div style="margin-top:12px"><div class="two"><label class="fld"><span>Наружный ⌀</span><div class="unit"><input type="number" data-thread="d" value="${num(state.thread.d)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Шаг F</span><div class="unit"><input type="number" data-thread="pitch" value="${num(state.thread.pitch)}" step="0.1"><i>мм</i></div></label></div><label class="fld" style="margin:0"><span>Длина</span><div class="unit"><input type="number" data-thread="length" value="${num(state.thread.length)}" step="0.1"><i>мм</i></div></label></div>` : ''}</div>`;
     const ops = `<div class="eyebrow" style="margin-top:16px">Дополнительные операции</div>` +
       opCard('drill', 'Сверление по оси', 'G83 с полным выводом или скоростной G74', `<div class="two"><label class="fld"><span>Цикл</span><select data-extra="drill" data-xkey="cycle"><option value="G83" ${state.extraOps.drill.cycle === 'G83' ? 'selected' : ''}>G83 · глубокое</option><option value="G74" ${state.extraOps.drill.cycle === 'G74' ? 'selected' : ''}>G74 · скоростное</option></select></label><label class="fld"><span>Сверло</span><div class="unit"><input type="number" data-extra="drill" data-xkey="diameter" value="${num(state.extraOps.drill.diameter)}"><i>⌀ мм</i></div></label></div><div class="two"><label class="fld"><span>Глубина</span><div class="unit"><input type="number" data-extra="drill" data-xkey="depth" value="${num(state.extraOps.drill.depth)}"><i>мм</i></div></label><label class="fld"><span>Шаг врезания</span><div class="unit"><input type="number" data-extra="drill" data-xkey="peck" value="${num(state.extraOps.drill.peck)}"><i>мм</i></div></label></div>`) +
@@ -416,6 +417,16 @@
     form.querySelectorAll('[data-bore]').forEach(inp => inp.oninput = () => { state.bore[inp.dataset.bore] = Math.max(0, +inp.value || 0); dirtyDims(); });
     form.querySelectorAll('[data-thread]').forEach(inp => inp.oninput = () => { state.thread[inp.dataset.thread] = Math.max(0, +inp.value || 0); dirtyDims(); });
     form.querySelectorAll('[data-feature]').forEach(inp => inp.onchange = inp.oninput = () => { const f = state.features[+inp.dataset.feature]; f[inp.dataset.fkey] = inp.dataset.fkey === 'type' ? inp.value : Math.max(0, +inp.value || 0); renderDimensions(); });
+    form.querySelectorAll('[data-bore-step]').forEach(inp => inp.oninput = () => {
+      boreSteps()[+inp.dataset.boreStep][inp.dataset.bkey] = Math.max(0, +inp.value || 0);
+      syncBoreMirror(); dirtyDims();
+    });
+    form.querySelectorAll('[data-bore-del]').forEach(b => b.onclick = () => { boreSteps().splice(+b.dataset.boreDel, 1); syncBoreMirror(); dirtyDims(); renderDimensions(); });
+    if ($('#boreStepAdd')) $('#boreStepAdd').onclick = () => {
+      const st = boreSteps(), last = st[st.length - 1];
+      st.push({ d: Math.max(1, (+last.d || 2) - 4), depth: (+last.depth || 0) + 20, tol: null });
+      syncBoreMirror(); dirtyDims(); renderDimensions();
+    };
     form.querySelectorAll('[data-groove-add]').forEach(b => b.onclick = () => {
       if ((state.extraOps.grooves || []).length >= GROOVE_LIMIT) { toast(`Больше ${GROOVE_LIMIT} канавок приложение не собирает`); return; }
       state.extraOps.grooves.push(defaultGroove(b.dataset.grooveAdd)); dirtyDims(); renderDimensions();
@@ -428,6 +439,21 @@
     $('#threadEnabled').onchange = e => { state.thread.enabled = e.target.checked; renderDimensions(); };
     dirtyDims();
   };
+
+  function boreBlock() {
+    const st = boreSteps();
+    const rows = st.map((s, i) => {
+      const T = window.RazryadTolerance, p = s.tol && T && T.parse(s.tol, +s.d || 0);
+      const note = p ? `<div class="compact-note">Допуск ${esc(s.tol)}: ${num((+s.d || 0) + p.ei, 3)} … ${num((+s.d || 0) + p.es, 3)} мм. Точим Ø${num((+s.d || 0) + p.mid, 3)}.</div>` : '';
+      return `<div class="card op-card enabled"><div class="op-title"><div><b>${st.length > 1 ? `Ступень ${i + 1}` : 'Отверстие'}</b><div class="compact-note">${i ? 'Глубже предыдущей и меньше по диаметру' : 'У торца — самый большой диаметр'}</div></div>${st.length > 1 ? `<button class="btn secondary mini" type="button" data-bore-del="${i}">Удалить</button>` : ''}</div><div class="two" style="margin-top:11px"><label class="fld"><span>Готовый ⌀</span><div class="unit"><input type="number" data-bore-step="${i}" data-bkey="d" value="${num(s.d)}" step="0.1"><i>мм</i></div></label><label class="fld"><span>Глубина от торца</span><div class="unit"><input type="number" data-bore-step="${i}" data-bkey="depth" value="${num(s.depth)}" step="0.1"><i>мм</i></div></label></div>${note}</div>`;
+    }).join('');
+    const add = st.length >= BORE_STEP_LIMIT
+      ? `<div class="compact-note">Больше ${BORE_STEP_LIMIT} ступеней отверстия приложение не собирает.</div>`
+      : `<button class="btn secondary mini" type="button" id="boreStepAdd">+ Ступень отверстия</button>`;
+    return `<div class="card subop"><div class="eyebrow">Расточка G71 / G70</div><div class="two"><label class="fld"><span>Исходное отверстие</span><div class="unit"><input type="number" data-bore="preD" value="${num(state.bore.preD)}" step="0.1"><i>⌀ мм</i></div></label><label class="fld"><span>Дно отверстия</span><select id="boreKind"><option value="blind" ${state.bore.through ? '' : 'selected'}>Глухое</option><option value="through" ${state.bore.through ? 'selected' : ''}>Сквозное</option></select></label></div><div class="compact-note">Исходное отверстие должно быть готово до внутреннего G71. U в цикле расточки выводится со знаком минус.</div></div>`
+      + rows
+      + `<div class="card"><div class="eyebrow">Ступени отверстия</div>${add}<div class="compact-note" style="margin-top:8px">Диаметр обязан убывать от торца вглубь: оправка входит через торец, и отверстие, расширяющееся внутри — поднутрение, прямым резцом его не взять. Глубина отсчитывается от торца и указывает, где ступень заканчивается.</div></div>`;
+  }
 
   // Карточка одной канавки. Индекс в data-groove — позиция в state.extraOps.grooves.
   function grooveCard(g, i) {
@@ -487,6 +513,22 @@
         if (chord > 2 * f.value) return `SR${num(f.value)} слишком мал для хорды ${num(chord)} мм.`;
       }
     }
+    // Ступени отверстия. Расточная оправка входит через торец, поэтому диаметр обязан только
+    // убывать вглубь: отверстие, расширяющееся внутри — поднутрение, его прямым резцом не взять.
+    if (hasBore()) {
+      syncBoreMirror();      // зеркала finalD/depth могли устареть, если steps правили извне
+      const st = boreSteps();
+      for (let i = 0; i < st.length; i++) {
+        const s = st[i], no = st.length > 1 ? `Ступень отверстия ${i + 1}` : 'Отверстие';
+        if (!(+s.d > 0)) return `${no}: введите диаметр.`;
+        if (!(+s.depth > 0)) return `${no}: введите глубину.`;
+        if (+s.d <= +state.bore.preD) return `${no}: Ø${num(s.d)} не больше исходного отверстия Ø${num(state.bore.preD)} — снимать нечего.`;
+        if (i) {
+          if (+s.d >= +st[i - 1].d) return `${no}: Ø${num(s.d)} не меньше предыдущей ступени Ø${num(st[i - 1].d)}. Отверстие, расширяющееся вглубь — поднутрение, прямым расточным резцом оно не растачивается.`;
+          if (+s.depth <= +st[i - 1].depth) return `${no}: глубина ${num(s.depth)} мм не больше предыдущей ${num(st[i - 1].depth)} мм.`;
+        }
+      }
+    }
     const o = state.extraOps;
     if (o.drill.enabled && (o.drill.depth <= 0 || o.drill.peck <= 0)) return 'Для сверления введите глубину и шаг врезания.';
     // Каждая канавка проверяется отдельно и называется по номеру: иначе оператор не поймёт,
@@ -500,7 +542,7 @@
       } else if (g.side === 'id') {
         if (!hasBore()) return `${no}: внутренняя канавка требует включённой расточки.`;
         if (!(g.width > 0)) return `${no}: введите ширину.`;
-        if (g.finalD <= state.bore.finalD) return `${no}: диаметр должен быть больше отверстия Ø${num(state.bore.finalD)}.`;
+        if (g.finalD <= boreDAt(g.z)) return `${no}: диаметр должен быть больше отверстия Ø${num(boreDAt(g.z))} на этой глубине.`;
         if (g.z + g.width > state.bore.depth) return `${no}: выходит за глубину расточки ${num(state.bore.depth)} мм.`;
       } else {
         if (g.endD <= g.startD) return `${no}: конечный диаметр торцевой канавки должен быть больше начального.`;
@@ -567,6 +609,50 @@
     return (+seg.d2 || 0) + (targetD(seg) - (+seg.d || 0));
   }
 
+  // Отверстие может быть ступенчатым: втулка с буртом под подшипник — рядовая деталь.
+  // state.bore.steps — источник истины, по одной записи на ступень, от торца вглубь.
+  // depth у ступени — глубина, на которой она ЗАКАНЧИВАЕТСЯ, считая от торца.
+  // [{d:30,depth:20},{d:22,depth:60}] = Ø30 от 0 до -20, дальше Ø22 до -60.
+  const BORE_STEP_LIMIT = 4;
+  function boreSteps() {
+    const b = state.bore;
+    if (!Array.isArray(b.steps) || !b.steps.length) b.steps = [{ d: +b.finalD || 0, depth: +b.depth || 0, tol: b.tol || null }];
+    return b.steps;
+  }
+  // finalD/depth/tol остаются ПРОИЗВОДНЫМИ зеркалами: их читают базовые geometryIssue() и
+  // checkSafety() в generator.html, которые этот файл только надстраивает. Единственный писатель —
+  // эта функция; вызывать после любой правки steps.
+  function syncBoreMirror() {
+    const st = boreSteps();
+    state.bore.finalD = +st[0].d || 0;                                   // наибольший, у торца
+    state.bore.depth = Math.max(...st.map(s => +s.depth || 0));          // полная глубина
+    state.bore.tol = st[0].tol || null;
+  }
+  // Наружный диаметр детали на расстоянии z от торца. Нужен для подвода канавочного резца:
+  // подводиться от диаметра ЗАГОТОВКИ неверно — в этом месте металл уже снят наружным циклом,
+  // и резец шёл бы по воздуху лишние миллиметры, а проверка глубины канавки считала бы плунж
+  // от заготовки и ругалась на ширину пластины.
+  function outerDAt(z) {
+    let acc = 0;
+    for (const s of state.segments) {
+      const end = acc + (+s.l || 0);
+      if (z <= end) {
+        const dStart = +s.d || 0, dEnd = s.d2 != null ? (+s.d2 || 0) : dStart, len = Math.max(1e-6, +s.l || 0);
+        return dStart + (dEnd - dStart) * ((z - acc) / len);
+      }
+      acc = end;
+    }
+    return maxD();
+  }
+
+  // Диаметр отверстия на глубине z от торца — нужен, чтобы внутренняя канавка сверялась со
+  // своей ступенью, а не с диаметром у торца.
+  function boreDAt(z) {
+    const st = boreSteps();
+    for (const s of st) if (z <= (+s.depth || 0)) return +s.d || 0;
+    return +st[st.length - 1].d || 0;
+  }
+
   // Размер настройки: при указанном поле допуска точим в СЕРЕДИНУ поля, а не по номиналу.
   // Ø45h6 -> 44.992. Номинал остаётся в state.segments[i].d и показывается оператору как есть.
   function targetD(seg) {
@@ -605,10 +691,12 @@
       if (!p) { out.push(`(UCHASTOK ${i + 1} DIA ${num(n, 3)} DOPUSK ${ncTol(s.tol)} NE RAZOBRAN / TOCHIM PO NOMINALU)`); return; }
       out.push(`(UCHASTOK ${i + 1} DIA ${num(n, 3)} ${ncTol(s.tol)} = ${num(n + p.ei, 3)}..${num(n + p.es, 3)} / NASTROYKA ${num(n + p.mid, 3)})`);
     });
-    if (state.bore && state.bore.tol && hasBore()) {
-      const n = +state.bore.finalD || 0, p = T.parse(state.bore.tol, n);
-      if (p) out.push(`(OTVERSTIE DIA ${num(n, 3)} ${ncTol(state.bore.tol)} = ${num(n + p.ei, 3)}..${num(n + p.es, 3)} / NASTROYKA ${num(n + p.mid, 3)})`);
-    }
+    if (hasBore()) boreSteps().forEach((s, i) => {
+      if (!s.tol) return;
+      const n = +s.d || 0, p = T.parse(s.tol, n);
+      const label = boreSteps().length > 1 ? `OTVERSTIE ${i + 1}` : 'OTVERSTIE';
+      if (p) out.push(`(${label} DIA ${num(n, 3)} ${ncTol(s.tol)} = ${num(n + p.ei, 3)}..${num(n + p.es, 3)} / NASTROYKA ${num(n + p.mid, 3)})`);
+    });
     if (out.length) out.push('(RAZMER NASTROYKI = SEREDINA POLYA DOPUSKA / PROVERIT PERVUYU DETAL)');
     return out;
   }
@@ -725,7 +813,7 @@
       } else {
         lines.push(`(--- KANAVKA ${no} NARUZHNAYA G75 ---)`, 'G28 U0. W0.', state.grooveTool,
           `G97 S${Math.round(Math.min(state.rpm, 900))} M03`,
-          `G00 X${num(Math.max(state.stockD, maxD()) + 2, 2)} Z-${num(g.z, 3)} M08`,
+          `G00 X${num(outerDAt(g.z) + 2, 2)} Z-${num(g.z, 3)} M08`,
           `G75 X${num(g.finalD, 3)} Z-${num(g.z + g.width, 3)} I${num(g.peck, 3)} K${num(g.step, 3)} F${num(f, 3)}`,
           `G00 X${num(state.stockD + 5, 2)} Z5. M09`);
       }
@@ -750,6 +838,7 @@
 
   generateGcode = function () {
     readSetup();
+    if (hasBore()) syncBoreMirror();
     nAlloc.reset();
     const pts = buildProfile(), safeX = Math.max(state.stockD, maxD()) + 4;
     const lines = ['%', 'O' + state.programNo + ' (RAZRYAD FOTO-GCODE V0980)', '(PROVERIT GRAPHICS SINGLE BLOCK RAPID 5%)', `(POST ${state.post === 'haas' ? 'HAAS NGC' : 'FANUC 0I TWO BLOCK'})`, `(MACHINE ${ncText(state.machine.name)})`, '(MATERIAL ' + ncText(materials[state.material].name) + (materials[state.material].noHrc ? '' : ' HRC ' + state.hrc) + ')', ...tolComments(), 'G21 G18 G40 G80 G99'];
@@ -765,9 +854,20 @@
     if (hasBore()) {
       const startX = Math.max(.5, state.bore.preD - 2), endX = Math.max(.2, state.bore.preD - 1), bd = Math.max(.2, state.depth * .65), bf = Math.max(.04, state.feed * .72);
       lines.push('(--- RASTOCHKA G71 ID / G70 TYPE I ---)', 'G28 U0. W0.', state.boreTool + ' (RASTOCHNOY REZEC)', `(ISKHODNOE OTV DIA ${num(state.bore.preD, 2)} / NOSE R${num(state.boreNose, 1)})`, 'G50 S' + Math.round(state.maxRpm), 'G97 S' + Math.round(state.boreRpm) + ' M03', 'G00 X' + num(startX, 2) + ' Z2. M08');
-      const bp = nAlloc.take(4), bq = bp + 30;
+      // Внутренний контур строится по ступеням. Для одной ступени выходят те же четыре кадра,
+      // что и раньше. Диаметр убывает от торца вглубь, Z растёт по модулю — контур монотонен по
+      // обеим осям, то есть остаётся Type I, и обходить блокировку Type II не требуется.
+      const st = boreSteps(), blocks = 2 * st.length + 2;
+      const bp = nAlloc.take(blocks), bq = bp + (blocks - 1) * 10;
       cycleG71(lines, bp, bq, bd, -.2, .1, bf);
-      lines.push(`N${bp} ${state.idComp || 'G41'} G00 X` + num(targetD({ d: state.bore.finalD, tol: state.bore.tol }), 3), `N${bp + 10} G01 Z0. F` + num(Math.max(.04, bf * .7), 3), `N${bp + 20} G01 Z-` + num(state.bore.depth, 3), `N${bq} G01 G40 X` + num(endX, 3), `G70 P${bp} Q${bq}`, 'G00 X' + num(startX, 2) + ' Z5. M09');
+      let n = bp;
+      lines.push(`N${n} ${state.idComp || 'G41'} G00 X` + num(targetD({ d: st[0].d, tol: st[0].tol }), 3));
+      lines.push(`N${n += 10} G01 Z0. F` + num(Math.max(.04, bf * .7), 3));
+      st.forEach((s, i) => {
+        if (i) lines.push(`N${n += 10} G01 X` + num(targetD({ d: s.d, tol: s.tol }), 3));
+        lines.push(`N${n += 10} G01 Z-` + num(s.depth, 3));
+      });
+      lines.push(`N${bq} G01 G40 X` + num(endX, 3), `G70 P${bp} Q${bq}`, 'G00 X' + num(startX, 2) + ' Z5. M09');
     }
     if (state.thread.enabled) appendThread(lines, 'od');
     appendExtraOps(lines);
@@ -872,5 +972,5 @@
      кэша, ответ index.html вместо .js), страница продолжала работать на старой
      версии и молча выдавала другую программу. Теперь экспорт по этой метке
      проверяет, что работает именно тот генератор, который показан оператору. */
-  window.RazryadGeneratorPro = { version: 'v0.980', normalizeExtraOps, defaultGroove, GROOVE_LIMIT };
+  window.RazryadGeneratorPro = { version: 'v0.980', normalizeExtraOps, defaultGroove, GROOVE_LIMIT, boreSteps, syncBoreMirror, boreDAt, BORE_STEP_LIMIT };
 })();

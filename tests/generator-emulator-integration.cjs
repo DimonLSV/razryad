@@ -152,4 +152,30 @@ const realBad = res => res.issues.filter(x => x.type === 'bad');
     'Контур с обратным ходом по Z обязан отвергаться как непригодный для Type I');
 }
 
+/* ---------- 4. Ступенчатая расточка доходит до детали двумя диаметрами ----------
+   Внутренний контур был захардкожен четырьмя кадрами, поэтому втулка с буртом под подшипник
+   не выражалась вовсе: выходила сквозная расточка на всю глубину, и подшипник садился без упора. */
+{
+  const code = GEN.build("applyPreset('bushing'); state.operation='both'; state.segments=[{d:60,l:70,tol:null}];"
+    + " state.features=[]; state.bore={preD:26,through:false,steps:[{d:34,depth:20,tol:null},{d:30,depth:55,tol:null}]};");
+  const r = run(code, { stock: 'tube', boreD: 26, length: 120 });
+  assert(realBad(r.res).length === 0, 'Эмулятор нашёл ошибки в ступенчатой расточке: ' + JSON.stringify(realBad(r.res).map(x => x.text)));
+  near(at(r.mat, -10).inner, 17, .8, 'Первая ступень отверстия Ø34 не выбрана');
+  near(at(r.mat, -45).inner, 15, .8, 'Вторая ступень отверстия Ø30 не выбрана');
+  assert(at(r.mat, -10).inner > at(r.mat, -45).inner + .8,
+    'У торца отверстие должно быть шире, чем в глубине: ' + at(r.mat, -10).inner.toFixed(2) + ' против ' + at(r.mat, -45).inner.toFixed(2));
+}
+
+/* ---------- 5. Две канавки доходят до детали как две ---------- */
+{
+  const code = GEN.build("applyPreset('shaft'); state.operation='external'; state.segments=[{d:40,l:80,tol:null}]; state.features=[];"
+    + " state.extraOps.grooves=[{side:'od',z:15,width:4,finalD:32,peck:1,step:2},"
+    + "{side:'od',z:55,width:4,finalD:32,peck:1,step:2}];");
+  const r = run(code, { stockD: 45, length: 110 });
+  assert(realBad(r.res).length === 0, 'Эмулятор нашёл ошибки в программе с двумя канавками: ' + JSON.stringify(realBad(r.res).map(x => x.text)));
+  near(at(r.mat, -17).outer, 16, 1, 'Первая канавка не прорезана до Ø32');
+  near(at(r.mat, -57).outer, 16, 1, 'Вторая канавка не прорезана до Ø32');
+  assert(at(r.mat, -35).outer > 19, 'Между канавками должен остаться диаметр детали, получено ' + at(r.mat, -35).outer.toFixed(2));
+}
+
 console.log('интеграция генератор -> эмулятор: OK (' + checks + ' проверок)');
